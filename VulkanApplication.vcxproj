@@ -103,9 +103,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Computer Graphics\Libraries\EASTL-3.21.23\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-Hpp-master\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-3.1.0\include;C:\VulkanSDK\1.3.290.0\Include;C:\Computer Graphics\Libraries\glfw-3.4.bin.WIN64\include;C:\Computer Graphics\Libraries\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.290.0\Include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-Hpp-master\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-3.1.0\include;C:\Computer Graphics\Libraries\glm;C:\Computer Graphics\Libraries\glfw-3.4.bin.WIN64\include;C:\Computer Graphics\Libraries\EASTL-3.21.23\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -121,9 +121,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Computer Graphics\Libraries\EASTL-3.21.23\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-Hpp-master\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-3.1.0\include;C:\VulkanSDK\1.3.290.0\Include;C:\Computer Graphics\Libraries\glfw-3.4.bin.WIN64\include;C:\Computer Graphics\Libraries\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.290.0\Include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-Hpp-master\include;C:\Computer Graphics\Libraries\VulkanMemoryAllocator-3.1.0\include;C:\Computer Graphics\Libraries\glm;C:\Computer Graphics\Libraries\glfw-3.4.bin.WIN64\include;C:\Computer Graphics\Libraries\EASTL-3.21.23\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -140,7 +140,31 @@
     <None Include="shaders\shader.vert" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\main.cpp" />
+    <ClInclude Include="AffineTransform.h" />
+    <ClInclude Include="AppConifg.h" />
+    <ClInclude Include="GraphicsEngine.h" />
+    <ClInclude Include="GraphicsDebug.h" />
+    <ClInclude Include="GraphicsUtility.h" />
+    <ClInclude Include="Model2D.h" />
+    <ClInclude Include="VulkanUsage.h" />
+    <ClInclude Include="WindowManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AffineTransform.cpp" />
+    <ClCompile Include="EventManager.cpp" />
+    <ClCompile Include="EventManager.h" />
+    <ClCompile Include="GlfwUsage.cpp" />
+    <ClCompile Include="GraphicsEngine.cpp" />
+    <ClCompile Include="GraphicsDebug.cpp" />
+    <ClCompile Include="GraphicsUtility.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="VmaUsage.cpp" />
+    <ClCompile Include="WindowManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="test.txt" />
+    <Text Include="test2.txt" />
+    <Text Include="test3.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
