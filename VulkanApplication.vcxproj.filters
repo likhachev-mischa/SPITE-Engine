@@ -16,6 +16,15 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{83c832cd-9b63-4419-80eb-a2b4b12c4fcc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application">
+      <UniqueIdentifier>{a8b697f7-57b7-41df-a143-452fa2a5a83e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{594111d7-1759-4e8f-bf76-6aedc72ffb73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base">
+      <UniqueIdentifier>{094d3e1e-06e1-4c34-a9a4-ab1c7a600118}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.frag">
@@ -24,63 +33,61 @@
     <None Include="shaders\shader.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AffineTransform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AppConifg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GraphicsEngine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GraphicsDebug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GraphicsUtility.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Model2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VulkanUsage.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Foundation\Platform.hpp">
+      <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="WindowManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Engine\GraphicsDebug.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\GraphicsEngine.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\GraphicsUtility.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\VulkanUsage.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\AppConifg.h">
+      <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\EventManager.h">
+      <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\WindowManager.h">
+      <Filter>Application</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GlfwUsage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GraphicsEngine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GraphicsDebug.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VmaUsage.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Base\GlfwUsage.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
-    <ClCompile Include="GraphicsUtility.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Base\VmaUsage.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
-    <ClCompile Include="WindowManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Engine\GraphicsDebug.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="EventManager.h">
-      <Filter>Header Files</Filter>
+    <ClCompile Include="Engine\GraphicsEngine.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="EventManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Engine\GraphicsUtility.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="AffineTransform.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Application\EventManager.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\WindowManager.cpp">
+      <Filter>Application</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/vulkan-memory-allocator-hpp-x64-windows-3.1.0-ee5ee9a9-e8a3-4e14-992b-cc24dae14abc",
+  "name": "vulkan-memory-allocator-hpp:x64-windows@3.1.0 4533cc43901886d02ef0fdcdc617bbf3b274d96127662634b1f56a2e9cb2c5df",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-2024-10-18-e392d7347fe72dff56e7857f7571c22301237ae6"
+    ],
+    "created": "2024-11-07T13:26:54Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-2"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-2",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "vulkan-memory-allocator-hpp",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "3.1.0",
+      "downloadLocation": "NOASSERTION",
+      "homepage": "https://github.com/YaaZ/VulkanMemoryAllocator-Hpp",
+      "licenseConcluded": "CC0-1.0",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "C++ bindings for VulkanMemoryAllocator (Development branch)",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "vulkan-memory-allocator-hpp:x64-windows",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "4533cc43901886d02ef0fdcdc617bbf3b274d96127662634b1f56a2e9cb2c5df",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "CC0-1.0",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-1",
+      "name": "YaaZ/VulkanMemoryAllocator-Hpp",
+      "downloadLocation": "git+https://github.com/YaaZ/VulkanMemoryAllocator-Hpp@v3.1.0",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "95f5a8930431c18683d7e768ce1363b4edcb2fa7ca527054c77dbc8b34355308f621eed8cd018a574a928ac93e8689d4a8991802e3d601f5c0d1204a9155aee6"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/vulkan-memory-allocator-hpp/portfile.cmake",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "326a8dbedf980a8216b114f4a747b793e8f745a3921dd61c665897e7ef8426a3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/vulkan-memory-allocator-hpp/unofficial-vulkan-memory-allocator-hpp-config.cmake",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d7f1d71c9e963c2a6ea6cb02c7bc546e14cd3996547b8233f3eb46f1180c8ef3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/vulkan-memory-allocator-hpp/vcpkg.json",
+      "SPDXID": "SPDXRef-file-2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8e7bd4e63a7ba5f83b8606a88c34997384bfa58f0affba4a436a04caa47b589f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}

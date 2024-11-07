@@ -1,0 +1,16 @@
+x64-windows/
+x64-windows/include/
+x64-windows/include/vulkan-memory-allocator-hpp/
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc.hpp
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc_enums.hpp
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc_funcs.hpp
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc_handles.hpp
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc_raii.hpp
+x64-windows/include/vulkan-memory-allocator-hpp/vk_mem_alloc_structs.hpp
+x64-windows/share/
+x64-windows/share/unofficial-vulkan-memory-allocator-hpp/
+x64-windows/share/unofficial-vulkan-memory-allocator-hpp/unofficial-vulkan-memory-allocator-hpp-config.cmake
+x64-windows/share/vulkan-memory-allocator-hpp/
+x64-windows/share/vulkan-memory-allocator-hpp/copyright
+x64-windows/share/vulkan-memory-allocator-hpp/vcpkg.spdx.json
+x64-windows/share/vulkan-memory-allocator-hpp/vcpkg_abi_info.txt

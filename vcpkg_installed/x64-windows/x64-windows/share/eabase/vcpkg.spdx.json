@@ -1,0 +1,154 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/eabase-x64-windows-2.09.12#3-fb174b44-ea3b-4fb3-845e-c60e823c9339",
+  "name": "eabase:x64-windows@2.09.12#3 b33e633382196d70ead3f400eff7c6e56534de30df62811711dca6c18a03ea39",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-2024-10-18-e392d7347fe72dff56e7857f7571c22301237ae6"
+    ],
+    "created": "2024-11-07T12:27:25Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-2"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-3"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-2",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-3",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "eabase",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "2.09.12#3",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/eabase",
+      "homepage": "https://github.com/electronicarts/EABase",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "Electronic Arts Base. EABase is a small set of header files that define platform-independent data types and macros.",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "eabase:x64-windows",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "b33e633382196d70ead3f400eff7c6e56534de30df62811711dca6c18a03ea39",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-1",
+      "name": "electronicarts/EABase",
+      "downloadLocation": "git+https://github.com/electronicarts/EABase@d1be0a1d0fc01a9bf8f3f2cea75018df0d2410ee",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "84a11bea06aecbf9a659d92b1ac904b99b2b82023650f4f376b5e68a744f631c5dbdd53d25f746ffb01b428415ac86e4fb8ba758db844acf80560fabe4d77733"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/eabase/EABaseConfig.cmake.in",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ce5d94474fdc800cbbdc169580fb346ea962c1623c2195f4d3b1c07d2fbda6ff"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/eabase/fix_cmake_install.patch",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3156719e6a6c09df7a10d2c4aed31b28e7d387e8371ccc9362beb3daeda0aa6f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/eabase/portfile.cmake",
+      "SPDXID": "SPDXRef-file-2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "267f377eb2f70029e54f5b1db035fa833338bf8d74c1d239fe6cc37e487962df"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Programming/vcpkg/ports/eabase/vcpkg.json",
+      "SPDXID": "SPDXRef-file-3",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a549f27c9bfb38ac9a79bc8822b6720441f04f1ef1c5910e6b4e1fd84617c381"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}

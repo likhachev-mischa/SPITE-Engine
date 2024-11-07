@@ -1,20 +1,26 @@
 #include <chrono>
 #include <iostream>
+#include <EASTL/vector.h>
 
-#include "GraphicsEngine.h"
-#include "GraphicsUtility.h"
 #include "Model2D.h"
-#include "EventManager.h"
-#include "WindowManager.h"
-#include "AffineTransform.h"
+#include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
+#include "Application/EventManager.h"
+#include "Engine/GraphicsEngine.h"
+#include "Engine/GraphicsUtility.h"
+#include "Application/WindowManager.h"
 
 struct Transform
 {
-	glm::mat4 translation = affine::identity();
-	glm::mat4 rotation = affine::identity();
-	glm::mat4 scale = affine::identity();
-	glm::vec4 color = glm::vec4(1.f, 0.f, 0.f, 1.f);
+	glm::mat4 translation;
+	glm::mat4 rotation;
+	glm::mat4 scale;
+	glm::vec4 color;
+
+	Transform() : translation(1.0f), rotation(1.0f), scale(1.0f), color(1.0f)
+	{
+	}
 };
 
 glm::vec4 RED(1.f, 0.f, 0.f, 1.f);
@@ -43,10 +49,10 @@ void onTranslationButtonPressed(EventContext& context)
 	std::cout << "\n";
 	size_t currentModel = context.currentModel;
 	Transform* pCurrentTransform = &context.transforms[currentModel];
-	pCurrentTransform->translation *= affine::translation(x, y);
+	pCurrentTransform->translation = glm::translate(pCurrentTransform->translation, glm::vec3(x, y, 0.f));
 
 	context.engine->setUbo({
-		pCurrentTransform->translation * pCurrentTransform->scale * pCurrentTransform->rotation,
+		pCurrentTransform->translation * pCurrentTransform->rotation * pCurrentTransform->scale,
 		pCurrentTransform->color
 	});
 }
@@ -59,9 +65,9 @@ void onScaleButtonPressed(EventContext& context)
 	std::cout << "\n";
 	size_t currentModel = context.currentModel;
 	Transform* pCurrentTransform = &context.transforms[currentModel];
-	pCurrentTransform->scale *= affine::scale(s);
+	pCurrentTransform->scale = glm::scale(pCurrentTransform->scale, glm::vec3(s, s, 0.f));
 	context.engine->setUbo({
-		pCurrentTransform->translation * pCurrentTransform->scale * pCurrentTransform->rotation,
+		pCurrentTransform->translation * pCurrentTransform->rotation * pCurrentTransform->scale,
 		pCurrentTransform->color
 	});
 }
@@ -75,9 +81,10 @@ void onRotationButtonPressed(EventContext& context)
 	std::cout << "\n";
 	size_t currentModel = context.currentModel;
 	Transform* pCurrentTransform = &context.transforms[currentModel];
-	pCurrentTransform->rotation *= affine::rotationZ(glm::radians(angle));
+	pCurrentTransform->rotation =
+		glm::rotate(pCurrentTransform->rotation, glm::radians(angle), glm::vec3(0.f, 0.f, 1.f));
 	context.engine->setUbo({
-		pCurrentTransform->translation * pCurrentTransform->scale * pCurrentTransform->rotation,
+		pCurrentTransform->translation * pCurrentTransform->rotation * pCurrentTransform->scale,
 		pCurrentTransform->color
 	});
 }
@@ -89,7 +96,7 @@ void onNextFigureButtonPressed(EventContext& context)
 	size_t currentModel = context.currentModel;
 	Transform* pCurrentTransform = &context.transforms[currentModel];
 	context.engine->setUbo({
-		pCurrentTransform->translation * pCurrentTransform->scale * pCurrentTransform->rotation,
+		pCurrentTransform->translation * pCurrentTransform->rotation * pCurrentTransform->scale,
 		pCurrentTransform->color
 	});
 	context.engine->setSelectedModel(idx);
@@ -117,7 +124,7 @@ void updateColor(EventContext& context)
 
 	pCurrentTransform->color = lerp(pCurrentTransform->color, lerpColor, 0.0005f);
 	context.engine->setUbo({
-		pCurrentTransform->translation * pCurrentTransform->scale * pCurrentTransform->rotation,
+		pCurrentTransform->translation * pCurrentTransform->rotation * pCurrentTransform->scale,
 		pCurrentTransform->color
 	});
 }
@@ -134,7 +141,7 @@ void initUbo(const std::vector<Model2D>& models, graphics::GraphicsEngine* engin
 	}
 
 	engine->setModelData(vertices, indices);
-	engine->setUbo({affine::identity(), {1.0f, 0.0f, 0.0f, 1.0f}});
+	engine->setUbo({glm::mat4(1.f), {1.0f, 0.0f, 0.0f, 1.0f}});
 }
 
 int main()
@@ -147,7 +154,6 @@ int main()
 
 	readModelInfoFile("test2.txt", vertices, indices);
 	Model2D testModel2(vertices, indices);
-
 
 	readModelInfoFile("test3.txt", vertices, indices);
 	Model2D testModel3(vertices, indices);
@@ -162,7 +168,7 @@ int main()
 	eventManager.subscribeToEvent(application::Events::NEXT_FIGURE_BUTTON_PRESS, onNextFigureButtonPressed);
 
 	graphics::GraphicsEngine engine(&windowManager);
-	initUbo({ testModel1, testModel2,testModel3 }, &engine);
+	initUbo({testModel1, testModel2, testModel3}, &engine);
 
 	Transform transforms[modelCount];
 
@@ -170,7 +176,6 @@ int main()
 	auto startTime = std::chrono::high_resolution_clock::now();
 
 	engine.setSelectedModel(0);
-
 
 	while (!windowManager.shouldTerminate())
 	{
