@@ -1,15 +1,15 @@
 #include "EventManager.h"
 
-namespace application
+namespace spite
 {
-	void EventManager::triggerPollEvent(const Events& eventParam)
+	void EventManager::triggerPollEvent(const Events& eventId)
 	{
-		m_pollEventsMask |= eventParam;
+		m_pollEventsMask |= eventId;
 	}
 
-	bool EventManager::isPollEventTriggered(const Events& eventParam)
+	bool EventManager::isPollEventTriggered(const Events& eventId)
 	{
-		return (m_pollEventsMask & eventParam) == eventParam;
+		return (m_pollEventsMask & eventId) == eventId;
 	}
 
 	void EventManager::discardPollEvents()
@@ -17,28 +17,28 @@ namespace application
 		m_pollEventsMask = 0;
 	}
 
-	void EventManager::subscribeToEvent(const Events& eventParam, void(* func)(EventContext&))
+	void EventManager::subscribeToEvent(const Events& eventId, const std::function<void()>& callback)
 	{
-		std::tuple<Events, void(*)(EventContext&)> tuple(eventParam, func);
-		m_subscirbers.push_back(tuple);
+		std::tuple tuple(eventId, callback);
+		m_subscirbers.push_back(std::move(tuple));
 	}
 
-	void EventManager::triggerEvent(const Events& eventParam)
+	void EventManager::triggerEvent(const Events& eventId)
 	{
-		for (const std::tuple<Events, void(*)(EventContext&)>& eventTuple : m_subscirbers)
+		for (const std::tuple<Events, std::function<void()>> eventTuple : m_subscirbers)
 		{
-			if (std::get<0>(eventTuple) == eventParam)
+			if (std::get<0>(eventTuple) == eventId)
 			{
 				m_executionQueue.push(std::get<1>(eventTuple));
 			}
 		}
 	}
 
-	void EventManager::processEvents(EventContext& context)
+	void EventManager::processEvents()
 	{
 		while (!m_executionQueue.empty())
 		{
-			m_executionQueue.front()(context);
+			m_executionQueue.front()();
 			m_executionQueue.pop();
 		}
 	}

@@ -29,8 +29,8 @@ glm::vec4 GRN(0.f, 0.f, 1.f, 1.f);
 
 struct EventContext
 {
-	graphics::GraphicsEngine* engine;
-	application::WindowManager* windowManager;
+	spite::GraphicsEngine* engine;
+	spite::WindowManager* windowManager;
 	size_t modelCount;
 	size_t currentModel;
 	Transform* transforms;
@@ -129,7 +129,7 @@ void updateColor(EventContext& context)
 	});
 }
 
-void initUbo(const std::vector<Model2D>& models, graphics::GraphicsEngine* engine)
+void initUbo(const std::vector<Model2D>& models, spite::GraphicsEngine* engine)
 {
 	std::vector<const std::vector<glm::vec2>*> vertices(models.size());
 	std::vector<const std::vector<uint16_t>*> indices(models.size());
@@ -159,15 +159,11 @@ int main()
 	Model2D testModel3(vertices, indices);
 	const int modelCount = 3;
 
-	application::EventManager eventManager;
-	application::WindowManager windowManager(&eventManager);
+	spite::EventManager eventManager;
+	spite::WindowManager windowManager(&eventManager);
 
-	eventManager.subscribeToEvent(application::Events::ROTATION_BUTTON_PRESS, onRotationButtonPressed);
-	eventManager.subscribeToEvent(application::Events::SCALING_BUTTON_PRESS, onScaleButtonPressed);
-	eventManager.subscribeToEvent(application::Events::TRANSLATION_BUTTON_PRESS, onTranslationButtonPressed);
-	eventManager.subscribeToEvent(application::Events::NEXT_FIGURE_BUTTON_PRESS, onNextFigureButtonPressed);
 
-	graphics::GraphicsEngine engine(&windowManager);
+	spite::GraphicsEngine engine(&windowManager);
 	initUbo({testModel1, testModel2, testModel3}, &engine);
 
 	Transform transforms[modelCount];
@@ -176,13 +172,20 @@ int main()
 	auto startTime = std::chrono::high_resolution_clock::now();
 
 	engine.setSelectedModel(0);
+	eventManager.subscribeToEvent(spite::Events::ROTATION_BUTTON_PRESS,
+	                              std::bind(onRotationButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::SCALING_BUTTON_PRESS, std::bind(onScaleButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::TRANSLATION_BUTTON_PRESS,
+	                              std::bind(onTranslationButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::NEXT_FIGURE_BUTTON_PRESS,
+	                              std::bind(onNextFigureButtonPressed, context));
 
 	while (!windowManager.shouldTerminate())
 	{
 		updateColor(context);
 		engine.drawFrame();
 		windowManager.pollEvents();
-		eventManager.processEvents(context);
+		eventManager.processEvents();
 		eventManager.discardPollEvents();
 	}
 }

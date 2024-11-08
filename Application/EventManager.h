@@ -3,10 +3,11 @@
 #include <vector>
 #include <tuple>
 #include <queue>
+#include <functional>
+#include "Platform.hpp"
 
-struct EventContext;
 
-namespace application
+namespace spite
 {
 	enum Events
 	{
@@ -20,23 +21,23 @@ namespace application
 	class EventManager
 	{
 	public:
-		void triggerPollEvent(const Events& eventParam);
+		void triggerPollEvent(const Events& eventId);
 
-		bool isPollEventTriggered(const Events& eventParam);
+		bool isPollEventTriggered(const Events& eventId);
 
 		void discardPollEvents();
 
-		void subscribeToEvent(const Events& eventParam, void (*func)(EventContext&));
+		void subscribeToEvent(const Events& eventId, const std::function<void()>& callback);
 
-		void triggerEvent(const Events& eventParam);
+		void triggerEvent(const Events& eventId);
 
-		void processEvents(EventContext& context);
+		void processEvents();
 
 		~EventManager();
 
 	private:
-		uint64_t m_pollEventsMask = 0;
-		std::vector<std::tuple<Events, void(*)(EventContext&)>> m_subscirbers;
-		std::queue<void(*)(EventContext&)> m_executionQueue;
+		u64 m_pollEventsMask = 0;
+		std::vector<std::tuple<Events, std::function<void()>>> m_subscirbers;
+		std::queue<std::function<void()>> m_executionQueue;
 	};
 }

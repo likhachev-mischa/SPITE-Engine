@@ -8,9 +8,10 @@
 #include <chrono>
 #include <set>
 
-namespace graphics
+
+namespace spite
 {
-	GraphicsEngine::GraphicsEngine(application::WindowManager* windowManager): m_windowManager(windowManager)
+	GraphicsEngine::GraphicsEngine(spite::WindowManager* windowManager): m_windowManager(windowManager)
 	{
 		initVulkan();
 	}
@@ -785,6 +786,7 @@ namespace graphics
 			&m_descriptorSetLayout);
 
 		vk::Result result;
+		struct GLFWwindow;
 		std::tie(result, m_pipelineLayout) = m_device.createPipelineLayout(pipelineLayoutInfo);
 		if (result != vk::Result::eSuccess)
 		{

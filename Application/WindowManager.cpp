@@ -6,7 +6,7 @@
 #include <GLFW/glfw3.h>
 
 
-namespace application
+namespace spite
 {
 	WindowManager::WindowManager(EventManager* eventManager) : m_eventManager(eventManager)
 	{

@@ -1,9 +1,10 @@
 #pragma once
 #include "Platform.hpp"
 
+//forward declaration
 struct GLFWwindow;
 
-namespace application
+namespace spite
 {
 	class EventManager;
 

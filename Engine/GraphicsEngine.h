@@ -3,13 +3,10 @@
 #include <glm/glm.hpp>
 #include <optional>
 
-namespace application
+namespace spite
 {
 	class WindowManager;
-}
 
-namespace graphics
-{
 	const std::array<const char*, 1> DEVICE_EXTENSIONS = {
 		vk::KHRSwapchainExtensionName
 	};
@@ -35,7 +32,7 @@ namespace graphics
 	public:
 		bool framebufferResized = false;
 
-		GraphicsEngine(application::WindowManager* windowManager);
+		GraphicsEngine(spite::WindowManager* windowManager);
 
 		size_t selectedModelIdx();
 
@@ -59,7 +56,7 @@ namespace graphics
 		vk::Buffer* m_modelBuffers;
 		vma::Allocation* m_modelBufferMemories;
 
-		application::WindowManager* m_windowManager;
+		spite::WindowManager* m_windowManager;
 
 		vk::Instance m_instance;
 
