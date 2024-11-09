@@ -1,3 +1,3 @@
 {
-  "dependencies": [ "eastl", "glm", "glfw3","vulkan","vulkan-memory-allocator","vulkan-memory-allocator-hpp" ]
+  "dependencies": [ "eastl", "glm", "glfw3","vulkan","vulkan-memory-allocator","vulkan-memory-allocator-hpp"]
 }

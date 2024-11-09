@@ -25,6 +25,9 @@
     <Filter Include="Base">
       <UniqueIdentifier>{094d3e1e-06e1-4c34-a9a4-ab1c7a600118}</UniqueIdentifier>
     </Filter>
+    <Filter Include="External">
+      <UniqueIdentifier>{1ac1a7dc-747a-43ca-b02d-9e374d208e08}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.frag">
@@ -38,9 +41,6 @@
   <ItemGroup>
     <ClInclude Include="Model2D.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Foundation\Platform.hpp">
-      <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="Engine\GraphicsDebug.h">
       <Filter>Engine</Filter>
@@ -62,6 +62,27 @@
     </ClInclude>
     <ClInclude Include="Application\WindowManager.h">
       <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Memory.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Logging.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Platform.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Assert.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="External\StackWalker.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="External\tlsf.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Service.hpp">
+      <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -88,6 +109,15 @@
     </ClCompile>
     <ClCompile Include="Application\WindowManager.cpp">
       <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\Memory.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="External\tlsf.c">
+      <Filter>External</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\Logging.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

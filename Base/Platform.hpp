@@ -1,6 +1,32 @@
 #pragma once
 #include <cstdint>
 
+//stolen from Mastering Vulkan
+
+//macros
+
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof(array)[0])
+
+#if defined (_MSC_VER)
+#define SPITE_INLINE                               inline
+#define SPITE_FINLINE                              __forceinline
+#define SPITE_DEBUG_BREAK                          __debugbreak();
+#define SPITE_DISABLE_WARNING(warning_number)      __pragma( warning( disable : (warning_number) ) )
+#define SPITE_CONCAT_OPERATOR(x, y)                x##y
+#else
+#define SPITE_INLINE                               inline
+#define SPITE_FINLINE                              always_inline
+#define SPITE_DEBUG_BREAK                          raise(SIGTRAP);
+#define SPITE_CONCAT_OPERATOR(x, y)                x y
+#endif // MSVC
+
+#define SPITE_STRINGIZE( L )                       #L 
+#define SPITE_MAKESTRING( L )                      SPITE_STRINGIZE( L )
+#define SPITE_CONCAT(x, y)                         SPITE_CONCAT_OPERATOR(x, y)
+#define SPITE_LINE_STRING                          SPITE_MAKESTRING( __LINE__ ) 
+#define SPITE_FILELINE(MESSAGE)                    __FILE__ "(" SPITE_LINE_STRING ") : " MESSAGE
+
+//native types
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

@@ -97,3 +97,12 @@ Abi: 4533cc43901886d02ef0fdcdc617bbf3b274d96127662634b1f56a2e9cb2c5df
 Description: C++ bindings for VulkanMemoryAllocator (Development branch)
 Status: install ok installed
 
+Package: stackwalker
+Version: 2023-06-24
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 3b6aa0c09142eec344b50892c5c297370267112429cf9536cf57a362745ab642
+Description: StackWalker - Walking the callstack.
+Status: install ok installed
+

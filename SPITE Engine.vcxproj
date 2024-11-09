@@ -96,7 +96,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;./External;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -111,7 +111,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;./External;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;./External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,7 +145,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./Application;./Engine/;./Base/;./External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -167,21 +167,30 @@
     <ClInclude Include="Application\AppConifg.h" />
     <ClInclude Include="Application\EventManager.h" />
     <ClInclude Include="Application\WindowManager.h" />
+    <ClInclude Include="Base\Assert.hpp" />
+    <ClInclude Include="Base\Logging.hpp" />
+    <ClInclude Include="Base\Memory.hpp" />
+    <ClInclude Include="Base\Platform.hpp" />
+    <ClInclude Include="Base\Service.hpp" />
     <ClInclude Include="Engine\GraphicsDebug.h" />
     <ClInclude Include="Engine\GraphicsEngine.h" />
     <ClInclude Include="Engine\GraphicsUtility.h" />
     <ClInclude Include="Engine\VulkanUsage.h" />
-    <ClInclude Include="Foundation\Platform.hpp" />
+    <ClInclude Include="External\StackWalker.h" />
+    <ClInclude Include="External\tlsf.h" />
     <ClInclude Include="Model2D.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application\EventManager.cpp" />
     <ClCompile Include="Application\WindowManager.cpp" />
     <ClCompile Include="Base\GlfwUsage.cpp" />
+    <ClCompile Include="Base\Logging.cpp" />
+    <ClCompile Include="Base\Memory.cpp" />
     <ClCompile Include="Base\VmaUsage.cpp" />
     <ClCompile Include="Engine\GraphicsDebug.cpp" />
     <ClCompile Include="Engine\GraphicsEngine.cpp" />
     <ClCompile Include="Engine\GraphicsUtility.cpp" />
+    <ClCompile Include="External\tlsf.c" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>

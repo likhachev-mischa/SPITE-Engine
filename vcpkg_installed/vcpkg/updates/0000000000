@@ -1,0 +1,8 @@
+Package: stackwalker
+Version: 2023-06-24
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 3b6aa0c09142eec344b50892c5c297370267112429cf9536cf57a362745ab642
+Description: StackWalker - Walking the callstack.
+Status: install ok half-installed

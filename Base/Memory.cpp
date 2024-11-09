@@ -1,0 +1,206 @@
+#include "Memory.hpp"
+#include "Assert.hpp"
+#include "Logging.hpp"
+#include "tlsf.h"
+
+#if defined(SPITE_MEMORY_STACK)
+#include"StackWalker.h"
+#endif
+
+
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+	return operator new[](size);
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags,
+                     unsigned debugFlags, const char* file, int line)
+{
+	return operator new[](size, static_cast<std::align_val_t>(alignment));
+}
+
+namespace spite
+{
+	//void exitWalker(void* ptr, sizet size, int used, void* user)
+	//{
+	//	MemoryStatistics* stats = static_cast<MemoryStatistics*>(user);
+	//	stats->add(used ? size : 0);
+
+	//	if (used)
+	//	{
+	//		SDEBUG_LOG("Found active allocation %p, %llu\n", ptr, size)
+	//	}
+	//}
+
+	void MemoryStatistics::add(sizet value)
+	{
+		if (value)
+		{
+			allocatedBytes += value;
+			++allocationCount;
+		}
+	}
+
+	HeapAllocator& HeapAllocator::operator=(const HeapAllocator& x)
+	{
+		return *this;
+	}
+
+	HeapAllocator::HeapAllocator(const char* pName, sizet size) : m_name(pName),
+	                                                              m_stats(new MemoryStatistics{0, 0, 0})
+	{
+		init(size);
+	}
+
+	HeapAllocator::HeapAllocator(const HeapAllocator& x) : m_name(x.m_name), m_tlsfHandle(x.m_tlsfHandle),
+	                                                       m_memory(x.m_memory), m_stats(x.m_stats)
+	{
+	}
+
+	HeapAllocator::HeapAllocator(const HeapAllocator& x, const char* pName) : m_name(pName),
+	                                                                          m_tlsfHandle(x.m_tlsfHandle),
+	                                                                          m_memory(x.m_memory), m_stats(x.m_stats)
+
+	{
+	}
+
+#if defined(SPITE_MEMORY_STACK)
+	class SpiteStackWalker : public StackWalker
+	{
+	public:
+		SpiteStackWalker() : StackWalker()
+		{
+		}
+
+	protected:
+		void OnOutput(LPCSTR szText) override
+		{
+			SDEBUG_LOG("\nStack: \n%s\n", szText)
+			StackWalker::OnOutput(szText);
+		}
+	};
+#endif
+
+	void* HeapAllocator::allocate(sizet size, int flags)
+	{
+		void* mem = tlsf_malloc(m_tlsfHandle, size);
+		m_stats->add(size);
+		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		return mem;
+	}
+
+	void* HeapAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
+	{
+		return allocate(size, flags);
+	}
+
+	void HeapAllocator::deallocate(void* p, size_t n)
+	{
+		tlsf_free(m_tlsfHandle, p);
+		m_stats->allocatedBytes -= n;
+	}
+
+	const char* HeapAllocator::get_name() const
+	{
+		return m_name;
+	}
+
+	void HeapAllocator::set_name(const char* pName)
+	{
+		m_name = pName;
+	}
+
+	void HeapAllocator::init(sizet size)
+	{
+		m_memory = malloc(size);
+		m_tlsfHandle = tlsf_create_with_pool(m_memory, size);
+
+		m_stats->totalBytes = size;
+		SDEBUG_LOG("HeapAllocator %s of size %llu created\n", m_name, size)
+	}
+
+	void HeapAllocator::shutdown()
+	{
+		//MemoryStatistics stats{0, *m_pMaxSize};
+		//	pool_t pool = tlsf_get_pool(m_tlsfHandle);
+		//	tlsf_walk_pool(pool, exitWalker, &stats);
+
+		if (m_stats->allocatedBytes)
+		{
+			SDEBUG_LOG(
+				"HeapAllocator %s Shutdown.\n===============\nFAILURE! Allocated memory detected. allocated %llu, total %llu\n===============\n\n",
+				m_name, m_stats->allocatedBytes, m_stats->totalBytes)
+		}
+		else
+		{
+			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_name)
+		}
+
+		SASSERTM(m_stats->allocatedBytes == 0, "Allocations still present. Check your code!\n")
+
+		tlsf_destroy(m_tlsfHandle);
+		free(m_memory);
+	}
+
+	bool HeapAllocator::operator==(const HeapAllocator& b)
+	{
+		return (m_memory == b.m_memory);
+	}
+
+	bool HeapAllocator::operator!=(const HeapAllocator& b)
+	{
+		return (m_memory != b.m_memory);
+	}
+
+	BlockAllocator::BlockAllocator(const char* pName) : m_allocator(pName)
+	{
+	}
+
+	BlockAllocator::BlockAllocator(const BlockAllocator& other): m_allocator(other.m_allocator)
+	{
+	}
+
+	void* BlockAllocator::allocate(size_t size, int flags)
+	{
+		void* mem = m_allocator.allocate(size, flags);
+		SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+		return mem;
+	}
+
+	void* BlockAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
+	{
+		void* mem = m_allocator.allocate(size, alignment, offset, flags);
+		SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+		return mem;
+	}
+
+	void BlockAllocator::deallocate(void* p, size_t n)
+	{
+		m_allocator.deallocate(p, n);
+	}
+
+	void BlockAllocator::init(void* pMemory, sizet memorySize, sizet nodeSize, sizet alignment,
+	                          sizet alignmentOffset)
+	{
+		m_totalBytes = memorySize;
+		m_allocator.init(pMemory, memorySize, nodeSize, alignment, alignmentOffset);
+		SDEBUG_LOG("BlockAllocator %s created of size %llu, nodeSize %llu created\n", m_allocator.get_name(),
+		           m_totalBytes, m_allocator.mnNodeSize)
+	}
+
+	void BlockAllocator::shutdown()
+	{
+		if (m_allocator.mnCurrentSize != 0)
+		{
+			SDEBUG_LOG(
+				"BlockAllocator %s Shutdown.\n===============\nFAILURE! Allocated memory detected. allocated %llu, total %llu\n===============\n\n",
+				m_allocator.get_name(), m_allocator.mnCurrentSize * m_allocator.mnNodeSize, m_totalBytes)
+		}
+		else
+		{
+			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_allocator.get_name())
+		}
+
+		SASSERT(m_allocator.mnCurrentSize == 0, "Allocations still present. Check your code!\n")
+	}
+}
