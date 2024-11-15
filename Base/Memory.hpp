@@ -59,14 +59,14 @@ namespace spite
 	{
 	public :
 		BlockAllocator(BlockAllocator&& other) = delete;
-		BlockAllocator& operator=(const BlockAllocator& other) = delete;
 		BlockAllocator& operator=(BlockAllocator&& other) = delete;
-		BlockAllocator& operator=(const HeapAllocator& x) = delete;
 
 		~BlockAllocator() = default;
 
 		BlockAllocator(const char* pName = EASTL_FIXED_POOL_DEFAULT_NAME);
 		BlockAllocator(const BlockAllocator& other);
+
+		BlockAllocator& operator=(const BlockAllocator& other);
 
 		void* allocate(size_t size, int flags = 0);
 		void* allocate(size_t size, size_t alignment, size_t offset, int flags = 0);
@@ -80,4 +80,5 @@ namespace spite
 		eastl::fixed_allocator m_allocator;
 		sizet m_totalBytes = 0;
 	};
+
 }

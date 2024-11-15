@@ -21,6 +21,7 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 namespace spite
 {
+	//TODO: consider stack walker
 	//void exitWalker(void* ptr, sizet size, int used, void* user)
 	//{
 	//	MemoryStatistics* stats = static_cast<MemoryStatistics*>(user);
@@ -121,10 +122,6 @@ namespace spite
 
 	void HeapAllocator::shutdown()
 	{
-		//MemoryStatistics stats{0, *m_pMaxSize};
-		//	pool_t pool = tlsf_get_pool(m_tlsfHandle);
-		//	tlsf_walk_pool(pool, exitWalker, &stats);
-
 		if (m_stats->allocatedBytes)
 		{
 			SDEBUG_LOG(
@@ -158,6 +155,13 @@ namespace spite
 
 	BlockAllocator::BlockAllocator(const BlockAllocator& other): m_allocator(other.m_allocator)
 	{
+	}
+
+	BlockAllocator& BlockAllocator::operator=(const BlockAllocator& other)
+	{
+		shutdown();
+		m_allocator = other.m_allocator;
+		return *this;
 	}
 
 	void* BlockAllocator::allocate(size_t size, int flags)
@@ -200,7 +204,6 @@ namespace spite
 		{
 			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_allocator.get_name())
 		}
-
 		SASSERT(m_allocator.mnCurrentSize == 0, "Allocations still present. Check your code!\n")
 	}
 }

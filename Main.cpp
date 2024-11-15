@@ -11,8 +11,6 @@
 #include "Engine/GraphicsUtility.h"
 #include "Application/WindowManager.h"
 
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
 
 struct Transform
 {
@@ -132,15 +130,15 @@ void updateColor(EventContext& context)
 	});
 }
 
-void initUbo(const eastl::vector<Model2D,spite::HeapAllocator>& models, spite::GraphicsEngine* engine)
+void initUbo(const std::vector<Model2D>& models, spite::GraphicsEngine* engine)
 {
 	std::vector<const std::vector<glm::vec2>*> vertices(models.size());
 	std::vector<const std::vector<uint16_t>*> indices(models.size());
 
 	for (size_t i = 0; i < models.size(); ++i)
 	{
-		//vertices[i] = &models[i].vertices;
-		//indices[i] = &models[i].indices;
+		vertices[i] = &models[i].vertices;
+		indices[i] = &models[i].indices;
 	}
 
 	engine->setModelData(vertices, indices);
@@ -149,62 +147,46 @@ void initUbo(const eastl::vector<Model2D,spite::HeapAllocator>& models, spite::G
 
 int main()
 {
-	/*spite::HeapAllocator testAllocator("my allocator");
+	std::vector<glm::vec2> vertices;
+	std::vector<u16> indices;
+
+	readModelInfoFile("test.txt", vertices, indices);
+	Model2D testModel1(vertices, indices);
+
+	readModelInfoFile("test2.txt", vertices, indices);
+	Model2D testModel2(vertices, indices);
+
+	readModelInfoFile("test3.txt", vertices, indices);
+	Model2D testModel3(vertices, indices);
+	const int modelCount = 3;
+
+	spite::EventManager eventManager;
+	spite::WindowManager windowManager(&eventManager);
+
+
+	spite::GraphicsEngine engine(&windowManager);
+	initUbo({testModel1, testModel2, testModel3}, &engine);
+
+	Transform transforms[modelCount];
+
+	EventContext context{&engine, &windowManager, modelCount, 0, transforms};
+	auto startTime = std::chrono::high_resolution_clock::now();
+
+	engine.setSelectedModel(0);
+	eventManager.subscribeToEvent(spite::Events::ROTATION_BUTTON_PRESS,
+	                              std::bind(onRotationButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::SCALING_BUTTON_PRESS, std::bind(onScaleButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::TRANSLATION_BUTTON_PRESS,
+	                              std::bind(onTranslationButtonPressed, context));
+	eventManager.subscribeToEvent(spite::Events::NEXT_FIGURE_BUTTON_PRESS,
+	                              std::bind(onNextFigureButtonPressed, context));
+
+	while (!windowManager.shouldTerminate())
 	{
-		eastl::vector<glm::vec2, spite::HeapAllocator> vertices(testAllocator);
-		eastl::vector<u16, spite::HeapAllocator> indices(testAllocator);
-		vertices.set_capacity(15);
-		vertices.clear();
+		updateColor(context);
+		engine.drawFrame();
+		windowManager.pollEvents();
+		eventManager.processEvents();
+		eventManager.discardPollEvents();
 	}
-	testAllocator.shutdown();*/
-
-	//spite::BlockAllocator blockAllocator("My block allocator");
-	//int* testArray = new int;
-	//blockAllocator.init(testArray, sizeof(int) * 20, sizeof(int), alignof(int));
-
-	//for (int i = 0;i < 20; ++i)
-	//{
-	//	testArray[i] = i;
-	//	std::cout << testArray[i];
-	//}
-
-	//readModelInfoFile("test.txt", vertices, indices);
-	//Model2D testModel1(vertices, indices);
-
-	//readModelInfoFile("test2.txt", vertices, indices);
-	//Model2D testModel2(vertices, indices);
-
-	//readModelInfoFile("test3.txt", vertices, indices);
-	//Model2D testModel3(vertices, indices);
-	//const int modelCount = 3;
-
-	//spite::EventManager eventManager;
-	//spite::WindowManager windowManager(&eventManager);
-
-
-	//spite::GraphicsEngine engine(&windowManager);
-	//initUbo({testModel1, testModel2, testModel3}, &engine);
-
-	//Transform transforms[modelCount];
-
-	//EventContext context{&engine, &windowManager, modelCount, 0, transforms};
-	//auto startTime = std::chrono::high_resolution_clock::now();
-
-	//engine.setSelectedModel(0);
-	//eventManager.subscribeToEvent(spite::Events::ROTATION_BUTTON_PRESS,
-	//                              std::bind(onRotationButtonPressed, context));
-	//eventManager.subscribeToEvent(spite::Events::SCALING_BUTTON_PRESS, std::bind(onScaleButtonPressed, context));
-	//eventManager.subscribeToEvent(spite::Events::TRANSLATION_BUTTON_PRESS,
-	//                              std::bind(onTranslationButtonPressed, context));
-	//eventManager.subscribeToEvent(spite::Events::NEXT_FIGURE_BUTTON_PRESS,
-	//                              std::bind(onNextFigureButtonPressed, context));
-
-	//while (!windowManager.shouldTerminate())
-	//{
-	//	updateColor(context);
-	//	engine.drawFrame();
-	//	windowManager.pollEvents();
-	//	eventManager.processEvents();
-	//	eventManager.discardPollEvents();
-	//}
 }

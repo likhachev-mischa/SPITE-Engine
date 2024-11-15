@@ -10,11 +10,11 @@ struct Model2D
 {
 	Model2D() = default;
 
-	Model2D(eastl::vector<glm::vec2,spite::HeapAllocator> vertices, eastl::vector<u16,spite::HeapAllocator> indices): vertices(std::move(vertices)),
+	Model2D(std::vector<glm::vec2> vertices, std::vector<u16> indices): vertices(std::move(vertices)),
 	                                                                         indices(std::move(indices))
 	{
 	}
 
-	const eastl::vector<glm::vec2,spite::HeapAllocator> vertices;
-	const eastl::vector<u16,spite::HeapAllocator> indices;
+	const std::vector<glm::vec2> vertices;
+	const std::vector<u16> indices;
 };

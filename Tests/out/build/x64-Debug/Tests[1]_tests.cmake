@@ -1,0 +1,5 @@
+add_test([=[BlockAllocatorTest.AllocateDataAndCleanup]=]  [==[C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug/Tests.exe]==] [==[--gtest_filter=BlockAllocatorTest.AllocateDataAndCleanup]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[BlockAllocatorTest.AllocateDataAndCleanup]=]  PROPERTIES WORKING_DIRECTORY [==[C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug]==] SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[BlockAllocatorTest.ErorrOnUnclean]=]  [==[C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug/Tests.exe]==] [==[--gtest_filter=BlockAllocatorTest.ErorrOnUnclean]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[BlockAllocatorTest.ErorrOnUnclean]=]  PROPERTIES WORKING_DIRECTORY [==[C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug]==] SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+set(  Tests_TESTS BlockAllocatorTest.AllocateDataAndCleanup BlockAllocatorTest.ErorrOnUnclean)
