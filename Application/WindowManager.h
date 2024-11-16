@@ -1,5 +1,6 @@
 #pragma once
-#include "Platform.hpp"
+#include "Engine/VulkanUsage.h"
+#include "Base/Platform.hpp"
 
 //forward declaration
 struct GLFWwindow;

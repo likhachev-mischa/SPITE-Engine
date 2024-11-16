@@ -1,9 +1,9 @@
 #include "VulkanUsage.h"
 #include "GraphicsEngine.h"
-#include "AppConifg.h"
+#include "Application/AppConifg.h"
 #include "GraphicsDebug.h"
 #include "GraphicsUtility.h"
-#include "WindowManager.h"
+#include "Application/WindowManager.h"
 
 #include <chrono>
 #include <set>

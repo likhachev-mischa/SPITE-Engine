@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="shaders">
-      <UniqueIdentifier>{83c832cd-9b63-4419-80eb-a2b4b12c4fcc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Application">
       <UniqueIdentifier>{a8b697f7-57b7-41df-a143-452fa2a5a83e}</UniqueIdentifier>
     </Filter>
@@ -28,15 +25,18 @@
     <Filter Include="External">
       <UniqueIdentifier>{1ac1a7dc-747a-43ca-b02d-9e374d208e08}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{83c832cd-9b63-4419-80eb-a2b4b12c4fcc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\shader.vert">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="vcpkg.json" />
+    <None Include="Shaders\shader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shader.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Model2D.h">
