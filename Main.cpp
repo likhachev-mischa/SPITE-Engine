@@ -6,10 +6,10 @@
 #include <glm/ext/matrix_transform.hpp>
 
 #include "Base/Memory.hpp"
-#include "Application/EventManager.h"
-#include "Engine/GraphicsEngine.h"
-#include "Engine/GraphicsUtility.h"
-#include "Application/WindowManager.h"
+#include "Application/EventManager.hpp"
+#include "Engine/GraphicsEngine.hpp"
+#include "Engine/GraphicsUtility.hpp"
+#include "Application/WindowManager.hpp"
 
 
 struct Transform

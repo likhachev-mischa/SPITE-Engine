@@ -1,4 +1,4 @@
-#include "GraphicsDebug.h"
+#include "GraphicsDebug.hpp"
 
 VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
 	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)

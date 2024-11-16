@@ -1,4 +1,4 @@
-#include "GraphicsUtility.h"
+#include "GraphicsUtility.hpp"
 #include <fstream>
 #include <EASTL/vector.h>
 

@@ -42,25 +42,25 @@
     <ClInclude Include="Model2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\GraphicsDebug.h">
+    <ClInclude Include="Engine\GraphicsDebug.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\GraphicsEngine.h">
+    <ClInclude Include="Engine\GraphicsEngine.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\GraphicsUtility.h">
+    <ClInclude Include="Engine\GraphicsUtility.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\VulkanUsage.h">
+    <ClInclude Include="Engine\VulkanUsage.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Application\AppConifg.h">
+    <ClInclude Include="Application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Application\EventManager.h">
+    <ClInclude Include="Application\EventManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Application\WindowManager.h">
+    <ClInclude Include="Application\WindowManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="Base\Memory.hpp">

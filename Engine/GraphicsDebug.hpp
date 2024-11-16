@@ -1,7 +1,7 @@
 #pragma once
 #include <array>
 #include <iostream>
-#include "VulkanUsage.h"
+#include "VulkanUsage.hpp"
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;

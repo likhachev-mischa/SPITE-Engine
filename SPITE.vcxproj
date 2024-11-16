@@ -166,18 +166,18 @@
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\AppConifg.h" />
-    <ClInclude Include="Application\EventManager.h" />
-    <ClInclude Include="Application\WindowManager.h" />
+    <ClInclude Include="Application\AppConifg.hpp" />
+    <ClInclude Include="Application\EventManager.hpp" />
+    <ClInclude Include="Application\WindowManager.hpp" />
     <ClInclude Include="Base\Assert.hpp" />
     <ClInclude Include="Base\Logging.hpp" />
     <ClInclude Include="Base\Memory.hpp" />
     <ClInclude Include="Base\Platform.hpp" />
     <ClInclude Include="Base\Service.hpp" />
-    <ClInclude Include="Engine\GraphicsDebug.h" />
-    <ClInclude Include="Engine\GraphicsEngine.h" />
-    <ClInclude Include="Engine\GraphicsUtility.h" />
-    <ClInclude Include="Engine\VulkanUsage.h" />
+    <ClInclude Include="Engine\GraphicsDebug.hpp" />
+    <ClInclude Include="Engine\GraphicsEngine.hpp" />
+    <ClInclude Include="Engine\GraphicsUtility.hpp" />
+    <ClInclude Include="Engine\VulkanUsage.hpp" />
     <ClInclude Include="External\StackWalker.h" />
     <ClInclude Include="External\tlsf.h" />
     <ClInclude Include="Model2D.h" />
