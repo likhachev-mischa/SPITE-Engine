@@ -25,7 +25,7 @@ namespace spite
 
 	void EventManager::triggerEvent(const Events& eventId)
 	{
-		for (const std::tuple<Events, std::function<void()>> eventTuple : m_subscirbers)
+		for (const std::tuple<Events, std::function<void()>>& eventTuple : m_subscirbers)
 		{
 			if (std::get<0>(eventTuple) == eventId)
 			{

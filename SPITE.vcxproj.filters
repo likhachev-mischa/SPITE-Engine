@@ -84,13 +84,16 @@
     <ClInclude Include="Base\Service.hpp">
       <Filter>Base</Filter>
     </ClInclude>
+    <ClInclude Include="Application\InputManager.hpp">
+      <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Events.hpp">
+      <Filter>Application</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Base\GlfwUsage.cpp">
-      <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="Base\VmaUsage.cpp">
       <Filter>Base</Filter>
@@ -118,6 +121,9 @@
     </ClCompile>
     <ClCompile Include="Base\Logging.cpp">
       <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\InputManager.cpp">
+      <Filter>Application</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

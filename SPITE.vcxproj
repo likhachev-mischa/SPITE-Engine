@@ -136,7 +136,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -157,7 +157,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -168,6 +168,8 @@
   <ItemGroup>
     <ClInclude Include="Application\AppConifg.hpp" />
     <ClInclude Include="Application\EventManager.hpp" />
+    <ClInclude Include="Application\Events.hpp" />
+    <ClInclude Include="Application\InputManager.hpp" />
     <ClInclude Include="Application\WindowManager.hpp" />
     <ClInclude Include="Base\Assert.hpp" />
     <ClInclude Include="Base\Logging.hpp" />
@@ -184,8 +186,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application\EventManager.cpp" />
+    <ClCompile Include="Application\InputManager.cpp" />
     <ClCompile Include="Application\WindowManager.cpp" />
-    <ClCompile Include="Base\GlfwUsage.cpp" />
     <ClCompile Include="Base\Logging.cpp" />
     <ClCompile Include="Base\Memory.cpp" />
     <ClCompile Include="Base\VmaUsage.cpp" />
@@ -206,6 +208,22 @@
   <PropertyGroup Condition="'$(SPITE_TEST)'=='true'">
     <IncludePath>
     </IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(SPITE_TEST)'=='true'">
     <ClCompile>

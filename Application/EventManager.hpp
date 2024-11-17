@@ -1,26 +1,25 @@
 #pragma once
 #include <cstdint>
-#include <vector>
-#include <tuple>
-#include <queue>
 #include <functional>
-#include "Base/Platform.hpp"
+#include <queue>
+#include <tuple>
+#include <vector>
 
+#include "Events.hpp"
+#include "Base/Platform.hpp"
 
 namespace spite
 {
-	enum Events
-	{
-		FRAMEBUFFER_RESIZE = (1u << 0),
-		ROTATION_BUTTON_PRESS = (1u << 1),
-		SCALING_BUTTON_PRESS = (1u << 2),
-		TRANSLATION_BUTTON_PRESS = (1u << 3),
-		NEXT_FIGURE_BUTTON_PRESS = (1u << 4)
-	};
-
 	class EventManager
 	{
 	public:
+		EventManager(const EventManager& other) = delete;
+		EventManager(EventManager&& other) = delete;
+		EventManager& operator=(const EventManager& other) = delete;
+		EventManager& operator=(EventManager&& other) = delete;
+
+		EventManager() = default;
+
 		void triggerPollEvent(const Events& eventId);
 
 		bool isPollEventTriggered(const Events& eventId);

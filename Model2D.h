@@ -3,7 +3,6 @@
 #include <vector>
 #include <EASTL/vector.h>
 
-#include "Base/Memory.hpp"
 #include "Base/Platform.hpp"
 
 struct Model2D

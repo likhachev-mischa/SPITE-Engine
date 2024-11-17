@@ -8,6 +8,8 @@
 #include <chrono>
 #include <set>
 
+#include "Base/Logging.hpp"
+
 
 namespace spite
 {
@@ -380,10 +382,11 @@ namespace spite
 	{
 		int width = 0, height = 0;
 		m_windowManager->getFramebufferSize(width, height);
-		while (width == 0 || height == 0)
+		while (m_windowManager->isMinimized())
 		{
+			SDEBUG_LOG("Window is minimized, rendering halts!\n")
 			m_windowManager->getFramebufferSize(width, height);
-			m_windowManager->waitEvents();
+			m_windowManager->waitWindowExpand();
 		}
 
 		m_device.waitIdle();
@@ -1227,7 +1230,7 @@ namespace spite
 	std::vector<const char*> GraphicsEngine::getRequiredExtensions()
 	{
 		uint32_t extensionCount = 0;
-		const char** extensionNames;
+		char const* const* extensionNames;
 		extensionNames = m_windowManager->getExtensions(extensionCount);
 
 		std::vector<const char*> extensions(extensionNames,

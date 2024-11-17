@@ -1,15 +1,16 @@
 #include <chrono>
 #include <iostream>
 
-#include "Model2D.h"
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include "Model2D.h"
 
-#include "Base/Memory.hpp"
 #include "Application/EventManager.hpp"
+#include "Application/InputManager.hpp"
+#include "Application/WindowManager.hpp"
+#include "Base/Memory.hpp"
 #include "Engine/GraphicsEngine.hpp"
 #include "Engine/GraphicsUtility.hpp"
-#include "Application/WindowManager.hpp"
 
 
 struct Transform
@@ -145,7 +146,7 @@ void initUbo(const std::vector<Model2D>& models, spite::GraphicsEngine* engine)
 	engine->setUbo({glm::mat4(1.f), {1.0f, 0.0f, 0.0f, 1.0f}});
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 	std::vector<glm::vec2> vertices;
 	std::vector<u16> indices;
@@ -160,8 +161,9 @@ int main()
 	Model2D testModel3(vertices, indices);
 	const int modelCount = 3;
 
+	spite::InputManager inputManager;
 	spite::EventManager eventManager;
-	spite::WindowManager windowManager(&eventManager);
+	spite::WindowManager windowManager(&eventManager, &inputManager);
 
 
 	spite::GraphicsEngine engine(&windowManager);
@@ -183,10 +185,15 @@ int main()
 
 	while (!windowManager.shouldTerminate())
 	{
-		updateColor(context);
-		engine.drawFrame();
 		windowManager.pollEvents();
+		if (windowManager.shouldTerminate())
+		{
+			break;
+		}
 		eventManager.processEvents();
 		eventManager.discardPollEvents();
+
+		updateColor(context);
+		engine.drawFrame();
 	}
 }

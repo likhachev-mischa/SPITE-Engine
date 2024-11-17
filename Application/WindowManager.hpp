@@ -1,42 +1,44 @@
 #pragma once
-#include "Engine/VulkanUsage.hpp"
 #include "Base/Platform.hpp"
-
-//forward declaration
-struct GLFWwindow;
+#include "Engine/VulkanUsage.hpp"
+#include <SDL3/SDL.h>
 
 namespace spite
 {
+	class InputManager;
 	class EventManager;
-
-	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
-	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 	class WindowManager
 	{
 	public:
-		WindowManager(EventManager* eventManager);
+		WindowManager(const WindowManager& other) = delete;
+		WindowManager(WindowManager&& other) = delete;
+		WindowManager& operator=(const WindowManager& other) = delete;
+		WindowManager& operator=(WindowManager&& other) = delete;
+
+		explicit WindowManager(EventManager* eventManager, InputManager* inputManager);
 
 		void initWindow();
 
 		void pollEvents();
 
-		void waitEvents();
+		void waitWindowExpand();
 
 		void getFramebufferSize(int& width, int& height);
+		bool isMinimized();
 
-		const char** getExtensions(u32& extensionCount);
+		char const* const* getExtensions(u32& extensionCount);
 
 		bool shouldTerminate();
 
-		vk::SurfaceKHR createWindowSurface(vk::Instance& instance);
-
-		EventManager* getEventManager();
+		vk::SurfaceKHR createWindowSurface(const vk::Instance& instance);
 
 		~WindowManager();
 
 	private:
-		GLFWwindow* m_window;
+		SDL_Window* m_window{};
 		EventManager* m_eventManager;
+		InputManager* m_inputManager;
+		bool m_shouldTerminate = false;
 	};
 }

@@ -1,115 +1,105 @@
-#include "Engine/VulkanUsage.hpp"
 #include "WindowManager.hpp"
 #include "EventManager.hpp"
 #include "AppConifg.hpp"
+#include "InputManager.hpp"
 
-#include <GLFW/glfw3.h>
+#include "Base/Assert.hpp"
+#include "Base/Logging.hpp"
 
+#include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL_events.h>
 
 namespace spite
 {
-	WindowManager::WindowManager(EventManager* eventManager) : m_eventManager(eventManager)
+	WindowManager::WindowManager(EventManager* eventManager, InputManager* inputManager) : m_eventManager(eventManager),
+		m_inputManager(inputManager)
 	{
 		initWindow();
 	}
 
 	void WindowManager::initWindow()
 	{
-		glfwInit();
+		bool result = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+		SASSERTM(result, "Error on SDL initializaion!");
 
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		result = SDL_SetAppMetadata(APPLICATION_NAME, "0.1", "aboba");
+		SASSERTM(result, "Error on SDL set metadata!");
 
-		m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-		glfwSetWindowUserPointer(m_window, this);
-
-		glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
-		glfwSetKeyCallback(m_window, keyCallback);
+		m_window = SDL_CreateWindow("SPITE", WIDTH, HEIGHT,SDL_WINDOW_VULKAN |
+		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
+		SASSERTM(m_window != nullptr, "Error on SDL Vulkan window creation!")
 	}
 
 	void WindowManager::pollEvents()
 	{
-		glfwPollEvents();
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+			case SDL_EVENT_KEY_UP:
+				{
+					Events buttonEvent = m_inputManager->tryGetEvent(event.key.key);
+					if (buttonEvent != Events::NONE)
+					{
+						m_eventManager->triggerEvent(buttonEvent);
+						m_eventManager->triggerPollEvent(buttonEvent);
+					}
+					break;
+				}
+			case SDL_EVENT_QUIT:
+				{
+					m_shouldTerminate = true;
+					break;
+				}
+
+			default: break;
+			}
+		}
 	}
 
-	void WindowManager::waitEvents()
+	void WindowManager::waitWindowExpand()
 	{
-		glfwWaitEvents();
+		SDL_Event event;
+		while (SDL_WaitEvent(&event))
+		{
+			if (event.type == SDL_EVENT_WINDOW_RESTORED)
+				return;
+		}
 	}
 
 	void WindowManager::getFramebufferSize(int& width, int& height)
 	{
-		glfwGetFramebufferSize(m_window, &width, &height);
+		SDL_GetWindowSize(m_window, &width, &height);
 	}
 
-	const char** WindowManager::getExtensions(uint32_t& extensionCount)
+	bool WindowManager::isMinimized()
 	{
-		return glfwGetRequiredInstanceExtensions(&extensionCount);
+		return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_MINIMIZED);
+	}
+
+	char const* const* WindowManager::getExtensions(uint32_t& extensionCount)
+	{
+		return SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 	}
 
 	bool WindowManager::shouldTerminate()
 	{
-		return glfwWindowShouldClose(m_window);
+		return m_shouldTerminate;
 	}
 
-	vk::SurfaceKHR WindowManager::createWindowSurface(vk::Instance& instance)
+	vk::SurfaceKHR WindowManager::createWindowSurface(const vk::Instance& instance)
 	{
 		VkSurfaceKHR tempSurface;
-		if (glfwCreateWindowSurface(instance, m_window, nullptr, &tempSurface) !=
-			VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create window surface!");
-		}
+		bool result = SDL_Vulkan_CreateSurface(m_window, instance, nullptr, &tempSurface);
+		SASSERTM(result, "Error on window surface creation!")
 
 		return tempSurface;
 	}
 
-	EventManager* WindowManager::getEventManager()
-	{
-		return m_eventManager;
-	}
-
 	WindowManager::~WindowManager()
 	{
-		glfwDestroyWindow(m_window);
-
-		glfwTerminate();
-	}
-
-	void framebufferResizeCallback(GLFWwindow* window, int width, int height)
-	{
-		auto windowManager = static_cast<WindowManager*>(glfwGetWindowUserPointer(window));
-		EventManager* eventManager = windowManager->getEventManager();
-		eventManager->triggerPollEvent(Events::FRAMEBUFFER_RESIZE);
-		eventManager->triggerEvent(Events::FRAMEBUFFER_RESIZE);
-	}
-
-	void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-	{
-		if (action != GLFW_PRESS)
-		{
-			return;
-		}
-		auto windowManager = static_cast<WindowManager*>(glfwGetWindowUserPointer(window));
-		EventManager* eventManager = windowManager->getEventManager();
-
-		switch (key)
-		{
-		case GLFW_KEY_R:
-			eventManager->triggerEvent(Events::ROTATION_BUTTON_PRESS);
-			eventManager->triggerPollEvent(Events::ROTATION_BUTTON_PRESS);
-			break;
-		case GLFW_KEY_T:
-			eventManager->triggerEvent(Events::TRANSLATION_BUTTON_PRESS);
-			eventManager->triggerPollEvent(Events::TRANSLATION_BUTTON_PRESS);
-			break;
-		case GLFW_KEY_S:
-			eventManager->triggerEvent(Events::SCALING_BUTTON_PRESS);
-			eventManager->triggerPollEvent(Events::SCALING_BUTTON_PRESS);
-			break;
-		case GLFW_KEY_N:
-			eventManager->triggerEvent(Events::NEXT_FIGURE_BUTTON_PRESS);
-			eventManager->triggerPollEvent(Events::NEXT_FIGURE_BUTTON_PRESS);
-		default: break;
-		}
+		SDL_DestroyWindow(m_window);
+		SDL_Quit();
 	}
 }

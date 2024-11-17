@@ -11,9 +11,9 @@ namespace spite
 		void printFormat(cstring format, ...);
 	};
 
-#if defined(_MSC_VER)
-#define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,__VA_ARGS__);
-#else
-#define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,## __VA_ARGS__);
-#endif
+ #if defined(_MSC_VER)
+ #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,__VA_ARGS__);
+ #else
+ #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,## __VA_ARGS__);
+ #endif
 }
