@@ -41,7 +41,6 @@ namespace spite
 		const char* get_name() const;
 		void set_name(const char* pName);
 
-		void init(sizet size);
 		void shutdown();
 
 	protected:
@@ -49,6 +48,7 @@ namespace spite
 		bool operator!=(const HeapAllocator& b);
 
 	private:
+		void init(sizet size);
 		cstring m_name;
 
 		void* m_tlsfHandle{};

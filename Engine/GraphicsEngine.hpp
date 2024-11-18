@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <optional>
 
+#include "Base/Memory.hpp"
+
 namespace spite
 {
 	class WindowManager;
@@ -47,6 +49,9 @@ namespace spite
 		~GraphicsEngine();
 
 	private:
+		spite::HeapAllocator m_heapAllocator;
+		vk::AllocationCallbacks m_allocationCallbacks;
+
 		UniformBufferObject m_ubo;
 
 		BufferData* m_bufferData;
@@ -113,7 +118,7 @@ namespace spite
 
 		void updateUniformBuffer(uint32_t currentImage);
 
-		void createAllocator();
+		void createVMAllocator();
 
 		void createUniformBuffers();
 

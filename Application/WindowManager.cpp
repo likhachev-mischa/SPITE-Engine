@@ -26,7 +26,7 @@ namespace spite
 		SASSERTM(result, "Error on SDL set metadata!");
 
 		m_window = SDL_CreateWindow("SPITE", WIDTH, HEIGHT,SDL_WINDOW_VULKAN |
-		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
+		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS );
 		SASSERTM(m_window != nullptr, "Error on SDL Vulkan window creation!")
 	}
 

@@ -8,12 +8,19 @@
 #include <chrono>
 #include <set>
 
+#include "VulkanAllocator.hpp"
 #include "Base/Logging.hpp"
+#include "Base/Memory.hpp"
 
 
 namespace spite
 {
-	GraphicsEngine::GraphicsEngine(spite::WindowManager* windowManager): m_windowManager(windowManager)
+	GraphicsEngine::GraphicsEngine(spite::WindowManager* windowManager): m_heapAllocator("Vulkan Engine Allocator"),
+	                                                                     m_windowManager(windowManager),
+	                                                                     m_allocationCallbacks(
+		                                                                     &m_heapAllocator, &vkAllocate,
+		                                                                     &vkReallocate, &vkFree,
+		                                                                     &vkAllocationCallback, &vkFreeCallback)
 	{
 		initVulkan();
 	}
@@ -42,7 +49,7 @@ namespace spite
 		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
-		createAllocator();
+		createVMAllocator();
 		createSwapChain();
 		createImageViews();
 		createRenderPass();
@@ -98,7 +105,9 @@ namespace spite
 		}
 
 		m_instance.destroySurfaceKHR(m_surface);
-		m_instance.destroy();
+		m_instance.destroy(m_allocationCallbacks);
+
+		m_heapAllocator.shutdown();
 	}
 
 	void GraphicsEngine::setModelData(const std::vector<const std::vector<glm::vec2>*>& vertices,
@@ -314,7 +323,7 @@ namespace spite
 		memcpy(m_uniformBuffersMapped[currentImage], &m_ubo, sizeof(m_ubo));
 	}
 
-	void GraphicsEngine::createAllocator()
+	void GraphicsEngine::createVMAllocator()
 	{
 		vma::AllocatorCreateInfo createInfo({},
 		                                    m_physicalDevice,
@@ -904,7 +913,7 @@ namespace spite
 		}
 
 		vk::Result result;
-		std::tie(result, m_instance) = vk::createInstance(createInfo, nullptr);
+		std::tie(result, m_instance) = vk::createInstance(createInfo, m_allocationCallbacks);
 		if (result != vk::Result::eSuccess)
 		{
 			throw std::runtime_error("Failed to create instance!");

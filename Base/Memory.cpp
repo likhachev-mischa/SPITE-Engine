@@ -85,14 +85,14 @@ namespace spite
 	void* HeapAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = tlsf_malloc(m_tlsfHandle, size);
-		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+	//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
 
 	void* HeapAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
-		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+	//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
 
@@ -175,14 +175,14 @@ namespace spite
 	void* BlockAllocator::allocate(size_t size, int flags)
 	{
 		void* mem = m_allocator.allocate(size, flags);
-		SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
 	void* BlockAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
 	{
 		void* mem = m_allocator.allocate(size, alignment, offset, flags);
-		SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
