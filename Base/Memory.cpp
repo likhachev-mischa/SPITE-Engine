@@ -21,17 +21,16 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 namespace spite
 {
-	//TODO: consider stack walker
-	//void exitWalker(void* ptr, sizet size, int used, void* user)
-	//{
-	//	MemoryStatistics* stats = static_cast<MemoryStatistics*>(user);
-	//	stats->add(used ? size : 0);
+	void exitWalker(void* ptr, sizet size, int used, void* user)
+	{
+		MemoryStatistics* stats = static_cast<MemoryStatistics*>(user);
+		stats->add(used ? size : 0);
 
-	//	if (used)
-	//	{
-	//		SDEBUG_LOG("Found active allocation %p, %llu\n", ptr, size)
-	//	}
-	//}
+		if (used)
+		{
+			SDEBUG_LOG("Found active allocation %p, %llu\n", ptr, size)
+		}
+	}
 
 	void MemoryStatistics::add(sizet value)
 	{
@@ -47,24 +46,25 @@ namespace spite
 		return *this;
 	}
 
-	HeapAllocator::HeapAllocator(const char* pName, sizet size) : m_name(pName),
-	                                                              m_stats(new MemoryStatistics{0, 0, 0})
+	HeapAllocator::HeapAllocator(const char* pName, sizet size) : m_name(pName), m_maxSize(size)
 	{
 		init(size);
 	}
 
 	HeapAllocator::HeapAllocator(const HeapAllocator& x) : m_name(x.m_name), m_tlsfHandle(x.m_tlsfHandle),
-	                                                       m_memory(x.m_memory), m_stats(x.m_stats)
+	                                                       m_memory(x.m_memory), m_maxSize(x.m_maxSize)
 	{
 	}
 
 	HeapAllocator::HeapAllocator(const HeapAllocator& x, const char* pName) : m_name(pName),
 	                                                                          m_tlsfHandle(x.m_tlsfHandle),
-	                                                                          m_memory(x.m_memory), m_stats(x.m_stats)
+	                                                                          m_memory(x.m_memory),
+	                                                                          m_maxSize(x.m_maxSize)
 
 	{
 	}
 
+	//TODO: consider stack walker
 #if defined(SPITE_MEMORY_STACK)
 	class SpiteStackWalker : public StackWalker
 	{
@@ -85,7 +85,6 @@ namespace spite
 	void* HeapAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = tlsf_malloc(m_tlsfHandle, size);
-		m_stats->add(size);
 		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
@@ -93,7 +92,6 @@ namespace spite
 	void* HeapAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
-		m_stats->add(size);
 		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
@@ -106,7 +104,6 @@ namespace spite
 	void HeapAllocator::deallocate(void* p, size_t n)
 	{
 		tlsf_free(m_tlsfHandle, p);
-		m_stats->allocatedBytes -= n;
 	}
 
 	const char* HeapAllocator::get_name() const
@@ -124,24 +121,27 @@ namespace spite
 		m_memory = malloc(size);
 		m_tlsfHandle = tlsf_create_with_pool(m_memory, size);
 
-		m_stats->totalBytes = size;
 		SDEBUG_LOG("HeapAllocator %s of size %llu created\n", m_name, size)
 	}
 
 	void HeapAllocator::shutdown()
 	{
-		if (m_stats->allocatedBytes)
+		MemoryStatistics stats{0, m_maxSize, 0};
+		pool_t pool = tlsf_get_pool(m_tlsfHandle);
+		tlsf_walk_pool(pool, exitWalker, &stats);
+
+		if (stats.allocatedBytes)
 		{
 			SDEBUG_LOG(
 				"HeapAllocator %s Shutdown.\n===============\nFAILURE! Allocated memory detected. allocated %llu, total %llu\n===============\n\n",
-				m_name, m_stats->allocatedBytes, m_stats->totalBytes)
+				m_name, stats.allocatedBytes, stats.totalBytes)
 		}
 		else
 		{
 			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_name)
 		}
 
-		SASSERTM(m_stats->allocatedBytes == 0, "Allocations still present. Check your code!\n")
+		SASSERTM(stats.allocatedBytes == 0, "Allocations still present. Check your code!\n")
 
 		tlsf_destroy(m_tlsfHandle);
 		free(m_memory);

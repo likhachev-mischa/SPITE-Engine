@@ -36,7 +36,7 @@ namespace spite
 		void* allocate(size_t size, int flags = 0);
 		void* allocate(size_t size, size_t alignment, size_t offset = 0, int flags = 0);
 		void* reallocate(void* original, sizet size);
-		void deallocate(void* p, size_t n);
+		void deallocate(void* p, size_t n = 0);
 
 		const char* get_name() const;
 		void set_name(const char* pName);
@@ -53,7 +53,7 @@ namespace spite
 
 		void* m_tlsfHandle{};
 		void* m_memory{};
-		std::shared_ptr<MemoryStatistics> m_stats;
+		sizet m_maxSize;
 	};
 
 	class BlockAllocator
