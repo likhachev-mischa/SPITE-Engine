@@ -98,6 +98,11 @@ namespace spite
 		return mem;
 	}
 
+	void* HeapAllocator::reallocate(void* original, sizet size)
+	{
+		return tlsf_realloc(m_tlsfHandle, original, size);
+	}
+
 	void HeapAllocator::deallocate(void* p, size_t n)
 	{
 		tlsf_free(m_tlsfHandle, p);
