@@ -90,6 +90,9 @@
     <ClInclude Include="Application\Events.hpp">
       <Filter>Application</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\VulkanAllocator.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

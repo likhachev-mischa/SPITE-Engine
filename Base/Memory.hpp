@@ -34,7 +34,7 @@ namespace spite
 
 
 		void* allocate(size_t size, int flags = 0);
-		void* allocate(size_t size, size_t alignment, size_t offset, int flags = 0);
+		void* allocate(size_t size, size_t alignment, size_t offset = 0, int flags = 0);
 		void deallocate(void* p, size_t n);
 
 		const char* get_name() const;

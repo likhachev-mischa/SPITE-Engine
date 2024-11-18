@@ -179,6 +179,7 @@
     <ClInclude Include="Engine\GraphicsDebug.hpp" />
     <ClInclude Include="Engine\GraphicsEngine.hpp" />
     <ClInclude Include="Engine\GraphicsUtility.hpp" />
+    <ClInclude Include="Engine\VulkanAllocator.hpp" />
     <ClInclude Include="Engine\VulkanUsage.hpp" />
     <ClInclude Include="External\StackWalker.h" />
     <ClInclude Include="External\tlsf.h" />

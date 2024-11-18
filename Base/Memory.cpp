@@ -92,7 +92,10 @@ namespace spite
 
 	void* HeapAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
 	{
-		return allocate(size, flags);
+		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
+		m_stats->add(size);
+		SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		return mem;
 	}
 
 	void HeapAllocator::deallocate(void* p, size_t n)
