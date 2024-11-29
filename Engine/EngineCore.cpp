@@ -1,10 +1,14 @@
 #include "EngineCore.hpp"
 
+#include <set>
+
 #include "GraphicsUtility.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
 
 #include <EASTL/array.h>
+
+#include "GraphicsDebug.hpp"
 
 namespace spite
 {
@@ -59,9 +63,7 @@ namespace spite
 			createInfo.pNext = &debugCreateInfo;
 		}
 
-		vk::Result result;
-		vk::Instance instance;
-		std::tie(result, instance) = vk::createInstance(createInfo, allocationCallbacks);
+		auto [result, instance] = vk::createInstance(createInfo, allocationCallbacks);
 		SASSERT_VULKAN(result)
 		return instance;
 	}
@@ -84,9 +86,7 @@ namespace spite
 
 	vk::PhysicalDevice getPhysicalDevice(const vk::Instance& instance)
 	{
-		std::vector<vk::PhysicalDevice> devices;
-		vk::Result result;
-		std::tie(result, devices) = instance.enumeratePhysicalDevices();
+		auto [result, devices] = instance.enumeratePhysicalDevices();
 		SASSERT_VULKAN(result)
 
 		SASSERTM(!devices.empty(), "Failed to locate physical devices!")
@@ -108,7 +108,7 @@ namespace spite
 	vk::Device createDevice(const QueueFamilyIndices& indices, const vk::PhysicalDevice& physicalDevice,
 	                        const spite::HeapAllocator& allocator)
 	{
-		std::set<uint32_t> uniqueQueueFamilies = {
+		std::set<u32> uniqueQueueFamilies = {
 			indices.graphicsFamily.value(), indices.presentFamily.value(),
 			indices.transferFamily.value()
 		};
@@ -117,7 +117,7 @@ namespace spite
 		queueCreateInfos.reserve(uniqueQueueFamilies.size());
 
 		float queuePriority = 1.0f;
-		for (uint32_t queueFamily : uniqueQueueFamilies)
+		for (u32 queueFamily : uniqueQueueFamilies)
 		{
 			vk::DeviceQueueCreateInfo queueCreateInfo(
 				{},
@@ -146,9 +146,7 @@ namespace spite
 			createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
 		}
 
-		vk::Result result;
-		vk::Device device;
-		std::tie(result, device) = physicalDevice.createDevice(createInfo);
+		auto [result, device] = physicalDevice.createDevice(createInfo);
 		SASSERT_VULKAN(result)
 
 		return device;
@@ -167,9 +165,7 @@ namespace spite
 		                                    {},
 		                                    instance,
 		                                    VK_API_VERSION);
-		vma::Allocator allocator;
-		vk::Result result;
-		std::tie(result, allocator) = vma::createAllocator(createInfo);
+		auto [result,allocator] = vma::createAllocator(createInfo);
 		SASSERT_VULKAN(result)
 		return allocator;
 	}
@@ -318,18 +314,14 @@ namespace spite
 			createInfo.pQueueFamilyIndices = nullptr;
 		}
 
-		vk::Result result;
-		vk::SwapchainKHR swapchain;
-		std::tie(result, swapchain) = device.createSwapchainKHR(createInfo, pAllocationCallbacks);
+		auto [result, swapchain] = device.createSwapchainKHR(createInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return swapchain;
 	}
 
 	std::vector<vk::Image> getSwapchainImages(const vk::Device& device, const vk::SwapchainKHR& swapchain)
 	{
-		vk::Result result;
-		std::vector<vk::Image> swapchainImages;
-		std::tie(result, swapchainImages) = device.getSwapchainImagesKHR(swapchain);
+		auto [result,swapchainImages] = device.getSwapchainImagesKHR(swapchain);
 		SASSERT_VULKAN(result)
 		return swapchainImages;
 	}
@@ -348,9 +340,7 @@ namespace spite
 			                                   imageFormat,
 			                                   {},
 			                                   {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-			vk::Result result;
-			vk::ImageView imageView;
-			std::tie(result, imageView) = device.createImageView(createInfo);
+			auto [result, imageView] = device.createImageView(createInfo);
 			SASSERT_VULKAN(result)
 			imageViews.push_back(imageView);
 		}
@@ -397,9 +387,7 @@ namespace spite
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		vk::Result result;
-		vk::RenderPass renderPass;
-		std::tie(result, renderPass) = device.createRenderPass(renderPassInfo);
+		auto [result, renderPass] = device.createRenderPass(renderPassInfo);
 		SASSERT_VULKAN(result);
 		return renderPass;
 	}
@@ -418,9 +406,7 @@ namespace spite
 			1,
 			&uboLayoutBinding);
 
-		vk::Result result;
-		vk::DescriptorSetLayout descriptorSetLayout;
-		std::tie(result, descriptorSetLayout) = device.createDescriptorSetLayout(layoutInfo);
+		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(layoutInfo);
 		SASSERT_VULKAN(result)
 		return descriptorSetLayout;
 	}
@@ -431,9 +417,8 @@ namespace spite
 			{},
 			code.size(),
 			reinterpret_cast<const u32*>(code.data()));
-		vk::Result result;
-		vk::ShaderModule shaderModule;
-		std::tie(result, shaderModule) = device.createShaderModule(createInfo);
+
+		auto [result, shaderModule] = device.createShaderModule(createInfo);
 		SASSERT_VULKAN(result)
 		return shaderModule;
 	}
@@ -545,9 +530,7 @@ namespace spite
 			1,
 			&descriptorSetLayout);
 
-		vk::Result result;
-		vk::PipelineLayout pipelineLayout;
-		std::tie(result, pipelineLayout) = device.createPipelineLayout(pipelineLayoutInfo, pAllocationCallbacks);
+		auto [result,pipelineLayout] = device.createPipelineLayout(pipelineLayoutInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result);
 
 		vk::GraphicsPipelineCreateInfo pipelineInfo({},
@@ -612,9 +595,7 @@ namespace spite
 	{
 		vk::CommandPoolCreateInfo commandPoolCreateInfo(flagBits,
 		                                                queueFamilyIndex);
-		vk::Result result;
-		vk::CommandPool commandPool;
-		std::tie(result, commandPool) = device.createCommandPool(commandPoolCreateInfo, pAllocationCallbacks);
+		auto [result, commandPool] = device.createCommandPool(commandPoolCreateInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return commandPool;
 	}
@@ -636,9 +617,8 @@ namespace spite
 		vk::BufferCreateInfo bufferInfo({}, size, usage, vk::SharingMode::eConcurrent, 2, queues);
 
 		vma::AllocationCreateInfo allocInfo(allocationFlags, vma::MemoryUsage::eAuto, properties);
-		vk::Result result;
-		std::pair<vk::Buffer, vma::Allocation> bufferAllocation;
-		std::tie(result, bufferAllocation) = allocator.createBuffer(bufferInfo, allocInfo);
+
+		auto [result, bufferAllocation] = allocator.createBuffer(bufferInfo, allocInfo);
 		SASSERT_VULKAN(result)
 
 		buffer = bufferAllocation.first;
@@ -651,9 +631,7 @@ namespace spite
 	{
 		vk::CommandBufferAllocateInfo allocInfo(transferCommandPool, vk::CommandBufferLevel::ePrimary, 1);
 
-		std::vector<vk::CommandBuffer> commandBuffers;
-		vk::Result result;
-		std::tie(result, commandBuffers) = device.allocateCommandBuffers(allocInfo, pAllocationCallbacks);
+		auto [result,commandBuffers] = device.allocateCommandBuffers(allocInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 
 		vk::CommandBuffer commandBuffer = commandBuffers[0];
@@ -687,9 +665,7 @@ namespace spite
 			size,
 			1,
 			&poolSize);
-		vk::Result result;
-		vk::DescriptorPool descriptorPool;
-		std::tie(result, descriptorPool) = device.createDescriptorPool(poolInfo, pAllocationCallbacks);
+		auto [result, descriptorPool] = device.createDescriptorPool(poolInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return descriptorPool;
 	}
@@ -709,10 +685,7 @@ namespace spite
 		                                        count,
 		                                        layouts.data());
 
-		std::vector<vk::DescriptorSet> descriptorSets(count);
-
-		vk::Result result;
-		std::tie(result, descriptorSets) = device.allocateDescriptorSets(allocInfo, pAllocationCallbacks);
+		auto [result, descriptorSets] = device.allocateDescriptorSets(allocInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return descriptorSets;
 	}
@@ -737,14 +710,11 @@ namespace spite
 	                                                            const vk::CommandPool& graphicsCommandPool,
 	                                                            const u32 count)
 	{
-		std::vector<vk::CommandBuffer> commandBuffers;
-
 		vk::CommandBufferAllocateInfo allocInfo(graphicsCommandPool,
 		                                        vk::CommandBufferLevel::ePrimary,
 		                                        count);
 
-		vk::Result result;
-		std::tie(result, commandBuffers) = device.allocateCommandBuffers(allocInfo);
+		auto [result, commandBuffers] = device.allocateCommandBuffers(allocInfo);
 		SASSERT_VULKAN(result)
 
 		return commandBuffers;

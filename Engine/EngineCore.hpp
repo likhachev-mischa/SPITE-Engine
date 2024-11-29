@@ -1,10 +1,7 @@
 #pragma once
 #include <optional>
-#include <set>
 #include <EASTL/vector.h>
 
-#include "GraphicsDebug.hpp"
-#include "VulkanUsage.hpp"
 #include "Application/AppConifg.hpp"
 #include "Application/WindowManager.hpp"
 #include "Base/Memory.hpp"
