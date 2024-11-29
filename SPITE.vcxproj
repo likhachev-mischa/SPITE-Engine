@@ -176,10 +176,13 @@
     <ClInclude Include="Base\Memory.hpp" />
     <ClInclude Include="Base\Platform.hpp" />
     <ClInclude Include="Base\Service.hpp" />
+    <ClInclude Include="Engine\EngineCommon.hpp" />
     <ClInclude Include="Engine\EngineCore.hpp" />
+    <ClInclude Include="Engine\EngineDebug.hpp" />
     <ClInclude Include="Engine\GraphicsDebug.hpp" />
     <ClInclude Include="Engine\GraphicsEngine.hpp" />
     <ClInclude Include="Engine\GraphicsUtility.hpp" />
+    <ClInclude Include="Engine\Resources.hpp" />
     <ClInclude Include="Engine\VulkanAllocator.hpp" />
     <ClInclude Include="Engine\VulkanUsage.hpp" />
     <ClInclude Include="External\StackWalker.h" />
@@ -194,9 +197,11 @@
     <ClCompile Include="Base\Memory.cpp" />
     <ClCompile Include="Base\VmaUsage.cpp" />
     <ClCompile Include="Engine\EngineCore.cpp" />
+    <ClCompile Include="Engine\EngineDebug.cpp" />
     <ClCompile Include="Engine\GraphicsDebug.cpp" />
     <ClCompile Include="Engine\GraphicsEngine.cpp" />
     <ClCompile Include="Engine\GraphicsUtility.cpp" />
+    <ClCompile Include="Engine\VulkanAllocator.cpp" />
     <ClCompile Include="External\tlsf.c" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>

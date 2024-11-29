@@ -1,14 +1,13 @@
 #include "EngineCore.hpp"
 
 #include <set>
+#include <EASTL/array.h>
 
+#include"EngineCommon.hpp"
+#include "EngineDebug.hpp"
 #include "GraphicsUtility.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
-
-#include <EASTL/array.h>
-
-#include "GraphicsDebug.hpp"
 
 namespace spite
 {
@@ -68,21 +67,6 @@ namespace spite
 		return instance;
 	}
 
-	VkDebugUtilsMessengerEXT createDebugUtilsMessenger(const vk::Instance& instance,
-	                                                   const vk::AllocationCallbacks& allocationCallbacks)
-	{
-		VkDebugUtilsMessengerCreateInfoEXT createInfo =
-			createDebugMessengerCreateInfo();
-
-		VkDebugUtilsMessengerEXT debugMessenger;
-
-		auto result = createDebugUtilsMessengerExt(instance,
-		                                           &createInfo,
-		                                           nullptr,
-		                                           &debugMessenger);
-		SASSERTM(result == VK_SUCCESS, , "Failed to create debug messenger!")
-		return debugMessenger;
-	}
 
 	vk::PhysicalDevice getPhysicalDevice(const vk::Instance& instance)
 	{
@@ -106,7 +90,7 @@ namespace spite
 	}
 
 	vk::Device createDevice(const QueueFamilyIndices& indices, const vk::PhysicalDevice& physicalDevice,
-	                        const spite::HeapAllocator& allocator)
+	                        const spite::HeapAllocator& allocator, const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		std::set<u32> uniqueQueueFamilies = {
 			indices.graphicsFamily.value(), indices.presentFamily.value(),
@@ -146,7 +130,7 @@ namespace spite
 			createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
 		}
 
-		auto [result, device] = physicalDevice.createDevice(createInfo);
+		auto [result, device] = physicalDevice.createDevice(createInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 
 		return device;
@@ -221,8 +205,7 @@ namespace spite
 	}
 
 
-	vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const eastl::vector<vk::SurfaceFormatKHR,
-	                                                                 spite::HeapAllocator>& availableFormats)
+	vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 	{
 		for (const auto& format : availableFormats)
 		{
@@ -235,8 +218,7 @@ namespace spite
 		return availableFormats[0];
 	}
 
-	vk::PresentModeKHR chooseSwapPresentMode(
-		const eastl::vector<vk::PresentModeKHR, spite::HeapAllocator>& availablePresentModes)
+	vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
 	{
 		for (const auto& presentMode : availablePresentModes)
 		{
@@ -328,7 +310,9 @@ namespace spite
 
 	eastl::vector<vk::ImageView, spite::HeapAllocator> createImageViews(const vk::Device& device,
 	                                                                    const std::vector<vk::Image>& swapchainImages,
-	                                                                    const vk::Format& imageFormat)
+	                                                                    const vk::Format& imageFormat,
+	                                                                    const vk::AllocationCallbacks*
+	                                                                    pAllocationCallbacks)
 	{
 		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews;
 		imageViews.reserve(swapchainImages.size());
@@ -340,14 +324,15 @@ namespace spite
 			                                   imageFormat,
 			                                   {},
 			                                   {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-			auto [result, imageView] = device.createImageView(createInfo);
+			auto [result, imageView] = device.createImageView(createInfo, pAllocationCallbacks);
 			SASSERT_VULKAN(result)
 			imageViews.push_back(imageView);
 		}
 		return imageViews;
 	}
 
-	vk::RenderPass createRenderPass(const vk::Device& device, const vk::Format& imageFormat)
+	vk::RenderPass createRenderPass(const vk::Device& device, const vk::Format& imageFormat,
+	                                const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::AttachmentDescription colorAttachment(
 			{},
@@ -387,12 +372,13 @@ namespace spite
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		auto [result, renderPass] = device.createRenderPass(renderPassInfo);
+		auto [result, renderPass] = device.createRenderPass(renderPassInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result);
 		return renderPass;
 	}
 
-	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device)
+	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
+	                                                  const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::DescriptorSetLayoutBinding uboLayoutBinding(
 			0,
@@ -406,31 +392,33 @@ namespace spite
 			1,
 			&uboLayoutBinding);
 
-		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(layoutInfo);
+		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(layoutInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return descriptorSetLayout;
 	}
 
-	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code)
+	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
+	                                    const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::ShaderModuleCreateInfo createInfo(
 			{},
 			code.size(),
 			reinterpret_cast<const u32*>(code.data()));
 
-		auto [result, shaderModule] = device.createShaderModule(createInfo);
+		auto [result, shaderModule] = device.createShaderModule(createInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return shaderModule;
 	}
 
+	//TODO: separate ShaderModule creation, add pipeline cache 
 	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
 	                                    const vk::Extent2D& swapchainExtent, const vk::RenderPass& renderPass,
-	                                    const vk::AllocationCallbacks& pAllocationCallbacks)
+	                                    const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		auto vertShaderCode = readBinaryFile("shaders/vert.spv");
 		auto fragShaderCode = readBinaryFile("shaders/frag.spv");
-		vk::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
-		vk::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
+		vk::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode, pAllocationCallbacks);
+		vk::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode, pAllocationCallbacks);
 		vertShaderCode.clear();
 		fragShaderCode.clear();
 
@@ -558,7 +546,8 @@ namespace spite
 
 	eastl::vector<vk::Framebuffer, spite::HeapAllocator> createFramebuffers(const vk::Device& device,
 	                                                                        const spite::HeapAllocator& allocator,
-	                                                                        const std::vector<vk::ImageView>&
+	                                                                        const eastl::vector<
+		                                                                        vk::ImageView, spite::HeapAllocator>&
 	                                                                        imageViews,
 	                                                                        const vk::Extent2D& swapchainExtent,
 	                                                                        const vk::RenderPass& renderPass,
@@ -591,9 +580,9 @@ namespace spite
 
 	vk::CommandPool createCommandPool(const vk::Device& device,
 	                                  const vk::AllocationCallbacks* pAllocationCallbacks,
-	                                  const vk::CommandPoolCreateFlagBits& flagBits, const u32 queueFamilyIndex)
+	                                  const vk::CommandPoolCreateFlags& flags, const u32 queueFamilyIndex)
 	{
-		vk::CommandPoolCreateInfo commandPoolCreateInfo(flagBits,
+		vk::CommandPoolCreateInfo commandPoolCreateInfo(flags,
 		                                                queueFamilyIndex);
 		auto [result, commandPool] = device.createCommandPool(commandPoolCreateInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
@@ -657,9 +646,10 @@ namespace spite
 
 	vk::DescriptorPool createDescriptorPool(const vk::Device& device,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks,
+	                                        vk::DescriptorType& type,
 	                                        const u32 size)
 	{
-		vk::DescriptorPoolSize poolSize(vk::DescriptorType::eUniformBuffer, size);
+		vk::DescriptorPoolSize poolSize(type, size);
 		vk::DescriptorPoolCreateInfo poolInfo(
 			{},
 			size,
@@ -718,6 +708,22 @@ namespace spite
 		SASSERT_VULKAN(result)
 
 		return commandBuffers;
+	}
+
+	vk::Semaphore createSemaphore(const vk::Device device, const vk::SemaphoreCreateInfo& createInfo,
+		const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		auto [result, semaphore] = device.createSemaphore(createInfo, pAllocationCallbacks);
+		SASSERT_VULKAN(result)
+		return semaphore;
+	}
+
+	vk::Fence createFence(const vk::Device device, const vk::FenceCreateInfo& createInfo,
+		const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		auto [result, fence] = device.createFence(createInfo, pAllocationCallbacks);
+		SASSERT_VULKAN(result)
+		return fence;
 	}
 
 	void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
