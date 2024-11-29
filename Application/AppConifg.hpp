@@ -1,13 +1,14 @@
 #pragma once
-#include <iostream>
-#include <vulkan/vulkan_core.h>
 
-const uint32_t VK_API_VERSION = VK_API_VERSION_1_0;
+namespace spite
+{
+	constexpr u32 VK_API_VERSION = VK_API_VERSION_1_0;
 
-const char APPLICATION_NAME[] = "Application";
-const char ENGINE_NAME[] = "ENGINE";
+	constexpr char APPLICATION_NAME[] = "Game";
+	constexpr char ENGINE_NAME[] = "SPITE";
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+	constexpr u32 WIDTH = 800;
+	constexpr u32 HEIGHT = 600;
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
+	constexpr u32 MAX_FRAMES_IN_FLIGHT = 2;
+}

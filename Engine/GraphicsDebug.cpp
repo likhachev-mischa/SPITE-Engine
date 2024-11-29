@@ -1,7 +1,8 @@
 #include "GraphicsDebug.hpp"
 
 VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+                                      const VkAllocationCallbacks* pAllocator,
+                                      VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
 		instance,
@@ -17,7 +18,7 @@ VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMes
 }
 
 void destroyDebugUtilsMessengerExt(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-	const VkAllocationCallbacks* pAllocator)
+                                   const VkAllocationCallbacks* pAllocator)
 {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
 		instance,
@@ -39,4 +40,31 @@ vk::DebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo()
 	                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
 	                                                debugCallback);
 	return createInfo;
+}
+
+bool checkValidationLayerSupport(const spite::HeapAllocator& allocator)
+{
+	std::vector<vk::LayerProperties, spite::HeapAllocator> availableLayers =
+		vk::enumerateInstanceLayerProperties<spite::HeapAllocator>(&allocator).value;
+
+	for (const char* layerName : VALIDATION_LAYERS)
+	{
+		bool layerFound = false;
+
+		for (const auto& layerProperties : availableLayers)
+		{
+			if (strcmp(layerName, layerProperties.layerName) == 0)
+			{
+				layerFound = true;
+				break;
+			}
+		}
+
+		if (!layerFound)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }

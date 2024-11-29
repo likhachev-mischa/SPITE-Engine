@@ -176,6 +176,7 @@
     <ClInclude Include="Base\Memory.hpp" />
     <ClInclude Include="Base\Platform.hpp" />
     <ClInclude Include="Base\Service.hpp" />
+    <ClInclude Include="Engine\EngineCore.hpp" />
     <ClInclude Include="Engine\GraphicsDebug.hpp" />
     <ClInclude Include="Engine\GraphicsEngine.hpp" />
     <ClInclude Include="Engine\GraphicsUtility.hpp" />
@@ -192,6 +193,7 @@
     <ClCompile Include="Base\Logging.cpp" />
     <ClCompile Include="Base\Memory.cpp" />
     <ClCompile Include="Base\VmaUsage.cpp" />
+    <ClCompile Include="Engine\EngineCore.cpp" />
     <ClCompile Include="Engine\GraphicsDebug.cpp" />
     <ClCompile Include="Engine\GraphicsEngine.cpp" />
     <ClCompile Include="Engine\GraphicsUtility.cpp" />
