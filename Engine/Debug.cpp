@@ -1,4 +1,4 @@
-#include "EngineDebug.hpp"
+#include "Debug.hpp"
 
 namespace spite
 {

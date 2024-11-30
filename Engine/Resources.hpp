@@ -1,10 +1,10 @@
 #pragma once
-//#include <vulkan/vulkan_enums.hpp>
-//#include <vulkan-memory-allocator-hpp/vk_mem_alloc_enums.hpp>
+#include <EASTL/vector.h>
 
-#include "Engine/EngineCommon.hpp"
-#include "Engine/EngineCore.hpp"
-#include "Engine/VulkanAllocator.hpp"
+#include "Base/Memory.hpp"
+#include "Common.hpp"
+#include "vulkan-memory-allocator-hpp/vk_mem_alloc.hpp"
+
 
 namespace spite
 {
@@ -17,21 +17,9 @@ namespace spite
 
 		vk::AllocationCallbacks allocationCallbacks;
 
-		explicit ResourceAllocationCallbacks(spite::HeapAllocator& allocator)
-		{
-			allocationCallbacks = vk::AllocationCallbacks(
-				&allocator,
-				&vkAllocate,
-				&vkReallocate,
-				&vkFree,
-				&vkAllocationCallback,
-				&vkFreeCallback);
-		}
+		explicit ResourceAllocationCallbacks(spite::HeapAllocator& allocator);
 
-		~ResourceAllocationCallbacks()
-		{
-			allocationCallbacks.pUserData = nullptr;
-		}
+		~ResourceAllocationCallbacks();
 	};
 
 	struct Instance
@@ -45,27 +33,17 @@ namespace spite
 		std::shared_ptr<spite::ResourceAllocationCallbacks> pResourceAllocation;
 
 		Instance(const spite::HeapAllocator& allocator,
-		         const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation,
-		         const eastl::vector<const char*, spite::HeapAllocator>& extensions): pResourceAllocation(
-			resourceAllocation)
-		{
-			instance = spite::createInstance(allocator, &pResourceAllocation->allocationCallbacks, extensions);
-		}
+		         std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
+		         const eastl::vector<const char*, spite::HeapAllocator>& extensions);
 
-		~Instance()
-		{
-			instance.destroy(&pResourceAllocation->allocationCallbacks);
-		}
+		~Instance();
 	};
 
 	struct PhysicalDevice
 	{
 		vk::PhysicalDevice device;
 
-		explicit PhysicalDevice(const Instance& instance)
-		{
-			device = spite::getPhysicalDevice(instance.instance);
-		}
+		explicit PhysicalDevice(const Instance& instance);
 	};
 
 	struct Device
@@ -80,17 +58,9 @@ namespace spite
 
 		Device(const PhysicalDevice& physicalDevice,
 		       const QueueFamilyIndices& indices, const spite::HeapAllocator& allocator,
-		       const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pResourceAllocation(
-			resourceAllocation)
-		{
-			device = spite::createDevice(indices, physicalDevice.device, allocator,
-			                             &pResourceAllocation->allocationCallbacks);
-		}
+		       std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~Device()
-		{
-			device.destroy(&pResourceAllocation->allocationCallbacks);
-		}
+		~Device();
 	};
 
 	struct GpuAllocator
@@ -104,16 +74,9 @@ namespace spite
 
 		GpuAllocator(const PhysicalDevice& physicalDevice, const Device& device,
 		             const Instance& instance,
-		             const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation)
-		{
-			allocator = spite::createVmAllocator(physicalDevice.device, device.device, instance.instance,
-			                                     &resourceAllocation->allocationCallbacks);;
-		}
+		             const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation);
 
-		~GpuAllocator()
-		{
-			allocator.destroy();
-		}
+		~GpuAllocator();
 	};
 
 	struct SwapchainDetails
@@ -125,13 +88,7 @@ namespace spite
 		vk::Extent2D extent;
 
 		SwapchainDetails(const PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface, const int width,
-		                 const int height): surface(surface)
-		{
-			supportDetails = querySwapchainSupport(physicalDevice.device, surface);
-			surfaceFormat = chooseSwapSurfaceFormat(supportDetails.formats);
-			presentMode = chooseSwapPresentMode(supportDetails.presentModes);
-			extent = chooseSwapExtent(supportDetails.capabilities, width, height);
-		}
+		                 const int height);
 	};
 
 	struct Swapchain
@@ -147,22 +104,12 @@ namespace spite
 		std::shared_ptr<spite::ResourceAllocationCallbacks> pResourceAllocation;
 
 
-		Swapchain(const PhysicalDevice& physicalDevice, const std::shared_ptr<Device>& device,
+		Swapchain(const PhysicalDevice& physicalDevice, std::shared_ptr<Device> device,
 		          const SwapchainDetails& details,
 		          const spite::HeapAllocator& allocator,
-		          const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation): pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			swapchain = spite::createSwapchain(physicalDevice.device, details.surface, details.supportDetails,
-			                                   device->device, details.extent,
-			                                   details.surfaceFormat, details.presentMode, allocator,
-			                                   &pResourceAllocation->allocationCallbacks);
-		}
+		          std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~Swapchain()
-		{
-			pDevice->device.destroySwapchainKHR(swapchain, &pResourceAllocation->allocationCallbacks);
-		}
+		~Swapchain();
 	};
 
 	struct SwapchainImages
@@ -174,12 +121,9 @@ namespace spite
 
 		std::vector<vk::Image> images{};
 
-		SwapchainImages(const Device& device, const Swapchain& swapchain)
-		{
-			images = getSwapchainImages(device.device, swapchain.swapchain);
-		}
+		SwapchainImages(const Device& device, const Swapchain& swapchain);
 
-		~SwapchainImages() = default;
+		~SwapchainImages();
 	};
 
 	struct ImageViews
@@ -194,22 +138,11 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		ImageViews(const std::shared_ptr<Device>& device, const SwapchainImages& swapchainImages,
+		ImageViews(std::shared_ptr<Device> device, const SwapchainImages& swapchainImages,
 		           const SwapchainDetails& details,
-		           const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			imageViews = createImageViews(device->device, swapchainImages.images, details.surfaceFormat.format,
-			                              &resourceAllocation->allocationCallbacks);
-		}
+		           std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~ImageViews()
-		{
-			for (const auto& imageView : imageViews)
-			{
-				pDevice->device.destroyImageView(imageView, &pResourceAllocation->allocationCallbacks);
-			}
-		}
+		~ImageViews();
 	};
 
 	struct RenderPass
@@ -223,18 +156,10 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		RenderPass(const std::shared_ptr<Device>& device, const SwapchainDetails& details,
-		           const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			renderPass = createRenderPass(device->device, details.surfaceFormat.format,
-			                              &resourceAllocation->allocationCallbacks);
-		}
+		RenderPass(std::shared_ptr<Device> device, const SwapchainDetails& details,
+		           std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~RenderPass()
-		{
-			pDevice->device.destroyRenderPass(renderPass, &pResourceAllocation->allocationCallbacks);
-		}
+		~RenderPass();
 	};
 
 	struct DescriptorSetLayout
@@ -249,17 +174,10 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		DescriptorSetLayout(const std::shared_ptr<Device>& device,
-		                    const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			descriptorSetLayout = createDescriptorSetLayout(device->device, &resourceAllocation->allocationCallbacks);
-		}
+		DescriptorSetLayout(std::shared_ptr<Device> device,
+		                    std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~DescriptorSetLayout()
-		{
-			pDevice->device.destroyDescriptorSetLayout(descriptorSetLayout, &pResourceAllocation->allocationCallbacks);
-		}
+		~DescriptorSetLayout();
 	};
 
 	struct DescriptorPool
@@ -274,17 +192,10 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		DescriptorPool(const std::shared_ptr<Device>& device, const vk::DescriptorType& type, const u32 size,
-		               const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			descriptorPool = createDescriptorPool(device->device, &resourceAllocation->allocationCallbacks, type, size);
-		}
+		DescriptorPool(std::shared_ptr<Device> device, const vk::DescriptorType& type, const u32 size,
+		               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~DescriptorPool()
-		{
-			pDevice->device.destroyDescriptorPool(descriptorPool, &pResourceAllocation->allocationCallbacks);
-		}
+		~DescriptorPool();
 	};
 
 	struct DescriptorSets
@@ -299,18 +210,12 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		DescriptorSets(const std::shared_ptr<Device>& device, const DescriptorSetLayout& descriptorSetLayout,
+		DescriptorSets(std::shared_ptr<Device> device, const DescriptorSetLayout& descriptorSetLayout,
 		               const DescriptorPool& descriptorPool, const spite::HeapAllocator& allocator,
-		               const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation,
-		               const u32 count) : pDevice(device),
-		                                  pResourceAllocation(resourceAllocation)
-		{
-			descriptorSets = createDescriptorSets(device->device, descriptorSetLayout.descriptorSetLayout,
-			                                      descriptorPool.descriptorPool, count, allocator,
-			                                      &resourceAllocation->allocationCallbacks);
-		}
+		               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
+		               const u32 count);
 
-		~DescriptorSets() = default;
+		~DescriptorSets();
 	};
 
 
@@ -325,20 +230,11 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		GraphicsPipeline(const std::shared_ptr<Device>& device, const DescriptorSetLayout& descriptorSetLayout,
+		GraphicsPipeline(std::shared_ptr<Device> device, const DescriptorSetLayout& descriptorSetLayout,
 		                 const SwapchainDetails& details, const RenderPass& renderPass,
-		                 const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			graphicsPipeline = createGraphicsPipeline(device->device, descriptorSetLayout.descriptorSetLayout,
-			                                          details.extent, renderPass.renderPass,
-			                                          &resourceAllocation->allocationCallbacks);
-		}
+		                 std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~GraphicsPipeline()
-		{
-			pDevice->device.destroyPipeline(graphicsPipeline, &pResourceAllocation->allocationCallbacks);
-		}
+		~GraphicsPipeline();
 	};
 
 	struct Framebuffers
@@ -353,156 +249,88 @@ namespace spite
 		std::shared_ptr<Device> pDevice;
 		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		Framebuffers(const std::shared_ptr<Device>& device, const spite::HeapAllocator& allocator,
+		Framebuffers(std::shared_ptr<Device> device, const spite::HeapAllocator& allocator,
 		             const ImageViews& imageViews, const SwapchainDetails& details, const RenderPass& renderPass,
-		             const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-			pResourceAllocation(resourceAllocation)
-		{
-			framebuffers = createFramebuffers(device->device, allocator, imageViews.imageViews, details.extent,
-			                                  renderPass.renderPass,
-			                                  &pResourceAllocation->allocationCallbacks);
-		}
+		             std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-		~Framebuffers()
-		{
-			for (const auto& framebuffer : framebuffers)
-			{
-				pDevice->device.destroyFramebuffer(framebuffer, &pResourceAllocation->allocationCallbacks);
-			}
-		}
+		~Framebuffers();
+	};
 
-		struct CommandPool
-		{
-			CommandPool(const CommandPool& other) = delete;
-			CommandPool(CommandPool&& other) = delete;
-			CommandPool& operator=(const CommandPool& other) = delete;
-			CommandPool& operator=(CommandPool&& other) = delete;
+	struct CommandPool
+	{
+		CommandPool(const CommandPool& other) = delete;
+		CommandPool(CommandPool&& other) = delete;
+		CommandPool& operator=(const CommandPool& other) = delete;
+		CommandPool& operator=(CommandPool&& other) = delete;
 
-			vk::CommandPool commandPool;
-			std::shared_ptr<Device> pDevice;
-			std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		vk::CommandPool commandPool;
+		std::shared_ptr<Device> pDevice;
+		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-			CommandPool(const std::shared_ptr<Device>& device, const u32 familyIndex,
-			            const vk::CommandPoolCreateFlagBits& flagBits,
-			            const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-				pResourceAllocation(resourceAllocation)
-			{
-				commandPool = createCommandPool(device->device, &resourceAllocation->allocationCallbacks, flagBits,
-				                                familyIndex);
-			}
+		CommandPool(std::shared_ptr<Device> device, const u32 familyIndex,
+		            const vk::CommandPoolCreateFlagBits& flagBits,
+		            std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-			~CommandPool()
-			{
-				pDevice->device.destroyCommandPool(commandPool, &pResourceAllocation->allocationCallbacks);
-			}
-		};
+		~CommandPool();
+	};
 
 
-		//TODO: make copy buffers func
-		struct Buffer
-		{
-			Buffer(const Buffer& other) = delete;
-			Buffer(Buffer&& other) = delete;
-			Buffer& operator=(const Buffer& other) = delete;
-			Buffer& operator=(Buffer&& other) = delete;
+	//TODO: make copy buffers func
+	struct Buffer
+	{
+		Buffer(const Buffer& other) = delete;
+		Buffer(Buffer&& other) = delete;
+		Buffer& operator=(const Buffer& other) = delete;
+		Buffer& operator=(Buffer&& other) = delete;
 
-			vk::Buffer buffer;
-			vma::Allocation allocation;
+		vk::Buffer buffer;
+		vma::Allocation allocation;
 
-			std::shared_ptr<GpuAllocator> pAllocator;
+		std::shared_ptr<GpuAllocator> pAllocator;
 
-			Buffer(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
-			       const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
-			       const std::shared_ptr<GpuAllocator>& allocator) : pAllocator(allocator)
-			{
-				createBuffer(size, usage, memoryProperty, allocationFlag, indices, allocator->allocator, buffer,
-				             allocation);
-			}
+		Buffer(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
+		       const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
+		       std::shared_ptr<GpuAllocator> allocator);
 
-			~Buffer()
-			{
-				pAllocator->allocator.destroyBuffer(buffer, allocation);
-			}
-		};
+		~Buffer();
+	};
 
-		struct CommandBuffers
-		{
-			CommandBuffers(const CommandBuffers& other) = delete;
-			CommandBuffers(CommandBuffers&& other) = delete;
-			CommandBuffers& operator=(const CommandBuffers& other) = delete;
-			CommandBuffers& operator=(CommandBuffers&& other) = delete;
+	struct CommandBuffers
+	{
+		CommandBuffers(const CommandBuffers& other) = delete;
+		CommandBuffers(CommandBuffers&& other) = delete;
+		CommandBuffers& operator=(const CommandBuffers& other) = delete;
+		CommandBuffers& operator=(CommandBuffers&& other) = delete;
 
-			std::vector<vk::CommandBuffer> commandBuffers{};
+		std::vector<vk::CommandBuffer> commandBuffers{};
 
-			std::shared_ptr<CommandPool> pCommandPool;
-			std::shared_ptr<Device> pDevice;
-			std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		std::shared_ptr<CommandPool> pCommandPool;
+		std::shared_ptr<Device> pDevice;
 
-			CommandBuffers(const std::shared_ptr<Device>& device, const std::shared_ptr<CommandPool>& commandPool,
-			               const u32 count,
-			               const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) :
-				pCommandPool(commandPool),
-				pDevice(device),
-				pResourceAllocation(resourceAllocation)
-			{
-				commandBuffers = createGraphicsCommandBuffers(device->device, commandPool->commandPool, count);
-			}
+		CommandBuffers(std::shared_ptr<Device> device, std::shared_ptr<CommandPool> commandPool,
+		               const u32 count);
 
-			~CommandBuffers()
-			{
-				pDevice->device.freeCommandBuffers(pCommandPool->commandPool, commandBuffers.size(),
-				                                   commandBuffers.data());
-			}
-		};
+		~CommandBuffers();
+	};
 
-		//probably will need to separate fences and semaphores
-		struct SyncObjects
-		{
-			SyncObjects(const SyncObjects& other) = delete;
-			SyncObjects(SyncObjects&& other) = delete;
-			SyncObjects& operator=(const SyncObjects& other) = delete;
-			SyncObjects& operator=(SyncObjects&& other) = delete;
+	//probably will need to separate fences and semaphores
+	struct SyncObjects
+	{
+		SyncObjects(const SyncObjects& other) = delete;
+		SyncObjects(SyncObjects&& other) = delete;
+		SyncObjects& operator=(const SyncObjects& other) = delete;
+		SyncObjects& operator=(SyncObjects&& other) = delete;
 
-			std::vector<vk::Semaphore> imageAvailableSemaphores{};
-			std::vector<vk::Semaphore> renderFinishedSemaphores{};
-			std::vector<vk::Fence> inFlightFences{};
+		std::vector<vk::Semaphore> imageAvailableSemaphores{};
+		std::vector<vk::Semaphore> renderFinishedSemaphores{};
+		std::vector<vk::Fence> inFlightFences{};
 
-			std::shared_ptr<Device> pDevice;
-			std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		std::shared_ptr<Device> pDevice;
+		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-			SyncObjects(const std::shared_ptr<Device>& device, const u32 count,
-			            const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation) : pDevice(device),
-				pResourceAllocation(resourceAllocation)
-			{
-				imageAvailableSemaphores.resize(count);
-				renderFinishedSemaphores.resize(count);
-				inFlightFences.resize(count);
+		SyncObjects(std::shared_ptr<Device> device, const u32 count,
+		            std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
 
-				vk::SemaphoreCreateInfo semaphoreInfo;
-				vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
-
-				for (size_t i = 0; i < count; ++i)
-				{
-					imageAvailableSemaphores[i] = createSemaphore(device->device, semaphoreInfo,
-					                                              &resourceAllocation->allocationCallbacks);
-					renderFinishedSemaphores[i] = createSemaphore(device->device, semaphoreInfo,
-					                                              &resourceAllocation->allocationCallbacks);
-					inFlightFences[i] = createFence(device->device, fenceInfo,
-					                                &resourceAllocation->allocationCallbacks);
-				}
-			}
-
-			~SyncObjects()
-			{
-				for (size_t i = 0; i < inFlightFences.size(); ++i)
-				{
-					pDevice->device.destroySemaphore(imageAvailableSemaphores[i],
-					                                 &pResourceAllocation->allocationCallbacks);
-					pDevice->device.destroySemaphore(renderFinishedSemaphores[i],
-					                                 &pResourceAllocation->allocationCallbacks);
-					pDevice->device.destroyFence(inFlightFences[i], &pResourceAllocation->allocationCallbacks);
-				}
-			}
-		};
+		~SyncObjects();
 	};
 }

@@ -93,16 +93,19 @@
     <ClInclude Include="Engine\VulkanAllocator.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\EngineCore.hpp">
+    <ClInclude Include="Engine\Core.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Resources.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\EngineDebug.hpp">
+    <ClInclude Include="Engine\Debug.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\EngineCommon.hpp">
+    <ClInclude Include="Engine\Common.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
@@ -140,13 +143,16 @@
     <ClCompile Include="Application\InputManager.cpp">
       <Filter>Application</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\EngineCore.cpp">
+    <ClCompile Include="Engine\Core.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\VulkanAllocator.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\EngineDebug.cpp">
+    <ClCompile Include="Engine\Debug.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>

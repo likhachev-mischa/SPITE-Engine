@@ -1,18 +1,15 @@
 #pragma once
 #include <EASTL/vector.h>
+
+#include "Common.hpp"
 #include "Application/AppConifg.hpp"
 #include "Application/WindowManager.hpp"
 #include "Base/Assert.hpp"
-#include "Base/Logging.hpp"
 #include "Base/Memory.hpp"
 #include "vulkan-memory-allocator-hpp/vk_mem_alloc.hpp"
 
 namespace spite
 {
-	//forward declarations
-	struct QueueFamilyIndices;
-
-
 	//TODO: replace most allocators to stack/linear allocator
 #define SASSERT_VULKAN(result) SASSERTM((result) == vk::Result::eSuccess, "Vulkan assertion failed %u",result)
 
@@ -20,12 +17,6 @@ namespace spite
 		vk::KHRSwapchainExtensionName
 	};
 
-	struct SwapchainSupportDetails
-	{
-		vk::SurfaceCapabilitiesKHR capabilities;
-		std::vector<vk::SurfaceFormatKHR> formats{};
-		std::vector<vk::PresentModeKHR> presentModes{};
-	};
 
 	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(
 		const spite::HeapAllocator& allocator, spite::WindowManager* windowManager);
@@ -57,8 +48,9 @@ namespace spite
 
 	vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, int width, int height);
 
-	SwapchainSupportDetails
-	querySwapchainSupport(const vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR surface);
+	SwapchainSupportDetails querySwapchainSupport(const vk::PhysicalDevice physicalDevice,
+	                                              const vk::SurfaceKHR surface);
+
 	vk::SwapchainKHR createSwapchain(const vk::PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface,
 	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Device& device,
 	                                 const vk::Extent2D& extent, const vk::SurfaceFormatKHR& surfaceFormat,

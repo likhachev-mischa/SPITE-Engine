@@ -1,10 +1,10 @@
-#include "EngineCore.hpp"
+#include "Core.hpp"
 
 #include <set>
 #include <EASTL/array.h>
 
-#include"EngineCommon.hpp"
-#include "EngineDebug.hpp"
+#include"Common.hpp"
+#include "Debug.hpp"
 #include "GraphicsUtility.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"

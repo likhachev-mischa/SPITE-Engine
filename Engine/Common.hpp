@@ -17,4 +17,11 @@ namespace spite
 				transferFamily.has_value();
 		}
 	};
+
+	struct SwapchainSupportDetails
+	{
+		vk::SurfaceCapabilitiesKHR capabilities;
+		std::vector<vk::SurfaceFormatKHR> formats{};
+		std::vector<vk::PresentModeKHR> presentModes{};
+	};
 }

@@ -1,8 +1,6 @@
 #pragma once
 #include "VulkanUsage.hpp"
-#include "Base/Logging.hpp"
 #include "Base/Platform.hpp"
-#include "Base/Memory.hpp"
 
 namespace spite
 {
