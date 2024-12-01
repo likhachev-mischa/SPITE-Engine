@@ -5,7 +5,7 @@
 
 namespace spite
 {
-	ResourceAllocationCallbacks::ResourceAllocationCallbacks(spite::HeapAllocator& allocator)
+	AllocationCallbacksWrapper::AllocationCallbacksWrapper(spite::HeapAllocator& allocator)
 	{
 		allocationCallbacks = vk::AllocationCallbacks(
 			&allocator,
@@ -16,244 +16,322 @@ namespace spite
 			&vkFreeCallback);
 	}
 
-	ResourceAllocationCallbacks::~ResourceAllocationCallbacks()
+	AllocationCallbacksWrapper::~AllocationCallbacksWrapper()
 	{
 		allocationCallbacks.pUserData = nullptr;
 	}
 
-	Instance::Instance(const spite::HeapAllocator& allocator,
-	                   std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
-	                   const eastl::vector<const char*, spite::HeapAllocator>& extensions): pResourceAllocation(
-		std::move(
-			resourceAllocation))
+	InstanceExtensions::InstanceExtensions(char const* const* windowExtensions, const u32 windowExtensionsCount,
+	                                       const spite::HeapAllocator& allocator)
 	{
-		instance = spite::createInstance(allocator, &pResourceAllocation->allocationCallbacks, extensions);
+		extensions = getRequiredExtensions(allocator, windowExtensions, windowExtensionsCount);
 	}
 
-	Instance::~Instance()
+	InstanceWrapper::InstanceWrapper(const spite::HeapAllocator& allocator,
+	                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+	                                 const eastl::vector<const char*, spite::HeapAllocator>& extensions):
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		instance.destroy(&pResourceAllocation->allocationCallbacks);
+		instance = spite::createInstance(allocator, *allocationCallbacks, extensions);
 	}
 
-	PhysicalDevice::PhysicalDevice(const Instance& instance)
+	InstanceWrapper::~InstanceWrapper()
 	{
-		device = spite::getPhysicalDevice(instance.instance);
+		instance.destroy(allocationCallbacks);
 	}
 
-	Device::Device(const PhysicalDevice& physicalDevice, const QueueFamilyIndices& indices,
-	               const spite::HeapAllocator& allocator,
-	               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pResourceAllocation(std::move(
-		resourceAllocation))
+	PhysicalDeviceWrapper::PhysicalDeviceWrapper(const InstanceWrapper& instanceWrapper)
 	{
-		device = spite::createDevice(indices, physicalDevice.device, allocator,
-		                             &pResourceAllocation->allocationCallbacks);
+		device = spite::getPhysicalDevice(instanceWrapper.instance);
 	}
 
-	Device::~Device()
+	DeviceWrapper::DeviceWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper, const QueueFamilyIndices& indices,
+	                             const spite::HeapAllocator& allocator,
+	                             const AllocationCallbacksWrapper& allocationCallbacksWrapper): allocationCallbacks(&
+		allocationCallbacksWrapper.allocationCallbacks)
 	{
-		device.destroy(&pResourceAllocation->allocationCallbacks);
+		device = spite::createDevice(indices, physicalDeviceWrapper.device, allocator, allocationCallbacks);
 	}
 
-	GpuAllocator::GpuAllocator(const PhysicalDevice& physicalDevice, const Device& device, const Instance& instance,
-	                           const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation)
+	DeviceWrapper::~DeviceWrapper()
 	{
-		allocator = spite::createVmAllocator(physicalDevice.device, device.device, instance.instance,
-		                                     &resourceAllocation->allocationCallbacks);;
+		device.destroy(allocationCallbacks);
 	}
 
-	GpuAllocator::~GpuAllocator()
+	GpuAllocatorWrapper::GpuAllocatorWrapper(const PhysicalDeviceWrapper& physicalDevice,
+	                                         const DeviceWrapper& deviceWrapper,
+	                                         const InstanceWrapper& instanceWrapper,
+	                                         const vk::AllocationCallbacks& allocationCallbacksWrapper)
+	{
+		allocator = spite::createVmAllocator(physicalDevice.device, deviceWrapper.device, instanceWrapper.instance,
+		                                     &allocationCallbacksWrapper);
+	}
+
+	GpuAllocatorWrapper::~GpuAllocatorWrapper()
 	{
 		allocator.destroy();
 	}
 
-	SwapchainDetails::SwapchainDetails(const PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface,
-	                                   const int width, const int height): surface(surface)
+	SwapchainDetailsWrapper::SwapchainDetailsWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
+	                                                 const vk::SurfaceKHR& surface,
+	                                                 const int width, const int height): surface(surface)
 	{
-		supportDetails = querySwapchainSupport(physicalDevice.device, surface);
+		supportDetails = querySwapchainSupport(physicalDeviceWrapper.device, surface);
 		surfaceFormat = chooseSwapSurfaceFormat(supportDetails.formats);
 		presentMode = chooseSwapPresentMode(supportDetails.presentModes);
 		extent = chooseSwapExtent(supportDetails.capabilities, width, height);
 	}
 
-	Swapchain::Swapchain(const PhysicalDevice& physicalDevice, std::shared_ptr<Device> device,
-	                     const SwapchainDetails& details, const spite::HeapAllocator& allocator,
-	                     std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(std::move(
-			device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	SwapchainWrapper::SwapchainWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
+	                                   const DeviceWrapper& deviceWrapper,
+	                                   const SwapchainDetailsWrapper& swapchainDetailsWrapper,
+	                                   const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+	                                   const spite::HeapAllocator& allocator): device(deviceWrapper.device),
+	                                                                           allocationCallbacks(
+		                                                                           &allocationCallbacksWrapper.
+		                                                                           allocationCallbacks)
+
 	{
-		swapchain = spite::createSwapchain(physicalDevice.device, details.surface, details.supportDetails,
-		                                   pDevice->device, details.extent,
-		                                   details.surfaceFormat, details.presentMode, allocator,
-		                                   &pResourceAllocation->allocationCallbacks);
+		swapchain = spite::createSwapchain(physicalDeviceWrapper.device, swapchainDetailsWrapper.surface,
+		                                   swapchainDetailsWrapper.supportDetails,
+		                                   device, swapchainDetailsWrapper.extent,
+		                                   swapchainDetailsWrapper.surfaceFormat, swapchainDetailsWrapper.presentMode,
+		                                   allocator,
+		                                   allocationCallbacks);
 	}
 
-	Swapchain::~Swapchain()
+	SwapchainWrapper::~SwapchainWrapper()
 	{
-		pDevice->device.destroySwapchainKHR(swapchain, &pResourceAllocation->allocationCallbacks);
+		device.destroySwapchainKHR(swapchain, allocationCallbacks);
 	}
 
-	SwapchainImages::SwapchainImages(const Device& device, const Swapchain& swapchain)
+	SwapchainImages::SwapchainImages(const DeviceWrapper& deviceWrapper,
+	                                 const SwapchainWrapper& swapchainWrapper)
 	{
-		images = getSwapchainImages(device.device, swapchain.swapchain);
+		images = getSwapchainImages(deviceWrapper.device, swapchainWrapper.swapchain);
 	}
 
 	SwapchainImages::~SwapchainImages() = default;
 
-	ImageViews::ImageViews(std::shared_ptr<Device> device, const SwapchainImages& swapchainImages,
-	                       const SwapchainDetails& details,
-	                       std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(std::move(device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	ImageViewsWrapper::ImageViewsWrapper(const DeviceWrapper& deviceWrapper,
+	                                     const SwapchainImages& swapchainImagesWrapper,
+	                                     const SwapchainDetailsWrapper& detailsWrapper,
+	                                     const AllocationCallbacksWrapper& resourceAllocationWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&resourceAllocationWrapper.allocationCallbacks)
 	{
-		imageViews = createImageViews(pDevice->device, swapchainImages.images, details.surfaceFormat.format,
-		                              &resourceAllocation->allocationCallbacks);
+		imageViews = createImageViews(device, swapchainImagesWrapper.images, detailsWrapper.surfaceFormat.format,
+		                              allocationCallbacks);
 	}
 
-	ImageViews::~ImageViews()
+	ImageViewsWrapper::~ImageViewsWrapper()
 	{
 		for (const auto& imageView : imageViews)
 		{
-			pDevice->device.destroyImageView(imageView, &pResourceAllocation->allocationCallbacks);
+			device.destroyImageView(imageView, allocationCallbacks);
 		}
 	}
 
-	RenderPass::RenderPass(std::shared_ptr<Device> device, const SwapchainDetails& details,
-	                       std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(std::move(
-			device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	RenderPassWrapper::RenderPassWrapper(const DeviceWrapper& deviceWrapper,
+	                                     const SwapchainDetailsWrapper& detailsWrapper,
+	                                     const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		renderPass = createRenderPass(pDevice->device, details.surfaceFormat.format,
-		                              &pResourceAllocation->allocationCallbacks);
+		renderPass = createRenderPass(device, detailsWrapper.surfaceFormat.format,
+		                              allocationCallbacks);
 	}
 
-	RenderPass::~RenderPass()
+	RenderPassWrapper::~RenderPassWrapper()
 	{
-		pDevice->device.destroyRenderPass(renderPass, &pResourceAllocation->allocationCallbacks);
+		device.destroyRenderPass(renderPass, allocationCallbacks);
 	}
 
-	DescriptorSetLayout::DescriptorSetLayout(std::shared_ptr<Device> device,
-	                                         std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(
-			std::move(device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	DescriptorSetLayoutWrapper::DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
+	                                                       const AllocationCallbacksWrapper&
+	                                                       allocationCallbacksWrapper): device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSetLayout = createDescriptorSetLayout(pDevice->device, &pResourceAllocation->allocationCallbacks);
+		descriptorSetLayout = createDescriptorSetLayout(device,
+		                                                allocationCallbacks);
 	}
 
-	DescriptorSetLayout::~DescriptorSetLayout()
+	DescriptorSetLayoutWrapper::~DescriptorSetLayoutWrapper()
 	{
-		pDevice->device.destroyDescriptorSetLayout(descriptorSetLayout, &pResourceAllocation->allocationCallbacks);
+		device.destroyDescriptorSetLayout(descriptorSetLayout, allocationCallbacks);
 	}
 
-	DescriptorPool::DescriptorPool(std::shared_ptr<Device> device, const vk::DescriptorType& type,
-	                               const u32 size,
-	                               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation):
-		pDevice(std::move(device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	DescriptorPoolWrapper::DescriptorPoolWrapper(const DeviceWrapper& deviceWrapper, const vk::DescriptorType& type,
+	                                             const u32 size,
+	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorPool = createDescriptorPool(pDevice->device, &pResourceAllocation->allocationCallbacks, type, size);
+		descriptorPool = createDescriptorPool(device, allocationCallbacks, type,
+		                                      size);
 	}
 
-	DescriptorPool::~DescriptorPool()
+	DescriptorPoolWrapper::~DescriptorPoolWrapper()
 	{
-		pDevice->device.destroyDescriptorPool(descriptorPool, &pResourceAllocation->allocationCallbacks);
+		device.destroyDescriptorPool(descriptorPool, allocationCallbacks);
 	}
 
-	DescriptorSets::DescriptorSets(std::shared_ptr<Device> device,
-	                               const DescriptorSetLayout& descriptorSetLayout, const DescriptorPool& descriptorPool,
-	                               const spite::HeapAllocator& allocator,
-	                               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
-	                               const u32 count): pDevice(std::move(device)),
-	                                                 pResourceAllocation(std::move(resourceAllocation))
+	DescriptorSetsWrapper::DescriptorSetsWrapper(const DeviceWrapper& deviceWrapper,
+	                                             const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+	                                             const DescriptorPoolWrapper& descriptorPoolWrapper,
+	                                             const spite::HeapAllocator& allocator,
+	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+	                                             const u32 count): descriptorPool(descriptorPoolWrapper.descriptorPool),
+	                                                               device(deviceWrapper.device),
+	                                                               allocationCallbacks(
+		                                                               &allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSets = createDescriptorSets(pDevice->device, descriptorSetLayout.descriptorSetLayout,
-		                                      descriptorPool.descriptorPool, count, allocator,
-		                                      &pResourceAllocation->allocationCallbacks);
+		descriptorSets = createDescriptorSets(device, descriptorSetLayoutWrapper.descriptorSetLayout,
+		                                      descriptorPool, count, allocator,
+		                                      allocationCallbacks);
 	}
 
-	DescriptorSets::~DescriptorSets() = default;
-
-	GraphicsPipeline::GraphicsPipeline(std::shared_ptr<Device> device,
-	                                   const DescriptorSetLayout& descriptorSetLayout, const SwapchainDetails& details,
-	                                   const RenderPass& renderPass,
-	                                   std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation):
-		pDevice(std::move(device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	DescriptorSetsWrapper::~DescriptorSetsWrapper()
 	{
-		graphicsPipeline = createGraphicsPipeline(pDevice->device, descriptorSetLayout.descriptorSetLayout,
-		                                          details.extent, renderPass.renderPass,
-		                                          &pResourceAllocation->allocationCallbacks);
+		device.freeDescriptorSets(descriptorPool, descriptorSets,
+		                          &allocationCallbacks);
 	}
 
-	GraphicsPipeline::~GraphicsPipeline()
+	ShaderModuleWrapper::ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const std::vector<char>& code,
+	                                         const vk::ShaderStageFlagBits& stageFlag,
+	                                         const AllocationCallbacksWrapper& allocationCallbacksWrapper) :
+		stage(stageFlag), device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		pDevice->device.destroyPipeline(graphicsPipeline, &pResourceAllocation->allocationCallbacks);
+		shaderModule = createShaderModule(device, code, allocationCallbacks);
 	}
 
-	Framebuffers::Framebuffers(std::shared_ptr<Device> device, const spite::HeapAllocator& allocator,
-	                           const ImageViews& imageViews, const SwapchainDetails& details,
-	                           const RenderPass& renderPass,
-	                           std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(
-			std::move(device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	ShaderModuleWrapper::~ShaderModuleWrapper()
 	{
-		framebuffers = createFramebuffers(pDevice->device, allocator, imageViews.imageViews, details.extent,
-		                                  renderPass.renderPass,
-		                                  &pResourceAllocation->allocationCallbacks);
+		device.destroyShaderModule(shaderModule, allocationCallbacks);
 	}
 
-	Framebuffers::~Framebuffers()
+	VertexInputDescriptions::VertexInputDescriptions(
+		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
+		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions) :
+		bindingDescriptions(std::move(bindingDescriptions)), attributeDescriptions(std::move(attributeDescriptions))
+	{
+	}
+
+	GraphicsPipelineWrapper::GraphicsPipelineWrapper(const DeviceWrapper& deviceWrapper,
+	                                                 const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+	                                                 const SwapchainDetailsWrapper& detailsWrapper,
+	                                                 const RenderPassWrapper& renderPassWrapper,
+	                                                 const spite::HeapAllocator& allocator,
+	                                                 eastl::array<std::tuple<
+		                                                 std::shared_ptr<ShaderModuleWrapper>, const char*>>&
+	                                                 shaderModules,
+	                                                 const VertexInputDescriptions& vertexInputDescription,
+	                                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
+	{
+		eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator> shaderStages(allocator);
+		shaderStages.reserve(shaderModules.size());
+
+		for (auto shaderModule : shaderModules)
+		{
+			vk::PipelineShaderStageCreateInfo createInfo(
+				{},
+				std::get<0>(shaderModule)->stage,
+				std::get<0>(shaderModule)->shaderModule,
+				std::get<1>(shaderModule));
+			shaderStages.push_back(createInfo);
+		}
+
+		vk::PipelineVertexInputStateCreateInfo vertexInputInfo(
+			{},
+			static_cast<u32>(vertexInputDescription.bindingDescriptions.size()),
+			vertexInputDescription.bindingDescriptions.data(),
+			static_cast<u32>(vertexInputDescription.attributeDescriptions.size()),
+			vertexInputDescription.attributeDescriptions.data());
+
+		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayoutWrapper.descriptorSetLayout,
+		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
+		                                          vertexInputInfo,
+		                                          allocationCallbacks);
+	}
+
+	GraphicsPipelineWrapper::~GraphicsPipelineWrapper()
+	{
+		device.destroyPipeline(graphicsPipeline, allocationCallbacks);
+	}
+
+	FramebuffersWrapper::FramebuffersWrapper(const DeviceWrapper& deviceWrapper,
+	                                         const spite::HeapAllocator& allocator,
+	                                         const ImageViewsWrapper& imageViewsWrapper,
+	                                         const SwapchainDetailsWrapper& detailsWrapper,
+	                                         const RenderPassWrapper& renderPassWrapper,
+	                                         const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
+	{
+		framebuffers = createFramebuffers(device, allocator, imageViewsWrapper.imageViews,
+		                                  detailsWrapper.extent,
+		                                  renderPassWrapper.renderPass,
+		                                  allocationCallbacks);
+	}
+
+	FramebuffersWrapper::~FramebuffersWrapper()
 	{
 		for (const auto& framebuffer : framebuffers)
 		{
-			pDevice->device.destroyFramebuffer(framebuffer, &pResourceAllocation->allocationCallbacks);
+			device.destroyFramebuffer(framebuffer, allocationCallbacks);
 		}
 	}
 
-	CommandPool::CommandPool(std::shared_ptr<Device> device, const u32 familyIndex,
-	                         const vk::CommandPoolCreateFlagBits& flagBits,
-	                         std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(std::move(
-			device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	CommandPoolWrapper::CommandPoolWrapper(const DeviceWrapper& deviceWrapper, const u32 familyIndex,
+	                                       const vk::CommandPoolCreateFlagBits& flagBits,
+	                                       const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		commandPool = createCommandPool(pDevice->device, &pResourceAllocation->allocationCallbacks, flagBits,
+		commandPool = createCommandPool(device, allocationCallbacks, flagBits,
 		                                familyIndex);
 	}
 
-	CommandPool::~CommandPool()
+	CommandPoolWrapper::~CommandPoolWrapper()
 	{
-		pDevice->device.destroyCommandPool(commandPool, &pResourceAllocation->allocationCallbacks);
+		device.destroyCommandPool(commandPool, allocationCallbacks);
 	}
 
-	Buffer::Buffer(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
-	               const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
-	               std::shared_ptr<GpuAllocator> allocator): pAllocator(std::move(allocator))
+	BufferWrapper::BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage,
+	                             const vk::MemoryPropertyFlags memoryProperty,
+	                             const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
+	                             const GpuAllocatorWrapper& allocatorWrapper): allocator(allocatorWrapper.allocator)
 	{
-		createBuffer(size, usage, memoryProperty, allocationFlag, indices, pAllocator->allocator, buffer,
+		createBuffer(size, usage, memoryProperty, allocationFlag, indices, allocator, buffer,
 		             allocation);
 	}
 
-	Buffer::~Buffer()
+	BufferWrapper::~BufferWrapper()
 	{
-		pAllocator->allocator.destroyBuffer(buffer, allocation);
+		allocator.destroyBuffer(buffer, allocation);
 	}
 
-	CommandBuffers::CommandBuffers(std::shared_ptr<Device> device,
-	                               std::shared_ptr<CommandPool> commandPool, const u32 count):
-		pCommandPool(std::move(commandPool)),
-		pDevice(std::move(device))
+	CommandBuffersWrapper::CommandBuffersWrapper(const DeviceWrapper& deviceWrapper,
+	                                             const CommandPoolWrapper& commandPoolWrapper, const u32 count):
+		commandPool(commandPoolWrapper.commandPool),
+		device(deviceWrapper.device)
 	{
-		commandBuffers = createGraphicsCommandBuffers(pDevice->device, pCommandPool->commandPool, count);
+		commandBuffers = createGraphicsCommandBuffers(device, commandPool, count);
 	}
 
-	CommandBuffers::~CommandBuffers()
+	CommandBuffersWrapper::~CommandBuffersWrapper()
 	{
-		pDevice->device.freeCommandBuffers(pCommandPool->commandPool, commandBuffers.size(),
-		                                   commandBuffers.data());
+		device.freeCommandBuffers(commandPool, static_cast<u32>(commandBuffers.size()),
+		                          commandBuffers.data());
 	}
 
-	SyncObjects::SyncObjects(std::shared_ptr<Device> device, const u32 count,
-	                         std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation): pDevice(std::move(
-			device)),
-		pResourceAllocation(std::move(resourceAllocation))
+	SyncObjectsWrapper::SyncObjectsWrapper(const DeviceWrapper& deviceWrapper, const u32 count,
+	                                       const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
 		imageAvailableSemaphores.resize(count);
 		renderFinishedSemaphores.resize(count);
@@ -264,24 +342,24 @@ namespace spite
 
 		for (size_t i = 0; i < count; ++i)
 		{
-			imageAvailableSemaphores[i] = createSemaphore(pDevice->device, semaphoreInfo,
-			                                              &pResourceAllocation->allocationCallbacks);
-			renderFinishedSemaphores[i] = createSemaphore(pDevice->device, semaphoreInfo,
-			                                              &pResourceAllocation->allocationCallbacks);
-			inFlightFences[i] = createFence(pDevice->device, fenceInfo,
-			                                &pResourceAllocation->allocationCallbacks);
+			imageAvailableSemaphores[i] = createSemaphore(device, semaphoreInfo,
+			                                              allocationCallbacks);
+			renderFinishedSemaphores[i] = createSemaphore(device, semaphoreInfo,
+			                                              allocationCallbacks);
+			inFlightFences[i] = createFence(device, fenceInfo,
+			                                allocationCallbacks);
 		}
 	}
 
-	SyncObjects::~SyncObjects()
+	SyncObjectsWrapper::~SyncObjectsWrapper()
 	{
 		for (size_t i = 0; i < inFlightFences.size(); ++i)
 		{
-			pDevice->device.destroySemaphore(imageAvailableSemaphores[i],
-			                                 &pResourceAllocation->allocationCallbacks);
-			pDevice->device.destroySemaphore(renderFinishedSemaphores[i],
-			                                 &pResourceAllocation->allocationCallbacks);
-			pDevice->device.destroyFence(inFlightFences[i], &pResourceAllocation->allocationCallbacks);
+			device.destroySemaphore(imageAvailableSemaphores[i],
+			                        allocationCallbacks);
+			device.destroySemaphore(renderFinishedSemaphores[i],
+			                        allocationCallbacks);
+			device.destroyFence(inFlightFences[i], allocationCallbacks);
 		}
 	}
 }

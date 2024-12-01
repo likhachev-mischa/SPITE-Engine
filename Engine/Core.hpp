@@ -1,9 +1,9 @@
 #pragma once
+#include <EASTL/array.h>
 #include <EASTL/vector.h>
 
 #include "Common.hpp"
 #include "Application/AppConifg.hpp"
-#include "Application/WindowManager.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Memory.hpp"
 #include "vulkan-memory-allocator-hpp/vk_mem_alloc.hpp"
@@ -13,13 +13,13 @@ namespace spite
 	//TODO: replace most allocators to stack/linear allocator
 #define SASSERT_VULKAN(result) SASSERTM((result) == vk::Result::eSuccess, "Vulkan assertion failed %u",result)
 
-	const std::array<const char*, 1> DEVICE_EXTENSIONS = {
+	const eastl::array DEVICE_EXTENSIONS = {
 		vk::KHRSwapchainExtensionName
 	};
 
-
-	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(
-		const spite::HeapAllocator& allocator, spite::WindowManager* windowManager);
+	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(const spite::HeapAllocator& allocator,
+	                                                                       char const* const* windowExtensions,
+	                                                                       const u32 windowExtensionCount);
 
 	vk::Instance createInstance(const spite::HeapAllocator& allocator,
 	                            const vk::AllocationCallbacks& allocationCallbacks,
@@ -74,8 +74,14 @@ namespace spite
 	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
 
+	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device, const std::vector<char>& code,
+	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
+	                                                        const vk::AllocationCallbacks* pAllocationCallbacks);
+
 	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
 	                                    const vk::Extent2D& swapchainExtent, const vk::RenderPass& renderPass,
+	                                    const eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator>&
+	                                    shaderStages, const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	eastl::vector<vk::Framebuffer, spite::HeapAllocator> createFramebuffers(const vk::Device& device,

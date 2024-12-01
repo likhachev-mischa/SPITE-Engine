@@ -1,9 +1,8 @@
 #include "Core.hpp"
 
 #include <set>
-#include <EASTL/array.h>
 
-#include"Common.hpp"
+#include "Common.hpp"
 #include "Debug.hpp"
 #include "GraphicsUtility.hpp"
 #include "Base/Assert.hpp"
@@ -12,14 +11,12 @@
 namespace spite
 {
 	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(const spite::HeapAllocator& allocator,
-	                                                                       spite::WindowManager* windowManager)
+	                                                                       char const* const* windowExtensions,
+	                                                                       const u32 windowExtensionCount)
 	{
-		uint32_t extensionCount = 0;
-		char const* const* extensionNames = windowManager->getExtensions(extensionCount);
-
-		eastl::vector<const char*, spite::HeapAllocator> extensions(extensionNames,
-		                                                            extensionNames +
-		                                                            extensionCount, allocator);
+		eastl::vector<const char*, spite::HeapAllocator> extensions(windowExtensions,
+		                                                            windowExtensions +
+		                                                            windowExtensionCount, allocator);
 
 		if (ENABLE_VALIDATION_LAYERS)
 		{
@@ -410,34 +407,27 @@ namespace spite
 		return shaderModule;
 	}
 
-	//TODO: separate ShaderModule creation, add pipeline cache 
+	//uses createShaderModule
+	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device, const std::vector<char>& code,
+	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
+	                                                        const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		vk::ShaderModule shaderModule = createShaderModule(device, code, pAllocationCallbacks);
+		vk::PipelineShaderStageCreateInfo shaderStageInfo(
+			{},
+			stage,
+			shaderModule,
+			name);
+		return shaderStageInfo;
+	}
+
+	//TODO: add pipeline cache 
 	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
 	                                    const vk::Extent2D& swapchainExtent, const vk::RenderPass& renderPass,
+	                                    const eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator>&
+	                                    shaderStages, const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
-		auto vertShaderCode = readBinaryFile("shaders/vert.spv");
-		auto fragShaderCode = readBinaryFile("shaders/frag.spv");
-		vk::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode, pAllocationCallbacks);
-		vk::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode, pAllocationCallbacks);
-		vertShaderCode.clear();
-		fragShaderCode.clear();
-
-		vk::PipelineShaderStageCreateInfo vertShaderStageInfo(
-			{},
-			vk::ShaderStageFlagBits::eVertex,
-			vertShaderModule,
-			"main");
-
-		vk::PipelineShaderStageCreateInfo fragShaderStageInfo(
-			{},
-			vk::ShaderStageFlagBits::eFragment,
-			fragShaderModule,
-			"main");
-
-		vk::PipelineShaderStageCreateInfo shaderStages[] = {
-			vertShaderStageInfo, fragShaderStageInfo
-		};
-
 		eastl::array dynamicStates = {
 			vk::DynamicState::eViewport,
 			vk::DynamicState::eScissor,
@@ -448,16 +438,6 @@ namespace spite
 			{},
 			static_cast<uint32_t>(dynamicStates.size()),
 			dynamicStates.data());
-
-		vk::VertexInputBindingDescription bindingDescription(0, sizeof(glm::vec2), vk::VertexInputRate::eVertex);
-		vk::VertexInputAttributeDescription attributeDescription(0, 0, vk::Format::eR32G32Sfloat);
-		vk::PipelineVertexInputStateCreateInfo vertexInputInfo(
-			{},
-			1,
-			&bindingDescription,
-			1,
-			&attributeDescription);
-
 
 		vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
 			{},
@@ -522,8 +502,8 @@ namespace spite
 		SASSERT_VULKAN(result);
 
 		vk::GraphicsPipelineCreateInfo pipelineInfo({},
-		                                            2,
-		                                            shaderStages,
+		                                            shaderStages.size(),
+		                                            shaderStages.data(),
 		                                            &vertexInputInfo,
 		                                            &inputAssembly,
 		                                            {},
@@ -711,7 +691,7 @@ namespace spite
 	}
 
 	vk::Semaphore createSemaphore(const vk::Device device, const vk::SemaphoreCreateInfo& createInfo,
-		const vk::AllocationCallbacks* pAllocationCallbacks)
+	                              const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		auto [result, semaphore] = device.createSemaphore(createInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
@@ -719,7 +699,7 @@ namespace spite
 	}
 
 	vk::Fence createFence(const vk::Device device, const vk::FenceCreateInfo& createInfo,
-		const vk::AllocationCallbacks* pAllocationCallbacks)
+	                      const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		auto [result, fence] = device.createFence(createInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)

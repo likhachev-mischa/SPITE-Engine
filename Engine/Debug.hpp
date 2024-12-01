@@ -13,7 +13,7 @@ namespace spite
 	constexpr bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 
-	const std::array<const char*, 1> VALIDATION_LAYERS = {
+	const std::array VALIDATION_LAYERS = {
 		"VK_LAYER_KHRONOS_validation"
 	};
 

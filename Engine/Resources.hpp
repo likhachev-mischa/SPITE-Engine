@@ -1,4 +1,5 @@
 #pragma once
+#include <EASTL/array.h>
 #include <EASTL/vector.h>
 
 #include "Base/Memory.hpp"
@@ -8,78 +9,101 @@
 
 namespace spite
 {
-	struct ResourceAllocationCallbacks
+	//TODO: consider eastl::shared_ptr instead of std::
+	struct AllocationCallbacksWrapper
 	{
-		ResourceAllocationCallbacks(const ResourceAllocationCallbacks& other) = delete;
-		ResourceAllocationCallbacks(ResourceAllocationCallbacks&& other) = delete;
-		ResourceAllocationCallbacks& operator=(const ResourceAllocationCallbacks& other) = delete;
-		ResourceAllocationCallbacks& operator=(ResourceAllocationCallbacks&& other) = delete;
+		AllocationCallbacksWrapper(const AllocationCallbacksWrapper& other) = delete;
+		AllocationCallbacksWrapper(AllocationCallbacksWrapper&& other) = delete;
+		AllocationCallbacksWrapper& operator=(const AllocationCallbacksWrapper& other) = delete;
+		AllocationCallbacksWrapper& operator=(AllocationCallbacksWrapper&& other) = delete;
 
 		vk::AllocationCallbacks allocationCallbacks;
 
-		explicit ResourceAllocationCallbacks(spite::HeapAllocator& allocator);
+		explicit AllocationCallbacksWrapper(spite::HeapAllocator& allocator);
 
-		~ResourceAllocationCallbacks();
+		~AllocationCallbacksWrapper();
 	};
 
-	struct Instance
+	struct InstanceExtensions
 	{
-		Instance(const Instance& other) = delete;
-		Instance(Instance&& other) = delete;
-		Instance& operator=(const Instance& other) = delete;
-		Instance& operator=(Instance&& other) = delete;
+		InstanceExtensions(const InstanceExtensions& other) = delete;
+		InstanceExtensions(InstanceExtensions&& other) = delete;
+		InstanceExtensions& operator=(const InstanceExtensions& other) = delete;
+		InstanceExtensions& operator=(InstanceExtensions&& other) = delete;
+
+		eastl::vector<const char*, spite::HeapAllocator> extensions;
+
+		InstanceExtensions(char const* const* windowExtensions, const u32 windowExtensionsCount,
+		                   const spite::HeapAllocator& allocator);
+
+		~InstanceExtensions() = default;
+	};
+
+	struct InstanceWrapper
+	{
+		InstanceWrapper(const InstanceWrapper& other) = delete;
+		InstanceWrapper(InstanceWrapper&& other) = delete;
+		InstanceWrapper& operator=(const InstanceWrapper& other) = delete;
+		InstanceWrapper& operator=(InstanceWrapper&& other) = delete;
 
 		vk::Instance instance;
-		std::shared_ptr<spite::ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		Instance(const spite::HeapAllocator& allocator,
-		         std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
-		         const eastl::vector<const char*, spite::HeapAllocator>& extensions);
+		InstanceWrapper(const spite::HeapAllocator& allocator,
+		                const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+		                const eastl::vector<const char*, spite::HeapAllocator>& extensions);
 
-		~Instance();
+		~InstanceWrapper();
 	};
 
-	struct PhysicalDevice
+	struct PhysicalDeviceWrapper
 	{
+		PhysicalDeviceWrapper(const PhysicalDeviceWrapper& other) = delete;
+		PhysicalDeviceWrapper(PhysicalDeviceWrapper&& other) = delete;
+		PhysicalDeviceWrapper& operator=(const PhysicalDeviceWrapper& other) = delete;
+		PhysicalDeviceWrapper& operator=(PhysicalDeviceWrapper&& other) = delete;
+
 		vk::PhysicalDevice device;
 
-		explicit PhysicalDevice(const Instance& instance);
+		explicit PhysicalDeviceWrapper(const InstanceWrapper& instanceWrapper);
+
+		~PhysicalDeviceWrapper() = default;
 	};
 
-	struct Device
+	struct DeviceWrapper
 	{
-		Device(const Device& other) = delete;
-		Device(Device&& other) = delete;
-		Device& operator=(const Device& other) = delete;
-		Device& operator=(Device&& other) = delete;
+		DeviceWrapper(const DeviceWrapper& other) = delete;
+		DeviceWrapper(DeviceWrapper&& other) = delete;
+		DeviceWrapper& operator=(const DeviceWrapper& other) = delete;
+		DeviceWrapper& operator=(DeviceWrapper&& other) = delete;
 
 		vk::Device device;
-		std::shared_ptr<spite::ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		Device(const PhysicalDevice& physicalDevice,
-		       const QueueFamilyIndices& indices, const spite::HeapAllocator& allocator,
-		       std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		DeviceWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
+		              const QueueFamilyIndices& indices, const spite::HeapAllocator& allocator,
+		              const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~Device();
+		~DeviceWrapper();
 	};
 
-	struct GpuAllocator
+	struct GpuAllocatorWrapper
 	{
-		GpuAllocator(const GpuAllocator& other) = delete;
-		GpuAllocator(GpuAllocator&& other) = delete;
-		GpuAllocator& operator=(const GpuAllocator& other) = delete;
-		GpuAllocator& operator=(GpuAllocator&& other) = delete;
+		GpuAllocatorWrapper(const GpuAllocatorWrapper& other) = delete;
+		GpuAllocatorWrapper(GpuAllocatorWrapper&& other) = delete;
+		GpuAllocatorWrapper& operator=(const GpuAllocatorWrapper& other) = delete;
+		GpuAllocatorWrapper& operator=(GpuAllocatorWrapper&& other) = delete;
 
 		vma::Allocator allocator;
 
-		GpuAllocator(const PhysicalDevice& physicalDevice, const Device& device,
-		             const Instance& instance,
-		             const std::shared_ptr<ResourceAllocationCallbacks>& resourceAllocation);
+		GpuAllocatorWrapper(const PhysicalDeviceWrapper& physicalDevice, const DeviceWrapper& deviceWrapper,
+		                    const InstanceWrapper& instanceWrapper,
+		                    const vk::AllocationCallbacks& allocationCallbacksWrapper);
 
-		~GpuAllocator();
+		~GpuAllocatorWrapper();
 	};
 
-	struct SwapchainDetails
+	struct SwapchainDetailsWrapper
 	{
 		SwapchainSupportDetails supportDetails;
 		vk::SurfaceKHR surface;
@@ -87,29 +111,29 @@ namespace spite
 		vk::PresentModeKHR presentMode{};
 		vk::Extent2D extent;
 
-		SwapchainDetails(const PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface, const int width,
-		                 const int height);
+		SwapchainDetailsWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper, const vk::SurfaceKHR& surface,
+		                        const int width,
+		                        const int height);
 	};
 
-	struct Swapchain
+	struct SwapchainWrapper
 	{
-		Swapchain(const Swapchain& other) = delete;
-		Swapchain(Swapchain&& other) = delete;
-		Swapchain& operator=(const Swapchain& other) = delete;
-		Swapchain& operator=(Swapchain&& other) = delete;
+		SwapchainWrapper(const SwapchainWrapper& other) = delete;
+		SwapchainWrapper(SwapchainWrapper&& other) = delete;
+		SwapchainWrapper& operator=(const SwapchainWrapper& other) = delete;
+		SwapchainWrapper& operator=(SwapchainWrapper&& other) = delete;
 
 		vk::SwapchainKHR swapchain;
 
-		std::shared_ptr<spite::Device> pDevice;
-		std::shared_ptr<spite::ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
+		SwapchainWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper, const DeviceWrapper& deviceWrapper,
+		                 const SwapchainDetailsWrapper& swapchainDetailsWrapper,
+		                 const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+		                 const spite::HeapAllocator& allocator);
 
-		Swapchain(const PhysicalDevice& physicalDevice, std::shared_ptr<Device> device,
-		          const SwapchainDetails& details,
-		          const spite::HeapAllocator& allocator,
-		          std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
-
-		~Swapchain();
+		~SwapchainWrapper();
 	};
 
 	struct SwapchainImages
@@ -121,216 +145,254 @@ namespace spite
 
 		std::vector<vk::Image> images{};
 
-		SwapchainImages(const Device& device, const Swapchain& swapchain);
+		SwapchainImages(const DeviceWrapper& deviceWrapper, const SwapchainWrapper& swapchainWrapper);
 
 		~SwapchainImages();
 	};
 
-	struct ImageViews
+	struct ImageViewsWrapper
 	{
-		ImageViews(const ImageViews& other) = delete;
-		ImageViews(ImageViews&& other) = delete;
-		ImageViews& operator=(const ImageViews& other) = delete;
-		ImageViews& operator=(ImageViews&& other) = delete;
+		ImageViewsWrapper(const ImageViewsWrapper& other) = delete;
+		ImageViewsWrapper(ImageViewsWrapper&& other) = delete;
+		ImageViewsWrapper& operator=(const ImageViewsWrapper& other) = delete;
+		ImageViewsWrapper& operator=(ImageViewsWrapper&& other) = delete;
 
 		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews{};
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		ImageViews(std::shared_ptr<Device> device, const SwapchainImages& swapchainImages,
-		           const SwapchainDetails& details,
-		           std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		ImageViewsWrapper(const DeviceWrapper& deviceWrapper, const SwapchainImages& swapchainImagesWrapper,
+		                  const SwapchainDetailsWrapper& detailsWrapper,
+		                  const AllocationCallbacksWrapper& resourceAllocationWrapper);
 
-		~ImageViews();
+		~ImageViewsWrapper();
 	};
 
-	struct RenderPass
+	struct RenderPassWrapper
 	{
-		RenderPass(const RenderPass& other) = delete;
-		RenderPass(RenderPass&& other) = delete;
-		RenderPass& operator=(const RenderPass& other) = delete;
-		RenderPass& operator=(RenderPass&& other) = delete;
+		RenderPassWrapper(const RenderPassWrapper& other) = delete;
+		RenderPassWrapper(RenderPassWrapper&& other) = delete;
+		RenderPassWrapper& operator=(const RenderPassWrapper& other) = delete;
+		RenderPassWrapper& operator=(RenderPassWrapper&& other) = delete;
 
 		vk::RenderPass renderPass;
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		RenderPass(std::shared_ptr<Device> device, const SwapchainDetails& details,
-		           std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		RenderPassWrapper(const DeviceWrapper& deviceWrapper, const SwapchainDetailsWrapper& detailsWrapper,
+		                  const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~RenderPass();
+		~RenderPassWrapper();
 	};
 
-	struct DescriptorSetLayout
+	struct DescriptorSetLayoutWrapper
 	{
-		DescriptorSetLayout(const DescriptorSetLayout& other) = delete;
-		DescriptorSetLayout(DescriptorSetLayout&& other) = delete;
-		DescriptorSetLayout& operator=(const DescriptorSetLayout& other) = delete;
-		DescriptorSetLayout& operator=(DescriptorSetLayout&& other) = delete;
+		DescriptorSetLayoutWrapper(const DescriptorSetLayoutWrapper& other) = delete;
+		DescriptorSetLayoutWrapper(DescriptorSetLayoutWrapper&& other) = delete;
+		DescriptorSetLayoutWrapper& operator=(const DescriptorSetLayoutWrapper& other) = delete;
+		DescriptorSetLayoutWrapper& operator=(DescriptorSetLayoutWrapper&& other) = delete;
 
 		vk::DescriptorSetLayout descriptorSetLayout;
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		DescriptorSetLayout(std::shared_ptr<Device> device,
-		                    std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
+		                           const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~DescriptorSetLayout();
+		~DescriptorSetLayoutWrapper();
 	};
 
-	struct DescriptorPool
+	struct DescriptorPoolWrapper
 	{
-		DescriptorPool(const DescriptorPool& other) = delete;
-		DescriptorPool(DescriptorPool&& other) = delete;
-		DescriptorPool& operator=(const DescriptorPool& other) = delete;
-		DescriptorPool& operator=(DescriptorPool&& other) = delete;
+		DescriptorPoolWrapper(const DescriptorPoolWrapper& other) = delete;
+		DescriptorPoolWrapper(DescriptorPoolWrapper&& other) = delete;
+		DescriptorPoolWrapper& operator=(const DescriptorPoolWrapper& other) = delete;
+		DescriptorPoolWrapper& operator=(DescriptorPoolWrapper&& other) = delete;
 
 		vk::DescriptorPool descriptorPool;
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		DescriptorPool(std::shared_ptr<Device> device, const vk::DescriptorType& type, const u32 size,
-		               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		DescriptorPoolWrapper(const DeviceWrapper& deviceWrapper, const vk::DescriptorType& type, const u32 size,
+		                      const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~DescriptorPool();
+		~DescriptorPoolWrapper();
 	};
 
-	struct DescriptorSets
+	struct DescriptorSetsWrapper
 	{
-		DescriptorSets(const DescriptorSets& other) = delete;
-		DescriptorSets(DescriptorSets&& other) = delete;
-		DescriptorSets& operator=(const DescriptorSets& other) = delete;
-		DescriptorSets& operator=(DescriptorSets&& other) = delete;
+		DescriptorSetsWrapper(const DescriptorSetsWrapper& other) = delete;
+		DescriptorSetsWrapper(DescriptorSetsWrapper&& other) = delete;
+		DescriptorSetsWrapper& operator=(const DescriptorSetsWrapper& other) = delete;
+		DescriptorSetsWrapper& operator=(DescriptorSetsWrapper&& other) = delete;
 
 		std::vector<vk::DescriptorSet> descriptorSets{};
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::DescriptorPool descriptorPool;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		DescriptorSets(std::shared_ptr<Device> device, const DescriptorSetLayout& descriptorSetLayout,
-		               const DescriptorPool& descriptorPool, const spite::HeapAllocator& allocator,
-		               std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation,
-		               const u32 count);
+		DescriptorSetsWrapper(const DeviceWrapper& deviceWrapper,
+		                      const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+		                      const DescriptorPoolWrapper& descriptorPoolWrapper,
+		                      const spite::HeapAllocator& allocator,
+		                      const AllocationCallbacksWrapper& allocationCallbacksWrapper,
+		                      const u32 count);
 
-		~DescriptorSets();
+		~DescriptorSetsWrapper();
 	};
 
-
-	struct GraphicsPipeline
+	struct ShaderModuleWrapper
 	{
-		GraphicsPipeline(const GraphicsPipeline& other) = delete;
-		GraphicsPipeline(GraphicsPipeline&& other) = delete;
-		GraphicsPipeline& operator=(const GraphicsPipeline& other) = delete;
-		GraphicsPipeline& operator=(GraphicsPipeline&& other) = delete;
+		ShaderModuleWrapper(const ShaderModuleWrapper& other) = delete;
+		ShaderModuleWrapper(ShaderModuleWrapper&& other) = delete;
+		ShaderModuleWrapper& operator=(const ShaderModuleWrapper& other) = delete;
+		ShaderModuleWrapper& operator=(ShaderModuleWrapper&& other) = delete;
+
+		vk::ShaderModule shaderModule;
+		const vk::ShaderStageFlagBits stage;
+
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
+
+		ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const std::vector<char>& code,
+		                    const vk::ShaderStageFlagBits& stageFlag,
+		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+		~ShaderModuleWrapper();
+	};
+
+	struct VertexInputDescriptions
+	{
+		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
+		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions;
+
+		VertexInputDescriptions(
+			eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
+			eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>
+			attributeDescriptions);
+	};
+
+	struct GraphicsPipelineWrapper
+	{
+		GraphicsPipelineWrapper(const GraphicsPipelineWrapper& other) = delete;
+		GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) = delete;
+		GraphicsPipelineWrapper& operator=(const GraphicsPipelineWrapper& other) = delete;
+		GraphicsPipelineWrapper& operator=(GraphicsPipelineWrapper&& other) = delete;
 
 		vk::Pipeline graphicsPipeline;
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		GraphicsPipeline(std::shared_ptr<Device> device, const DescriptorSetLayout& descriptorSetLayout,
-		                 const SwapchainDetails& details, const RenderPass& renderPass,
-		                 std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		GraphicsPipelineWrapper(const DeviceWrapper& deviceWrapper,
+		                        const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+		                        const SwapchainDetailsWrapper& detailsWrapper,
+		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
+		                        eastl::array<std::tuple<std::shared_ptr<ShaderModuleWrapper>, const char*>>&
+		                        shaderModules, const VertexInputDescriptions& vertexInputDescription,
+		                        const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~GraphicsPipeline();
+		~GraphicsPipelineWrapper();
 	};
 
-	struct Framebuffers
+	struct FramebuffersWrapper
 	{
-		Framebuffers(const Framebuffers& other) = delete;
-		Framebuffers(Framebuffers&& other) = delete;
-		Framebuffers& operator=(const Framebuffers& other) = delete;
-		Framebuffers& operator=(Framebuffers&& other) = delete;
+		FramebuffersWrapper(const FramebuffersWrapper& other) = delete;
+		FramebuffersWrapper(FramebuffersWrapper&& other) = delete;
+		FramebuffersWrapper& operator=(const FramebuffersWrapper& other) = delete;
+		FramebuffersWrapper& operator=(FramebuffersWrapper&& other) = delete;
 
 		eastl::vector<vk::Framebuffer, spite::HeapAllocator> framebuffers;
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		Framebuffers(std::shared_ptr<Device> device, const spite::HeapAllocator& allocator,
-		             const ImageViews& imageViews, const SwapchainDetails& details, const RenderPass& renderPass,
-		             std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		FramebuffersWrapper(const DeviceWrapper& deviceWrapper, const spite::HeapAllocator& allocator,
+		                    const ImageViewsWrapper& imageViewsWrapper, const SwapchainDetailsWrapper& detailsWrapper,
+		                    const RenderPassWrapper& renderPassWrapper,
+		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~Framebuffers();
+		~FramebuffersWrapper();
 	};
 
-	struct CommandPool
+	struct CommandPoolWrapper
 	{
-		CommandPool(const CommandPool& other) = delete;
-		CommandPool(CommandPool&& other) = delete;
-		CommandPool& operator=(const CommandPool& other) = delete;
-		CommandPool& operator=(CommandPool&& other) = delete;
+		CommandPoolWrapper(const CommandPoolWrapper& other) = delete;
+		CommandPoolWrapper(CommandPoolWrapper&& other) = delete;
+		CommandPoolWrapper& operator=(const CommandPoolWrapper& other) = delete;
+		CommandPoolWrapper& operator=(CommandPoolWrapper&& other) = delete;
 
 		vk::CommandPool commandPool;
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
 
-		CommandPool(std::shared_ptr<Device> device, const u32 familyIndex,
-		            const vk::CommandPoolCreateFlagBits& flagBits,
-		            std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		~CommandPool();
+		CommandPoolWrapper(const DeviceWrapper& deviceWrapper, const u32 familyIndex,
+		                   const vk::CommandPoolCreateFlagBits& flagBits,
+		                   const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		~CommandPoolWrapper();
 	};
 
 
 	//TODO: make copy buffers func
-	struct Buffer
+	struct BufferWrapper
 	{
-		Buffer(const Buffer& other) = delete;
-		Buffer(Buffer&& other) = delete;
-		Buffer& operator=(const Buffer& other) = delete;
-		Buffer& operator=(Buffer&& other) = delete;
+		BufferWrapper(const BufferWrapper& other) = delete;
+		BufferWrapper(BufferWrapper&& other) = delete;
+		BufferWrapper& operator=(const BufferWrapper& other) = delete;
+		BufferWrapper& operator=(BufferWrapper&& other) = delete;
 
 		vk::Buffer buffer;
 		vma::Allocation allocation;
 
-		std::shared_ptr<GpuAllocator> pAllocator;
+		const vma::Allocator allocator;
 
-		Buffer(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
-		       const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
-		       std::shared_ptr<GpuAllocator> allocator);
+		BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
+		              const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
+		              const GpuAllocatorWrapper& allocatorWrapper);
 
-		~Buffer();
+		~BufferWrapper();
 	};
 
-	struct CommandBuffers
+	struct CommandBuffersWrapper
 	{
-		CommandBuffers(const CommandBuffers& other) = delete;
-		CommandBuffers(CommandBuffers&& other) = delete;
-		CommandBuffers& operator=(const CommandBuffers& other) = delete;
-		CommandBuffers& operator=(CommandBuffers&& other) = delete;
+		CommandBuffersWrapper(const CommandBuffersWrapper& other) = delete;
+		CommandBuffersWrapper(CommandBuffersWrapper&& other) = delete;
+		CommandBuffersWrapper& operator=(const CommandBuffersWrapper& other) = delete;
+		CommandBuffersWrapper& operator=(CommandBuffersWrapper&& other) = delete;
 
 		std::vector<vk::CommandBuffer> commandBuffers{};
 
-		std::shared_ptr<CommandPool> pCommandPool;
-		std::shared_ptr<Device> pDevice;
+		const vk::CommandPool commandPool;
+		const vk::Device device;
 
-		CommandBuffers(std::shared_ptr<Device> device, std::shared_ptr<CommandPool> commandPool,
-		               const u32 count);
+		CommandBuffersWrapper(const DeviceWrapper& deviceWrapper, const CommandPoolWrapper& commandPoolWrapper,
+		                      const u32 count);
 
-		~CommandBuffers();
+		~CommandBuffersWrapper();
 	};
 
 	//probably will need to separate fences and semaphores
-	struct SyncObjects
+	struct SyncObjectsWrapper
 	{
-		SyncObjects(const SyncObjects& other) = delete;
-		SyncObjects(SyncObjects&& other) = delete;
-		SyncObjects& operator=(const SyncObjects& other) = delete;
-		SyncObjects& operator=(SyncObjects&& other) = delete;
+		SyncObjectsWrapper(const SyncObjectsWrapper& other) = delete;
+		SyncObjectsWrapper(SyncObjectsWrapper&& other) = delete;
+		SyncObjectsWrapper& operator=(const SyncObjectsWrapper& other) = delete;
+		SyncObjectsWrapper& operator=(SyncObjectsWrapper&& other) = delete;
 
 		std::vector<vk::Semaphore> imageAvailableSemaphores{};
 		std::vector<vk::Semaphore> renderFinishedSemaphores{};
 		std::vector<vk::Fence> inFlightFences{};
 
-		std::shared_ptr<Device> pDevice;
-		std::shared_ptr<ResourceAllocationCallbacks> pResourceAllocation;
+		const vk::Device device;
+		const vk::AllocationCallbacks* allocationCallbacks;
 
-		SyncObjects(std::shared_ptr<Device> device, const u32 count,
-		            std::shared_ptr<ResourceAllocationCallbacks> resourceAllocation);
+		SyncObjectsWrapper(const DeviceWrapper& deviceWrapper, const u32 count,
+		                   const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
-		~SyncObjects();
+		~SyncObjectsWrapper();
 	};
 }
