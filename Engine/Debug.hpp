@@ -1,9 +1,8 @@
 #pragma once
-
-#include "Base/Assert.hpp"
+//TODO: refactor
 #include "Base/Logging.hpp"
 #include "Base/Memory.hpp"
-#include "vulkan/vulkan.hpp"
+#include "Base/VulkanUsage.hpp"
 
 namespace spite
 {
@@ -45,19 +44,4 @@ namespace spite
 
 	void destroyDebugUtilsMessenger(const vk::Instance& instance, VkDebugUtilsMessengerEXT& debugMessenger,
 	                                const VkAllocationCallbacks* pAllocator);
-
-	struct DebugMessenger
-	{
-		DebugMessenger(const DebugMessenger& other) = delete;
-		DebugMessenger(DebugMessenger&& other) = delete;
-		DebugMessenger& operator=(const DebugMessenger& other) = delete;
-		DebugMessenger& operator=(DebugMessenger&& other) = delete;
-
-		VkDebugUtilsMessengerEXT debugMessenger;
-		vk::Instance instance;
-
-		DebugMessenger(const vk::Instance& instance, const vk::AllocationCallbacks* pAllocationCallbacks);
-
-		~DebugMessenger();
-	};
 }

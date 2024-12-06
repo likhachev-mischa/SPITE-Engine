@@ -1,11 +1,13 @@
 #pragma once
 #include <optional>
 
-#include "VulkanUsage.hpp"
 #include "Base/Platform.hpp"
+#include "Base/VulkanUsage.hpp"
 
 namespace spite
 {
+#define SASSERT_VULKAN(result) SASSERTM((result) == vk::Result::eSuccess, "Vulkan assertion failed %u",result)
+
 	struct QueueFamilyIndices
 	{
 		std::optional<u32> graphicsFamily;

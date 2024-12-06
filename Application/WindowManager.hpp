@@ -1,6 +1,6 @@
 #pragma once
 #include "Base/Platform.hpp"
-#include "Engine/VulkanUsage.hpp"
+#include "Base/VulkanUsage.hpp"
 #include <SDL3/SDL.h>
 
 namespace spite

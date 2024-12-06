@@ -1,5 +1,7 @@
 #include "Debug.hpp"
 
+#include "Base/Assert.hpp"
+
 namespace spite
 {
 	
@@ -85,15 +87,5 @@ namespace spite
 		{
 			func(instance, debugMessenger, pAllocator);
 		}
-	}
-
-	DebugMessenger::DebugMessenger(const vk::Instance& instance, const vk::AllocationCallbacks* pAllocationCallbacks): instance(instance)
-	{
-		debugMessenger = createDebugUtilsMessenger(instance, nullptr);
-	}
-
-	DebugMessenger::~DebugMessenger()
-	{
-		destroyDebugUtilsMessenger(instance, debugMessenger, nullptr);
 	}
 }

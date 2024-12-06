@@ -18,6 +18,7 @@ namespace spite
 		void add(sizet value);
 	};
 
+	//CALL SHUTDOWN TO DISPOSE!
 	class HeapAllocator
 	{
 	public:
@@ -56,6 +57,7 @@ namespace spite
 		sizet m_maxSize;
 	};
 
+	//CALL SHUTDOWN TO CHECK LEFTOVER ALLOCATIONS!
 	class BlockAllocator
 	{
 	public :

@@ -97,9 +97,11 @@ namespace spite
 		return tempSurface;
 	}
 
+	//TODO: destroy surface
 	WindowManager::~WindowManager()
 	{
 		SDL_DestroyWindow(m_window);
+	//	SDL_Vulkan_DestroySurface();
 		SDL_Quit();
 	}
 }

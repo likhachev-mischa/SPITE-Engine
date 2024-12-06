@@ -3,8 +3,9 @@
 #include <EASTL/vector.h>
 
 #include "Base/Memory.hpp"
-#include "Common.hpp"
-#include "vulkan-memory-allocator-hpp/vk_mem_alloc.hpp"
+#include "Base/VmaUsage.hpp"
+
+#include "Engine/Common.hpp"
 
 
 namespace spite
@@ -51,9 +52,28 @@ namespace spite
 
 		InstanceWrapper(const spite::HeapAllocator& allocator,
 		                const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-		                const eastl::vector<const char*, spite::HeapAllocator>& extensions);
+		                const InstanceExtensions& extensions);
 
 		~InstanceWrapper();
+	};
+
+	struct DebugMessengerWrapper
+	{
+		DebugMessengerWrapper(const DebugMessengerWrapper& other) = delete;
+		DebugMessengerWrapper(DebugMessengerWrapper&& other) = delete;
+		DebugMessengerWrapper& operator=(const DebugMessengerWrapper& other) = delete;
+		DebugMessengerWrapper& operator=(DebugMessengerWrapper&& other) = delete;
+
+		VkDebugUtilsMessengerEXT debugMessenger;
+
+		const vk::Instance instance;
+		const vk::AllocationCallbacks* allocationCallbacks;
+
+		//TODO: ALLOCATION CALLBACKS UNUSED (SHOULD BE, BUT NOT DONE YET)
+		DebugMessengerWrapper(const InstanceWrapper& instanceWrapper,
+		                      const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		~DebugMessengerWrapper();
 	};
 
 	struct PhysicalDeviceWrapper
@@ -98,56 +118,103 @@ namespace spite
 
 		GpuAllocatorWrapper(const PhysicalDeviceWrapper& physicalDevice, const DeviceWrapper& deviceWrapper,
 		                    const InstanceWrapper& instanceWrapper,
-		                    const vk::AllocationCallbacks& allocationCallbacksWrapper);
+		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		~GpuAllocatorWrapper();
 	};
 
+	struct BufferWrapper
+	{
+		BufferWrapper(const BufferWrapper& other) = delete;
+		BufferWrapper& operator=(const BufferWrapper& other) = delete;
+
+		vk::Buffer buffer;
+		vma::Allocation allocation;
+
+		vma::Allocator allocator;
+		vk::DeviceSize size;
+
+		BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage,
+		              const vk::MemoryPropertyFlags memoryProperty,
+		              const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
+		              const GpuAllocatorWrapper& allocatorWrapper);
+
+		BufferWrapper(BufferWrapper&& other) noexcept;
+		BufferWrapper& operator=(BufferWrapper&& other) noexcept;
+
+		//copies only same sized buffers
+		void copyBuffer(const BufferWrapper& other, const vk::Device& device, const vk::CommandPool&
+		                transferCommandPool, const vk::Queue transferQueue,
+		                const vk::AllocationCallbacks* allocationCallbacks) const;
+
+		void copyMemory(const void* data, const vk::DeviceSize& memorySize, const vk::DeviceSize& localOffset) const;
+
+		[[nodiscard]] void* mapMemory() const;
+		void unmapMemory() const;
+
+		~BufferWrapper();
+	};
+
+
 	struct SwapchainDetailsWrapper
 	{
 		SwapchainSupportDetails supportDetails;
-		vk::SurfaceKHR surface;
 		vk::SurfaceFormatKHR surfaceFormat;
 		vk::PresentModeKHR presentMode{};
 		vk::Extent2D extent;
 
-		SwapchainDetailsWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper, const vk::SurfaceKHR& surface,
+		SwapchainDetailsWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
+		                        const vk::SurfaceKHR& surface,
 		                        const int width,
 		                        const int height);
+
+		SwapchainDetailsWrapper(const SwapchainDetailsWrapper& other);
+		SwapchainDetailsWrapper& operator=(const SwapchainDetailsWrapper& other);
+
+		SwapchainDetailsWrapper(SwapchainDetailsWrapper&& other) noexcept;
+		SwapchainDetailsWrapper& operator=(SwapchainDetailsWrapper&& other) noexcept;
+
+		~SwapchainDetailsWrapper() = default;
 	};
 
 	struct SwapchainWrapper
 	{
-		SwapchainWrapper(const SwapchainWrapper& other) = delete;
 		SwapchainWrapper(SwapchainWrapper&& other) = delete;
-		SwapchainWrapper& operator=(const SwapchainWrapper& other) = delete;
+		SwapchainWrapper(SwapchainWrapper& other) = delete;
 		SwapchainWrapper& operator=(SwapchainWrapper&& other) = delete;
+		SwapchainWrapper& operator=(const SwapchainWrapper& other) = delete;
 
 		vk::SwapchainKHR swapchain;
+
+		const QueueFamilyIndices indices;
+		const vk::SurfaceKHR surface;
 
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
-		SwapchainWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper, const DeviceWrapper& deviceWrapper,
+		SwapchainWrapper(const DeviceWrapper& deviceWrapper, const QueueFamilyIndices& indices,
 		                 const SwapchainDetailsWrapper& swapchainDetailsWrapper,
-		                 const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-		                 const spite::HeapAllocator& allocator);
+		                 const vk::SurfaceKHR& surface,
+		                 const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+		//should call device.waitIdle() first
+		void recreate(const SwapchainDetailsWrapper& swapchainDetailsWrapper);
 
 		~SwapchainWrapper();
 	};
 
-	struct SwapchainImages
+	struct SwapchainImagesWrapper
 	{
-		SwapchainImages(const SwapchainImages& other) = delete;
-		SwapchainImages(SwapchainImages&& other) = delete;
-		SwapchainImages& operator=(const SwapchainImages& other) = delete;
-		SwapchainImages& operator=(SwapchainImages&& other) = delete;
-
 		std::vector<vk::Image> images{};
 
-		SwapchainImages(const DeviceWrapper& deviceWrapper, const SwapchainWrapper& swapchainWrapper);
+		SwapchainImagesWrapper(const DeviceWrapper& deviceWrapper, const SwapchainWrapper& swapchainWrapper);
 
-		~SwapchainImages();
+		SwapchainImagesWrapper(const SwapchainImagesWrapper& other);
+		SwapchainImagesWrapper& operator=(const SwapchainImagesWrapper& other);
+
+		SwapchainImagesWrapper(SwapchainImagesWrapper&& other) noexcept;
+		SwapchainImagesWrapper& operator=(SwapchainImagesWrapper&& other) noexcept;
+
+		~SwapchainImagesWrapper() = default;
 	};
 
 	struct ImageViewsWrapper
@@ -162,9 +229,12 @@ namespace spite
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
-		ImageViewsWrapper(const DeviceWrapper& deviceWrapper, const SwapchainImages& swapchainImagesWrapper,
+		ImageViewsWrapper(const DeviceWrapper& deviceWrapper, const SwapchainImagesWrapper& swapchainImagesWrapper,
 		                  const SwapchainDetailsWrapper& detailsWrapper,
-		                  const AllocationCallbacksWrapper& resourceAllocationWrapper);
+		                  const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		void recreate(const SwapchainImagesWrapper& swapchainImagesWrapper,
+		              const SwapchainDetailsWrapper& detailsWrapper);
 
 		~ImageViewsWrapper();
 	};
@@ -182,6 +252,7 @@ namespace spite
 
 		RenderPassWrapper(const DeviceWrapper& deviceWrapper, const SwapchainDetailsWrapper& detailsWrapper,
 		                  const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+		void recreate(const SwapchainDetailsWrapper& detailsWrapper);
 
 		~RenderPassWrapper();
 	};
@@ -198,7 +269,7 @@ namespace spite
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
-		DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
+		DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper, const vk::DescriptorType& type,
 		                           const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		~DescriptorSetLayoutWrapper();
@@ -240,7 +311,9 @@ namespace spite
 		                      const DescriptorPoolWrapper& descriptorPoolWrapper,
 		                      const spite::HeapAllocator& allocator,
 		                      const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-		                      const u32 count);
+		                      const u32 count,
+		                      const BufferWrapper& bufferWrapper,
+		                      const sizet bufferElementSize);
 
 		~DescriptorSetsWrapper();
 	};
@@ -258,18 +331,18 @@ namespace spite
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
-		ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const std::vector<char>& code,
+		ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const eastl::vector<char, spite::HeapAllocator>& code,
 		                    const vk::ShaderStageFlagBits& stageFlag,
 		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 		~ShaderModuleWrapper();
 	};
 
-	struct VertexInputDescriptions
+	struct VertexInputDescriptionsWrapper
 	{
 		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
 		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions;
 
-		VertexInputDescriptions(
+		VertexInputDescriptionsWrapper(
 			eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
 			eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>
 			attributeDescriptions);
@@ -283,6 +356,11 @@ namespace spite
 		GraphicsPipelineWrapper& operator=(GraphicsPipelineWrapper&& other) = delete;
 
 		vk::Pipeline graphicsPipeline;
+		eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator> shaderStages;
+
+		const vk::DescriptorSetLayout descriptorSetLayout;
+		const vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
@@ -290,9 +368,13 @@ namespace spite
 		                        const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
 		                        const SwapchainDetailsWrapper& detailsWrapper,
 		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
-		                        eastl::array<std::tuple<std::shared_ptr<ShaderModuleWrapper>, const char*>>&
-		                        shaderModules, const VertexInputDescriptions& vertexInputDescription,
+		                        const eastl::vector<
+			                        eastl::tuple<ShaderModuleWrapper*, const char*>, spite::HeapAllocator>
+		                        & shaderModules, const VertexInputDescriptionsWrapper& vertexInputDescription,
 		                        const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		void recreate(const SwapchainDetailsWrapper& detailsWrapper,
+		              const RenderPassWrapper& renderPassWrapper);
 
 		~GraphicsPipelineWrapper();
 	};
@@ -313,6 +395,10 @@ namespace spite
 		                    const ImageViewsWrapper& imageViewsWrapper, const SwapchainDetailsWrapper& detailsWrapper,
 		                    const RenderPassWrapper& renderPassWrapper,
 		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		void recreate(const SwapchainDetailsWrapper& detailsWrapper,
+		              const ImageViewsWrapper& imageViewsWrapper,
+		              const RenderPassWrapper& renderPassWrapper);
 
 		~FramebuffersWrapper();
 	};
@@ -336,26 +422,6 @@ namespace spite
 		~CommandPoolWrapper();
 	};
 
-
-	//TODO: make copy buffers func
-	struct BufferWrapper
-	{
-		BufferWrapper(const BufferWrapper& other) = delete;
-		BufferWrapper(BufferWrapper&& other) = delete;
-		BufferWrapper& operator=(const BufferWrapper& other) = delete;
-		BufferWrapper& operator=(BufferWrapper&& other) = delete;
-
-		vk::Buffer buffer;
-		vma::Allocation allocation;
-
-		const vma::Allocator allocator;
-
-		BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags memoryProperty,
-		              const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
-		              const GpuAllocatorWrapper& allocatorWrapper);
-
-		~BufferWrapper();
-	};
 
 	struct CommandBuffersWrapper
 	{

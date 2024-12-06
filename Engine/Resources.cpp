@@ -1,6 +1,11 @@
 #include "Resources.hpp"
 
-#include "Core.hpp"
+#include <EASTL/tuple.h>
+
+#include "Base/Assert.hpp"
+
+#include "Engine/Debug.hpp"
+#include "Engine/ResourcesCore.hpp"
 #include "Engine/VulkanAllocator.hpp"
 
 namespace spite
@@ -29,16 +34,38 @@ namespace spite
 
 	InstanceWrapper::InstanceWrapper(const spite::HeapAllocator& allocator,
 	                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-	                                 const eastl::vector<const char*, spite::HeapAllocator>& extensions):
+	                                 const InstanceExtensions& extensions):
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		instance = spite::createInstance(allocator, *allocationCallbacks, extensions);
+		instance = spite::createInstance(allocator, *allocationCallbacks, extensions.extensions);
 	}
 
 	InstanceWrapper::~InstanceWrapper()
 	{
 		instance.destroy(allocationCallbacks);
 	}
+
+
+	DebugMessengerWrapper::DebugMessengerWrapper(const InstanceWrapper& instanceWrapper,
+	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		instance(instanceWrapper.instance), allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
+	{
+		if constexpr (!ENABLE_VALIDATION_LAYERS)
+		{
+			return;
+		}
+		debugMessenger = createDebugUtilsMessenger(instance, nullptr);
+	}
+
+	DebugMessengerWrapper::~DebugMessengerWrapper()
+	{
+		if constexpr (!ENABLE_VALIDATION_LAYERS)
+		{
+			return;
+		}
+		destroyDebugUtilsMessenger(instance, debugMessenger, nullptr);
+	}
+
 
 	PhysicalDeviceWrapper::PhysicalDeviceWrapper(const InstanceWrapper& instanceWrapper)
 	{
@@ -61,10 +88,10 @@ namespace spite
 	GpuAllocatorWrapper::GpuAllocatorWrapper(const PhysicalDeviceWrapper& physicalDevice,
 	                                         const DeviceWrapper& deviceWrapper,
 	                                         const InstanceWrapper& instanceWrapper,
-	                                         const vk::AllocationCallbacks& allocationCallbacksWrapper)
+	                                         const AllocationCallbacksWrapper& allocationCallbacksWrapper)
 	{
 		allocator = spite::createVmAllocator(physicalDevice.device, deviceWrapper.device, instanceWrapper.instance,
-		                                     &allocationCallbacksWrapper);
+		                                     &allocationCallbacksWrapper.allocationCallbacks);
 	}
 
 	GpuAllocatorWrapper::~GpuAllocatorWrapper()
@@ -72,9 +99,54 @@ namespace spite
 		allocator.destroy();
 	}
 
+	SwapchainDetailsWrapper& SwapchainDetailsWrapper::operator=(const SwapchainDetailsWrapper& other)
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		supportDetails = other.supportDetails;
+		surfaceFormat = other.surfaceFormat;
+		presentMode = other.presentMode;
+		extent = other.extent;
+
+		return *this;
+	}
+
+	SwapchainDetailsWrapper::SwapchainDetailsWrapper(SwapchainDetailsWrapper&& other) noexcept: supportDetails(
+			std::move(other.supportDetails)),
+		surfaceFormat(other.surfaceFormat),
+		presentMode(other.presentMode),
+		extent(other.extent)
+	{
+	}
+
+	SwapchainDetailsWrapper& SwapchainDetailsWrapper::operator=(SwapchainDetailsWrapper&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		supportDetails = std::move(other.supportDetails);
+		surfaceFormat = other.surfaceFormat;
+		presentMode = other.presentMode;
+		extent = other.extent;
+		return *this;
+	}
+
+	SwapchainDetailsWrapper::SwapchainDetailsWrapper(const SwapchainDetailsWrapper& other):
+		supportDetails(other.supportDetails),
+		surfaceFormat(other.surfaceFormat),
+		presentMode(other.presentMode),
+		extent(other.extent)
+	{
+	}
+
 	SwapchainDetailsWrapper::SwapchainDetailsWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
 	                                                 const vk::SurfaceKHR& surface,
-	                                                 const int width, const int height): surface(surface)
+	                                                 const int width, const int height)
 	{
 		supportDetails = querySwapchainSupport(physicalDeviceWrapper.device, surface);
 		surfaceFormat = chooseSwapSurfaceFormat(supportDetails.formats);
@@ -82,21 +154,30 @@ namespace spite
 		extent = chooseSwapExtent(supportDetails.capabilities, width, height);
 	}
 
-	SwapchainWrapper::SwapchainWrapper(const PhysicalDeviceWrapper& physicalDeviceWrapper,
-	                                   const DeviceWrapper& deviceWrapper,
+	SwapchainWrapper::SwapchainWrapper(const DeviceWrapper& deviceWrapper,
+	                                   const QueueFamilyIndices& indices,
 	                                   const SwapchainDetailsWrapper& swapchainDetailsWrapper,
-	                                   const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-	                                   const spite::HeapAllocator& allocator): device(deviceWrapper.device),
-	                                                                           allocationCallbacks(
-		                                                                           &allocationCallbacksWrapper.
-		                                                                           allocationCallbacks)
+	                                   const vk::SurfaceKHR& surface,
+	                                   const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		indices(indices), surface(surface),
+		device(deviceWrapper.device), allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 
 	{
-		swapchain = spite::createSwapchain(physicalDeviceWrapper.device, swapchainDetailsWrapper.surface,
+		swapchain = spite::createSwapchain(device, indices, surface,
 		                                   swapchainDetailsWrapper.supportDetails,
-		                                   device, swapchainDetailsWrapper.extent,
+		                                   swapchainDetailsWrapper.extent,
 		                                   swapchainDetailsWrapper.surfaceFormat, swapchainDetailsWrapper.presentMode,
-		                                   allocator,
+		                                   allocationCallbacks);
+	}
+
+	void SwapchainWrapper::recreate(const SwapchainDetailsWrapper& swapchainDetailsWrapper)
+	{
+		device.destroySwapchainKHR(swapchain, allocationCallbacks);
+
+		swapchain = spite::createSwapchain(device, indices, surface,
+		                                   swapchainDetailsWrapper.supportDetails,
+		                                   swapchainDetailsWrapper.extent,
+		                                   swapchainDetailsWrapper.surfaceFormat, swapchainDetailsWrapper.presentMode,
 		                                   allocationCallbacks);
 	}
 
@@ -105,21 +186,60 @@ namespace spite
 		device.destroySwapchainKHR(swapchain, allocationCallbacks);
 	}
 
-	SwapchainImages::SwapchainImages(const DeviceWrapper& deviceWrapper,
-	                                 const SwapchainWrapper& swapchainWrapper)
+	SwapchainImagesWrapper::SwapchainImagesWrapper(const DeviceWrapper& deviceWrapper,
+	                                               const SwapchainWrapper& swapchainWrapper)
 	{
 		images = getSwapchainImages(deviceWrapper.device, swapchainWrapper.swapchain);
 	}
 
-	SwapchainImages::~SwapchainImages() = default;
+	SwapchainImagesWrapper::SwapchainImagesWrapper(const SwapchainImagesWrapper& other): images(other.images)
+	{
+	}
+
+	SwapchainImagesWrapper& SwapchainImagesWrapper::operator=(const SwapchainImagesWrapper& other)
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		images.clear();
+		images = other.images;
+		return *this;
+	}
+
+	SwapchainImagesWrapper::SwapchainImagesWrapper(SwapchainImagesWrapper&& other) noexcept: images(
+		std::move(other.images))
+	{
+	}
+
+	SwapchainImagesWrapper& SwapchainImagesWrapper::operator=(SwapchainImagesWrapper&& other) noexcept
+	{
+		images.clear();
+		images = std::move(other.images);
+		return *this;
+	}
 
 	ImageViewsWrapper::ImageViewsWrapper(const DeviceWrapper& deviceWrapper,
-	                                     const SwapchainImages& swapchainImagesWrapper,
+	                                     const SwapchainImagesWrapper& swapchainImagesWrapper,
 	                                     const SwapchainDetailsWrapper& detailsWrapper,
-	                                     const AllocationCallbacksWrapper& resourceAllocationWrapper):
+	                                     const AllocationCallbacksWrapper& allocationCallbacksWrapper):
 		device(deviceWrapper.device),
-		allocationCallbacks(&resourceAllocationWrapper.allocationCallbacks)
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
+		imageViews = createImageViews(device, swapchainImagesWrapper.images, detailsWrapper.surfaceFormat.format,
+		                              allocationCallbacks);
+	}
+
+	void ImageViewsWrapper::recreate(const SwapchainImagesWrapper& swapchainImagesWrapper,
+	                                 const SwapchainDetailsWrapper& detailsWrapper)
+	{
+		for (const auto& imageView : imageViews)
+		{
+			device.destroyImageView(imageView, allocationCallbacks);
+		}
+		imageViews.clear();
+
 		imageViews = createImageViews(device, swapchainImagesWrapper.images, detailsWrapper.surfaceFormat.format,
 		                              allocationCallbacks);
 	}
@@ -130,6 +250,7 @@ namespace spite
 		{
 			device.destroyImageView(imageView, allocationCallbacks);
 		}
+		imageViews.clear();
 	}
 
 	RenderPassWrapper::RenderPassWrapper(const DeviceWrapper& deviceWrapper,
@@ -142,17 +263,25 @@ namespace spite
 		                              allocationCallbacks);
 	}
 
+	void RenderPassWrapper::recreate(const SwapchainDetailsWrapper& detailsWrapper)
+	{
+		device.destroyRenderPass(renderPass, allocationCallbacks);
+		renderPass = createRenderPass(device, detailsWrapper.surfaceFormat.format,
+		                              allocationCallbacks);
+	}
+
 	RenderPassWrapper::~RenderPassWrapper()
 	{
 		device.destroyRenderPass(renderPass, allocationCallbacks);
 	}
 
 	DescriptorSetLayoutWrapper::DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
+	                                                       const vk::DescriptorType& type,
 	                                                       const AllocationCallbacksWrapper&
 	                                                       allocationCallbacksWrapper): device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSetLayout = createDescriptorSetLayout(device,
+		descriptorSetLayout = createDescriptorSetLayout(device, type,
 		                                                allocationCallbacks);
 	}
 
@@ -181,23 +310,32 @@ namespace spite
 	                                             const DescriptorPoolWrapper& descriptorPoolWrapper,
 	                                             const spite::HeapAllocator& allocator,
 	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-	                                             const u32 count): descriptorPool(descriptorPoolWrapper.descriptorPool),
-	                                                               device(deviceWrapper.device),
-	                                                               allocationCallbacks(
-		                                                               &allocationCallbacksWrapper.allocationCallbacks)
+	                                             const u32 count, const BufferWrapper& bufferWrapper,
+	                                             const sizet bufferElementSize):
+		descriptorPool(descriptorPoolWrapper.descriptorPool),
+		device(deviceWrapper.device),
+		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSets = createDescriptorSets(device, descriptorSetLayoutWrapper.descriptorSetLayout,
-		                                      descriptorPool, count, allocator,
-		                                      allocationCallbacks);
+		descriptorSets = spite::createDescriptorSets(device, descriptorSetLayoutWrapper.descriptorSetLayout,
+		                                             descriptorPool, count, allocator,
+		                                             allocationCallbacks);
+		for (u32 i = 0; i < count; ++i)
+		{
+			spite::updateDescriptorSets(device, descriptorSets[i], bufferWrapper.buffer,
+			                            vk::DescriptorType::eUniformBufferDynamic,
+			                            bufferElementSize);
+		}
 	}
 
 	DescriptorSetsWrapper::~DescriptorSetsWrapper()
 	{
 		device.freeDescriptorSets(descriptorPool, descriptorSets,
 		                          &allocationCallbacks);
+		descriptorSets.clear();
 	}
 
-	ShaderModuleWrapper::ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const std::vector<char>& code,
+	ShaderModuleWrapper::ShaderModuleWrapper(const DeviceWrapper& deviceWrapper,
+	                                         const eastl::vector<char, spite::HeapAllocator>& code,
 	                                         const vk::ShaderStageFlagBits& stageFlag,
 	                                         const AllocationCallbacksWrapper& allocationCallbacksWrapper) :
 		stage(stageFlag), device(deviceWrapper.device),
@@ -211,7 +349,7 @@ namespace spite
 		device.destroyShaderModule(shaderModule, allocationCallbacks);
 	}
 
-	VertexInputDescriptions::VertexInputDescriptions(
+	VertexInputDescriptionsWrapper::VertexInputDescriptionsWrapper(
 		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
 		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions) :
 		bindingDescriptions(std::move(bindingDescriptions)), attributeDescriptions(std::move(attributeDescriptions))
@@ -223,35 +361,45 @@ namespace spite
 	                                                 const SwapchainDetailsWrapper& detailsWrapper,
 	                                                 const RenderPassWrapper& renderPassWrapper,
 	                                                 const spite::HeapAllocator& allocator,
-	                                                 eastl::array<std::tuple<
-		                                                 std::shared_ptr<ShaderModuleWrapper>, const char*>>&
-	                                                 shaderModules,
-	                                                 const VertexInputDescriptions& vertexInputDescription,
+	                                                 const eastl::vector<
+		                                                 eastl::tuple<ShaderModuleWrapper*, const char*>,
+		                                                 spite::HeapAllocator>& shaderModules,
+	                                                 const VertexInputDescriptionsWrapper& vertexInputDescription,
 	                                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		shaderStages(allocator),
+		descriptorSetLayout(descriptorSetLayoutWrapper.descriptorSetLayout),
+		vertexInputInfo(
+			{},
+			static_cast<u32>(vertexInputDescription.bindingDescriptions.size()),
+			vertexInputDescription.bindingDescriptions.data(),
+			static_cast<u32>(vertexInputDescription.attributeDescriptions.size()),
+			vertexInputDescription.attributeDescriptions.data()),
 		device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator> shaderStages(allocator);
 		shaderStages.reserve(shaderModules.size());
 
 		for (auto shaderModule : shaderModules)
 		{
 			vk::PipelineShaderStageCreateInfo createInfo(
 				{},
-				std::get<0>(shaderModule)->stage,
-				std::get<0>(shaderModule)->shaderModule,
-				std::get<1>(shaderModule));
+				eastl::get<0>(shaderModule)->stage,
+				eastl::get<0>(shaderModule)->shaderModule,
+				eastl::get<1>(shaderModule));
 			shaderStages.push_back(createInfo);
 		}
 
-		vk::PipelineVertexInputStateCreateInfo vertexInputInfo(
-			{},
-			static_cast<u32>(vertexInputDescription.bindingDescriptions.size()),
-			vertexInputDescription.bindingDescriptions.data(),
-			static_cast<u32>(vertexInputDescription.attributeDescriptions.size()),
-			vertexInputDescription.attributeDescriptions.data());
+		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayout,
+		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
+		                                          vertexInputInfo,
+		                                          allocationCallbacks);
+	}
 
-		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayoutWrapper.descriptorSetLayout,
+	void GraphicsPipelineWrapper::recreate(const SwapchainDetailsWrapper& detailsWrapper,
+	                                       const RenderPassWrapper& renderPassWrapper)
+	{
+		device.destroyPipeline(graphicsPipeline, allocationCallbacks);
+		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayout,
 		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
 		                                          vertexInputInfo,
 		                                          allocationCallbacks);
@@ -272,6 +420,22 @@ namespace spite
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
 		framebuffers = createFramebuffers(device, allocator, imageViewsWrapper.imageViews,
+		                                  detailsWrapper.extent,
+		                                  renderPassWrapper.renderPass,
+		                                  allocationCallbacks);
+	}
+
+	void FramebuffersWrapper::recreate(const SwapchainDetailsWrapper& detailsWrapper,
+	                                   const ImageViewsWrapper& imageViewsWrapper,
+	                                   const RenderPassWrapper& renderPassWrapper)
+	{
+		for (const auto& framebuffer : framebuffers)
+		{
+			device.destroyFramebuffer(framebuffer, allocationCallbacks);
+		}
+		framebuffers.clear();
+
+		framebuffers = createFramebuffers(device, framebuffers.get_allocator(), imageViewsWrapper.imageViews,
 		                                  detailsWrapper.extent,
 		                                  renderPassWrapper.renderPass,
 		                                  allocationCallbacks);
@@ -303,15 +467,74 @@ namespace spite
 	BufferWrapper::BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage,
 	                             const vk::MemoryPropertyFlags memoryProperty,
 	                             const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
-	                             const GpuAllocatorWrapper& allocatorWrapper): allocator(allocatorWrapper.allocator)
+	                             const GpuAllocatorWrapper& allocatorWrapper): allocator(allocatorWrapper.allocator),
+	                                                                           size(size)
 	{
 		createBuffer(size, usage, memoryProperty, allocationFlag, indices, allocator, buffer,
 		             allocation);
 	}
 
+	BufferWrapper::BufferWrapper(BufferWrapper&& other) noexcept:
+		buffer(other.buffer),
+		allocation(other.allocation),
+		allocator(other.allocator),
+		size(other.size)
+	{
+		other.allocator = nullptr;
+		other.buffer = nullptr;
+		other.allocation = nullptr;
+	}
+
+	BufferWrapper& BufferWrapper::operator=(BufferWrapper&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		buffer = other.buffer;
+		allocation = other.allocation;
+		allocator = other.allocator;
+		size = other.size;
+
+		other.allocator = nullptr;
+		other.buffer = nullptr;
+		other.allocation = nullptr;
+
+		return *this;
+	}
+
+	void BufferWrapper::copyBuffer(const BufferWrapper& other, const vk::Device& device, const vk::CommandPool&
+	                               transferCommandPool, const vk::Queue transferQueue,
+	                               const vk::AllocationCallbacks* allocationCallbacks) const
+	{
+		SASSERT(size == other.size, "Buffer sizes are not equal");
+		spite::copyBuffer(other.buffer, buffer, size, transferCommandPool, device, transferQueue, allocationCallbacks);
+	}
+
+	void BufferWrapper::copyMemory(const void* data, const vk::DeviceSize& memorySize,
+	                               const vk::DeviceSize& localOffset) const
+	{
+		vk::Result result = allocator.copyMemoryToAllocation(data, allocation, localOffset, memorySize);
+		SASSERT_VULKAN(result);
+	}
+
+	void* BufferWrapper::mapMemory() const
+	{
+		auto [result,memory] = allocator.mapMemory(allocation);
+		SASSERT_VULKAN(result);
+		return memory;
+	}
+
+	void BufferWrapper::unmapMemory() const
+	{
+		allocator.unmapMemory(allocation);
+	}
+
 	BufferWrapper::~BufferWrapper()
 	{
-		allocator.destroyBuffer(buffer, allocation);
+		if (allocator)
+			allocator.destroyBuffer(buffer, allocation);
 	}
 
 	CommandBuffersWrapper::CommandBuffersWrapper(const DeviceWrapper& deviceWrapper,

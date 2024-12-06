@@ -2,16 +2,17 @@
 #include <EASTL/array.h>
 #include <EASTL/vector.h>
 
-#include "Common.hpp"
+
 #include "Application/AppConifg.hpp"
-#include "Base/Assert.hpp"
+
 #include "Base/Memory.hpp"
-#include "vulkan-memory-allocator-hpp/vk_mem_alloc.hpp"
+#include "Base/VmaUsage.hpp"
+
+#include "Engine/Common.hpp"
 
 namespace spite
 {
 	//TODO: replace most allocators to stack/linear allocator
-#define SASSERT_VULKAN(result) SASSERTM((result) == vk::Result::eSuccess, "Vulkan assertion failed %u",result)
 
 	const eastl::array DEVICE_EXTENSIONS = {
 		vk::KHRSwapchainExtensionName
@@ -25,12 +26,9 @@ namespace spite
 	                            const vk::AllocationCallbacks& allocationCallbacks,
 	                            const eastl::vector<const char*, spite::HeapAllocator>& extensions);
 
-	//TODO: implement allocation callbacks
-	//allocation callbacks are unused for now
-
 	vk::PhysicalDevice getPhysicalDevice(const vk::Instance& instance);
 
-	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, vk::PhysicalDevice& physicalDevice,
+	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, const vk::PhysicalDevice& physicalDevice,
 	                                     const spite::HeapAllocator& allocator);
 
 	vk::Device createDevice(const QueueFamilyIndices& indices, const vk::PhysicalDevice& physicalDevice,
@@ -51,10 +49,11 @@ namespace spite
 	SwapchainSupportDetails querySwapchainSupport(const vk::PhysicalDevice physicalDevice,
 	                                              const vk::SurfaceKHR surface);
 
-	vk::SwapchainKHR createSwapchain(const vk::PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface,
-	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Device& device,
-	                                 const vk::Extent2D& extent, const vk::SurfaceFormatKHR& surfaceFormat,
-	                                 const vk::PresentModeKHR& presentMode, const spite::HeapAllocator& allocator,
+	vk::SwapchainKHR createSwapchain(const vk::Device& device,
+	                                 const QueueFamilyIndices& indices, const vk::SurfaceKHR& surface,
+	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Extent2D& extent,
+	                                 const vk::SurfaceFormatKHR& surfaceFormat,
+	                                 const vk::PresentModeKHR& presentMode,
 	                                 const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	std::vector<vk::Image> getSwapchainImages(const vk::Device& device, const vk::SwapchainKHR& swapchain);
@@ -68,13 +67,14 @@ namespace spite
 	vk::RenderPass createRenderPass(const vk::Device& device, const vk::Format& imageFormat,
 	                                const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
+	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
+	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device, const std::vector<char>& code,
+	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device,
+	                                                        const eastl::vector<char, spite::HeapAllocator>& code,
 	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
@@ -98,6 +98,8 @@ namespace spite
 	                                  const vk::AllocationCallbacks* pAllocationCallbacks,
 	                                  const vk::CommandPoolCreateFlags& flags, const u32 queueFamilyIndex);
 
+	//for graphics and transfer usage
+	//TODO: parametrize
 	void createBuffer(const vk::DeviceSize& size,
 	                  const vk::BufferUsageFlags& usage,
 	                  const vk::MemoryPropertyFlags& properties,
@@ -106,6 +108,10 @@ namespace spite
 	                  const vma::Allocator& allocator,
 	                  vk::Buffer& buffer,
 	                  vma::Allocation& bufferMemory);
+
+	void copyBuffer(const vk::Buffer& srcBuffer, const vk::Buffer& dstBuffer, const vk::DeviceSize& size,
+	                const vk::CommandPool& transferCommandPool, const vk::Device& device,
+	                const vk::Queue& transferQueue, const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::DescriptorPool createDescriptorPool(const vk::Device& device,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks,
@@ -131,19 +137,4 @@ namespace spite
 
 	vk::Fence createFence(const vk::Device device, const vk::FenceCreateInfo& createInfo,
 	                      const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
-	                         const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                         const vk::Pipeline& graphicsPipeline, const vk::Buffer& buffer,
-	                         const vk::DeviceSize& indicesOffset, const vk::PipelineLayout& pipelineLayout,
-	                         const vk::DescriptorSet& descriptorSet, const u32 indexCount);
-
-	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
-	                        const vk::Semaphore& imageAvaliableSemaphore, const vk::CommandBuffer& commandBuffer,
-	                        u32& imageIndex);
-
-	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer, const vk::Fence& inFlightFence,
-	                     const vk::Semaphore& imageAvaliableSemaphore, const vk::Semaphore& renderFinishedSemaphore,
-	                     const vk::Queue& graphicsQueue, const vk::Queue& presentQueue,
-	                     const vk::SwapchainKHR swapchain, const u32& imageIndex);
 }

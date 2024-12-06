@@ -1,0 +1,114 @@
+#include "RenderingCore.hpp"
+
+#include "Base/Assert.hpp"
+#include "Base/Logging.hpp"
+
+#include "Engine/Common.hpp"
+
+namespace spite
+{
+	void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
+	                         const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
+	                         const vk::Pipeline& graphicsPipeline, const vk::Buffer& buffer,
+	                         const vk::DeviceSize& indicesOffset, const vk::PipelineLayout& pipelineLayout,
+	                         const vk::DescriptorSet& descriptorSet, const u32 indicesCount)
+	{
+		vk::CommandBufferBeginInfo beginInfo;
+		vk::Result result = commandBuffer.begin(beginInfo);
+		SASSERT_VULKAN(result);
+
+		vk::Rect2D renderArea({}, swapchainExtent);
+		vk::ClearValue clearColor({0.0f, 0.0f, 0.0f, 1.0f});
+		vk::RenderPassBeginInfo renderPassInfo(renderPass,
+		                                       framebuffer,
+		                                       renderArea,
+		                                       1,
+		                                       &clearColor);
+
+		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+
+		vk::Viewport viewport(0.0f,
+		                      0.0f,
+		                      static_cast<float>(swapchainExtent.width),
+		                      static_cast<float>(swapchainExtent.height),
+		                      0.0f,
+		                      1.0f);
+		commandBuffer.setViewport(0, 1, &viewport);
+
+
+		commandBuffer.setScissor(0, 1, &renderArea);
+
+		vk::DeviceSize offset = 0;
+		commandBuffer.bindVertexBuffers(0, 1, &buffer, &offset);
+
+		commandBuffer.bindIndexBuffer(buffer, indicesOffset,
+		                              vk::IndexType::eUint32);
+
+		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+		                                 pipelineLayout,
+		                                 0,
+		                                 1,
+		                                 &descriptorSet,
+		                                 {},
+		                                 {});
+
+		commandBuffer.drawIndexed(indicesCount, 1, 0, 0, 0);
+		commandBuffer.endRenderPass();
+
+		result = commandBuffer.end();
+		SASSERT_VULKAN(result);
+	}
+
+	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
+	                        const vk::Semaphore& imageAvaliableSemaphore, const vk::CommandBuffer& commandBuffer,
+	                        u32& imageIndex)
+	{
+		vk::Result result = device.waitForFences(1, &inFlightFence, vk::True, UINT64_MAX);
+		SASSERT_VULKAN(result);
+
+		result = device.resetFences({inFlightFence});
+		SASSERT_VULKAN(result);
+
+		result = commandBuffer.reset();
+		SASSERT_VULKAN(result);
+
+		result = device.acquireNextImageKHR(swapchain,
+		                                    UINT64_MAX,
+		                                    imageAvaliableSemaphore,
+		                                    {}, &imageIndex);
+		return result;
+	}
+
+	//command buffer has to be recorded before
+	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer, const vk::Fence& inFlightFence,
+	                     const vk::Semaphore& imageAvaliableSemaphore, const vk::Semaphore& renderFinishedSemaphore,
+	                     const vk::Queue& graphicsQueue, const vk::Queue& presentQueue,
+	                     const vk::SwapchainKHR swapchain, const u32& imageIndex)
+	{
+		vk::Semaphore waitSemaphores[] = {imageAvaliableSemaphore};
+		vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+		vk::Semaphore signalSemaphores[] = {
+			renderFinishedSemaphore
+		};
+
+
+		vk::SubmitInfo submitInfo(1,
+		                          waitSemaphores,
+		                          waitStages,
+		                          1,
+		                          &commandBuffer,
+		                          1,
+		                          signalSemaphores);
+
+
+		vk::Result result = graphicsQueue.submit({submitInfo}, inFlightFence);
+		SASSERT_VULKAN(result);
+
+		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &swapchain, &imageIndex, &result);
+		result = presentQueue.presentKHR(presentInfo);
+
+		return result;
+	}
+}

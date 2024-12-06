@@ -51,9 +51,6 @@
     <ClInclude Include="Engine\GraphicsUtility.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\VulkanUsage.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
@@ -93,7 +90,7 @@
     <ClInclude Include="Engine\VulkanAllocator.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core.hpp">
+    <ClInclude Include="Engine\ResourcesCore.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Resources.hpp">
@@ -105,8 +102,20 @@
     <ClInclude Include="Engine\Common.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer.hpp">
+    <ClInclude Include="Engine\Modules.hpp">
       <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\RenderingCore.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\File.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\VmaUsage.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\VulkanUsage.hpp">
+      <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -143,7 +152,7 @@
     <ClCompile Include="Application\InputManager.cpp">
       <Filter>Application</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core.cpp">
+    <ClCompile Include="Engine\ResourcesCore.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\VulkanAllocator.cpp">
@@ -154,6 +163,15 @@
     </ClCompile>
     <ClCompile Include="Engine\Resources.cpp">
       <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\RenderingCore.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Modules.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\File.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

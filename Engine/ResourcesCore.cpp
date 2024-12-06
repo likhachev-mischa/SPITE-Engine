@@ -1,10 +1,11 @@
-#include "Core.hpp"
+#include "ResourcesCore.hpp"
 
 #include <set>
 
 #include "Common.hpp"
 #include "Debug.hpp"
 #include "GraphicsUtility.hpp"
+
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
 
@@ -30,7 +31,7 @@ namespace spite
 	                            const vk::AllocationCallbacks& allocationCallbacks, const
 	                            eastl::vector<const char*, spite::HeapAllocator>& extensions)
 	{
-		if (ENABLE_VALIDATION_LAYERS)
+		if constexpr (ENABLE_VALIDATION_LAYERS)
 		{
 			SASSERTM(checkValidationLayerSupport(allocator), "Validation layers requested, but not available!")
 		}
@@ -48,7 +49,7 @@ namespace spite
 		                                  extensions.data(),
 		                                  {});
 
-		if (ENABLE_VALIDATION_LAYERS)
+		if constexpr (ENABLE_VALIDATION_LAYERS)
 		{
 			createInfo.enabledLayerCount = static_cast<u32>(
 				VALIDATION_LAYERS.size());
@@ -188,6 +189,7 @@ namespace spite
 			indices.transferFamily.value() = indices.graphicsFamily.value();
 		}
 
+		SASSERTM(indices.isComplete(), "Failed to find queue families!")
 		return indices;
 	}
 
@@ -244,10 +246,11 @@ namespace spite
 		return actualExtent;
 	}
 
-	vk::SwapchainKHR createSwapchain(const vk::PhysicalDevice& physicalDevice, const vk::SurfaceKHR& surface,
-	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Device& device,
-	                                 const vk::Extent2D& extent, const vk::SurfaceFormatKHR& surfaceFormat,
-	                                 const vk::PresentModeKHR& presentMode, const spite::HeapAllocator& allocator,
+	vk::SwapchainKHR createSwapchain(const vk::Device& device,
+	                                 const QueueFamilyIndices& indices, const vk::SurfaceKHR& surface,
+	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Extent2D& extent,
+	                                 const vk::SurfaceFormatKHR& surfaceFormat,
+	                                 const vk::PresentModeKHR& presentMode,
 	                                 const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		u32 imageCount = swapchainSupport.capabilities.minImageCount + 1;
@@ -275,7 +278,6 @@ namespace spite
 		                                      vk::True);
 
 
-		QueueFamilyIndices indices = findQueueFamilies(surface, physicalDevice, allocator);
 		u32 queueFamilyInidces[] = {
 			indices.graphicsFamily.value(), indices.presentFamily.value()
 		};
@@ -294,14 +296,14 @@ namespace spite
 		}
 
 		auto [result, swapchain] = device.createSwapchainKHR(createInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return swapchain;
 	}
 
 	std::vector<vk::Image> getSwapchainImages(const vk::Device& device, const vk::SwapchainKHR& swapchain)
 	{
 		auto [result,swapchainImages] = device.getSwapchainImagesKHR(swapchain);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return swapchainImages;
 	}
 
@@ -322,7 +324,7 @@ namespace spite
 			                                   {},
 			                                   {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
 			auto [result, imageView] = device.createImageView(createInfo, pAllocationCallbacks);
-			SASSERT_VULKAN(result)
+			SASSERT_VULKAN(result);
 			imageViews.push_back(imageView);
 		}
 		return imageViews;
@@ -374,12 +376,12 @@ namespace spite
 		return renderPass;
 	}
 
-	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
+	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::DescriptorSetLayoutBinding uboLayoutBinding(
 			0,
-			vk::DescriptorType::eUniformBuffer,
+			type,
 			1,
 			vk::ShaderStageFlagBits::eVertex,
 			{});
@@ -390,11 +392,11 @@ namespace spite
 			&uboLayoutBinding);
 
 		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(layoutInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return descriptorSetLayout;
 	}
 
-	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
+	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::ShaderModuleCreateInfo createInfo(
@@ -403,12 +405,13 @@ namespace spite
 			reinterpret_cast<const u32*>(code.data()));
 
 		auto [result, shaderModule] = device.createShaderModule(createInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return shaderModule;
 	}
 
 	//uses createShaderModule
-	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device, const std::vector<char>& code,
+	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device,
+	                                                        const eastl::vector<char, spite::HeapAllocator>& code,
 	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
@@ -502,7 +505,7 @@ namespace spite
 		SASSERT_VULKAN(result);
 
 		vk::GraphicsPipelineCreateInfo pipelineInfo({},
-		                                            shaderStages.size(),
+		                                            static_cast<u32>(shaderStages.size()),
 		                                            shaderStages.data(),
 		                                            &vertexInputInfo,
 		                                            &inputAssembly,
@@ -520,7 +523,7 @@ namespace spite
 		std::tie(result, graphicsPipeline) =
 			device.createGraphicsPipeline({}, pipelineInfo, pAllocationCallbacks);
 
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return graphicsPipeline;
 	}
 
@@ -565,7 +568,7 @@ namespace spite
 		vk::CommandPoolCreateInfo commandPoolCreateInfo(flags,
 		                                                queueFamilyIndex);
 		auto [result, commandPool] = device.createCommandPool(commandPoolCreateInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return commandPool;
 	}
 
@@ -588,7 +591,7 @@ namespace spite
 		vma::AllocationCreateInfo allocInfo(allocationFlags, vma::MemoryUsage::eAuto, properties);
 
 		auto [result, bufferAllocation] = allocator.createBuffer(bufferInfo, allocInfo);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		buffer = bufferAllocation.first;
 		bufferMemory = bufferAllocation.second;
@@ -601,26 +604,26 @@ namespace spite
 		vk::CommandBufferAllocateInfo allocInfo(transferCommandPool, vk::CommandBufferLevel::ePrimary, 1);
 
 		auto [result,commandBuffers] = device.allocateCommandBuffers(allocInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		vk::CommandBuffer commandBuffer = commandBuffers[0];
 
 		vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 		result = commandBuffer.begin(beginInfo);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		vk::BufferCopy copyRegion({}, {}, size);
 		commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
 		result = commandBuffer.end();
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		vk::SubmitInfo submitInfo({}, {}, {}, 1, &commandBuffer);
 
 		result = transferQueue.submit({submitInfo});
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		result = transferQueue.waitIdle();
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		device.freeCommandBuffers(transferCommandPool, 1, &commandBuffer);
 	}
 
@@ -636,7 +639,7 @@ namespace spite
 			1,
 			&poolSize);
 		auto [result, descriptorPool] = device.createDescriptorPool(poolInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return descriptorPool;
 	}
 
@@ -656,7 +659,7 @@ namespace spite
 		                                        layouts.data());
 
 		auto [result, descriptorSets] = device.allocateDescriptorSets(allocInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return descriptorSets;
 	}
 
@@ -685,7 +688,7 @@ namespace spite
 		                                        count);
 
 		auto [result, commandBuffers] = device.allocateCommandBuffers(allocInfo);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 
 		return commandBuffers;
 	}
@@ -694,7 +697,7 @@ namespace spite
 	                              const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		auto [result, semaphore] = device.createSemaphore(createInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return semaphore;
 	}
 
@@ -702,112 +705,7 @@ namespace spite
 	                      const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		auto [result, fence] = device.createFence(createInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result)
+		SASSERT_VULKAN(result);
 		return fence;
-	}
-
-	void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
-	                         const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                         const vk::Pipeline& graphicsPipeline, const vk::Buffer& buffer,
-	                         const vk::DeviceSize& indicesOffset, const vk::PipelineLayout& pipelineLayout,
-	                         const vk::DescriptorSet& descriptorSet, const u32 indexCount)
-	{
-		vk::CommandBufferBeginInfo beginInfo;
-		vk::Result result = commandBuffer.begin(beginInfo);
-		SASSERT_VULKAN(result)
-
-		vk::Rect2D renderArea({}, swapchainExtent);
-		vk::ClearValue clearColor({0.0f, 0.0f, 0.0f, 1.0f});
-		vk::RenderPassBeginInfo renderPassInfo(renderPass,
-		                                       framebuffer,
-		                                       renderArea,
-		                                       1,
-		                                       &clearColor);
-
-		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-
-		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
-
-		vk::Viewport viewport(0.0f,
-		                      0.0f,
-		                      static_cast<float>(swapchainExtent.width),
-		                      static_cast<float>(swapchainExtent.height),
-		                      0.0f,
-		                      1.0f);
-		commandBuffer.setViewport(0, 1, &viewport);
-
-
-		commandBuffer.setScissor(0, 1, &renderArea);
-
-		vk::DeviceSize offset = 0;
-		commandBuffer.bindVertexBuffers(0, 1, &buffer, &offset);
-
-		commandBuffer.bindIndexBuffer(buffer, indicesOffset,
-		                              vk::IndexType::eUint16);
-
-		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-		                                 pipelineLayout,
-		                                 0,
-		                                 1,
-		                                 &descriptorSet,
-		                                 {},
-		                                 {});
-
-		commandBuffer.drawIndexed(indexCount, 1, 0, 0, 0);
-		commandBuffer.endRenderPass();
-
-		result = commandBuffer.end();
-		SASSERT_VULKAN(result)
-	}
-
-	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
-	                        const vk::Semaphore& imageAvaliableSemaphore, const vk::CommandBuffer& commandBuffer,
-	                        u32& imageIndex)
-	{
-		vk::Result result = device.waitForFences(1, &inFlightFence, vk::True, UINT64_MAX);
-		SASSERT_VULKAN(result)
-
-		result = device.resetFences({inFlightFence});
-		SASSERT_VULKAN(result)
-
-		result = commandBuffer.reset();
-		SASSERT_VULKAN(result)
-
-		result = device.acquireNextImageKHR(swapchain,
-		                                    UINT64_MAX,
-		                                    imageAvaliableSemaphore,
-		                                    {}, &imageIndex);
-		return result;
-	}
-
-	//command buffer has to be recorded before
-	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer, const vk::Fence& inFlightFence,
-	                     const vk::Semaphore& imageAvaliableSemaphore, const vk::Semaphore& renderFinishedSemaphore,
-	                     const vk::Queue& graphicsQueue, const vk::Queue& presentQueue,
-	                     const vk::SwapchainKHR swapchain, const u32& imageIndex)
-	{
-		vk::Semaphore waitSemaphores[] = {imageAvaliableSemaphore};
-		vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
-		vk::Semaphore signalSemaphores[] = {
-			renderFinishedSemaphore
-		};
-
-
-		vk::SubmitInfo submitInfo(1,
-		                          waitSemaphores,
-		                          waitStages,
-		                          1,
-		                          &commandBuffer,
-		                          1,
-		                          signalSemaphores);
-
-
-		vk::Result result = graphicsQueue.submit({submitInfo}, inFlightFence);
-		SASSERT_VULKAN(result)
-
-		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &swapchain, &imageIndex, &result);
-		result = presentQueue.presentKHR(presentInfo);
-
-		return result;
 	}
 }
