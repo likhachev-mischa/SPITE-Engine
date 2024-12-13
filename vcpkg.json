@@ -4,7 +4,7 @@
     "glm",
     {
       "name": "sdl3",
-      "features": ["vulkan"]
+      "features": [ "vulkan" ]
     },
     "vulkan",
     "vulkan-memory-allocator",

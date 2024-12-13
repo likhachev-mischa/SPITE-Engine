@@ -1,7 +1,8 @@
 #pragma once
-#include <vulkan-memory-allocator-hpp/vk_mem_alloc.hpp>
+#include "Base/VulkanUsage.hpp"
 #include <glm/glm.hpp>
 #include <optional>
+#include "Base/VmaUsage.hpp"
 
 #include "Base/Memory.hpp"
 

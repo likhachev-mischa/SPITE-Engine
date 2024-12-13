@@ -9,19 +9,22 @@
 #include "Engine/RenderingCore.hpp"
 #include "Engine/ResourcesCore.hpp"
 
+
 namespace spite
 {
+	//TODO: REMOVE WINDOWMANAGER
 	BaseModule::BaseModule(spite::HeapAllocator& allocator, char const* const* windowExtensions,
-	                       const u32 windowExtensionCount, const vk::SurfaceKHR& surface):
-		allocationCallbacksWrapper(allocator), surface(surface),
+	                       const u32 windowExtensionCount, spite::WindowManager* windowManager):
+		allocationCallbacksWrapper(allocator), extensions(windowExtensions, windowExtensionCount, allocator),
+		instanceWrapper(allocator, allocationCallbacksWrapper, extensions),
+		surface(windowManager->createWindowSurface(instanceWrapper.instance)),
 		physicalDeviceWrapper(instanceWrapper),
 		indices(spite::findQueueFamilies(surface, physicalDeviceWrapper.device, allocator)),
-		extensions(windowExtensions, windowExtensionCount, allocator),
-		instanceWrapper(allocator, allocationCallbacksWrapper, extensions),
 		deviceWrapper(physicalDeviceWrapper, indices, allocator, allocationCallbacksWrapper),
 		gpuAllocatorWrapper(physicalDeviceWrapper, deviceWrapper, instanceWrapper, allocationCallbacksWrapper),
 		transferCommandPool(deviceWrapper, indices.transferFamily.value(), vk::CommandPoolCreateFlagBits::eTransient,
-		                    allocationCallbacksWrapper)
+		                    allocationCallbacksWrapper),
+		debugMessengerWrapper(instanceWrapper, allocationCallbacksWrapper)
 	{
 		vk::Device device = deviceWrapper.device;
 		transferQueue = device.getQueue(indices.transferFamily.value(), 0);
@@ -84,12 +87,14 @@ namespace spite
 	                                                          const vk::ShaderStageFlagBits& bits)
 	{
 		eastl::string shaderPathStr(shaderPath);
+
 		auto it = shaderModules.find(shaderPathStr);
 		if (it == shaderModules.end())
 		{
-			shaderModules.emplace(shaderPathStr, ShaderModuleWrapper(baseModule->deviceWrapper,
-			                                                         readBinaryFile(shaderPath, bufferAllocator), bits,
-			                                                         baseModule->allocationCallbacksWrapper));
+			shaderModules.emplace(
+				shaderPathStr, ShaderModuleWrapper(baseModule->deviceWrapper,
+				                                   readBinaryFile(shaderPath, bufferAllocator),
+				                                   bits, baseModule->allocationCallbacksWrapper));
 			return shaderModules.at(shaderPathStr);
 		}
 		return it->second;
@@ -114,25 +119,34 @@ namespace spite
 		baseModule(std::move(baseModulePtr)),
 		commandPoolWrapper(baseModule->deviceWrapper, baseModule->indices.graphicsFamily.value(), flagBits,
 		                   baseModule->allocationCallbacksWrapper),
-		commandBuffersWrapper(baseModule->deviceWrapper, commandPoolWrapper, count)
+		primaryCommandBuffersWrapper(baseModule->deviceWrapper, commandPoolWrapper, vk::CommandBufferLevel::ePrimary,
+		                             count),
+		secondaryCommandBuffersWrapper(baseModule->deviceWrapper, commandPoolWrapper,
+		                               vk::CommandBufferLevel::eSecondary, count)
 	{
 	}
 
 	ModelDataModule::ModelDataModule(std::shared_ptr<BaseModule> baseModulePtr,
 	                                 const eastl::vector<glm::vec3>& vertices,
-	                                 const eastl::vector<u32>& indices): baseModule(std::move(baseModulePtr))
+	                                 const eastl::vector<u32>& indices): indicesCount(static_cast<u32>(indices.size())),
+	                                                                     baseModule(std::move(baseModulePtr))
 	{
 		vertSize = vertices.size() * sizeof(vertices[0]);
-		sizet indSize = indices.size() * sizeof(indices[0]);
+		sizet indSize = indicesCount * sizeof(indices[0]);
 		sizet totalSize = vertSize + indSize;
 
 		modelBuffer = BufferWrapper(
-			totalSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
+			totalSize,
+			vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer |
+			vk::BufferUsageFlagBits::eTransferDst,
 			vk::MemoryPropertyFlagBits::eDeviceLocal, {}, baseModule->indices, baseModule->gpuAllocatorWrapper);
 
 		auto stagingBuffer = BufferWrapper(
-			totalSize, vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, {},
+			totalSize,
+			vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eVertexBuffer |
+			vk::BufferUsageFlagBits::eIndexBuffer,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			vma::AllocationCreateFlagBits::eHostAccessSequentialWrite | vma::AllocationCreateFlagBits::eStrategyMinTime,
 			baseModule->indices, baseModule->gpuAllocatorWrapper);
 
 		stagingBuffer.copyMemory(vertices.data(), vertSize, 0);
@@ -172,7 +186,7 @@ namespace spite
 	                           eastl::vector<std::shared_ptr<ModelDataModule>> models,
 	                           const spite::HeapAllocator& allocator,
 	                           const eastl::vector<
-		                           eastl::tuple<ShaderModuleWrapper*, const char*>, spite::HeapAllocator>&
+		                           eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 	                           shaderModules,
 	                           const VertexInputDescriptionsWrapper& vertexInputDescriptions,
 	                           WindowManager* windowManager, const u32 framesInFlight):
@@ -196,23 +210,45 @@ namespace spite
 		                                        swapchainModule->swapchainWrapper.swapchain,
 		                                        syncObjectsWrapper.inFlightFences[currentFrame],
 		                                        syncObjectsWrapper.imageAvailableSemaphores[currentFrame],
-		                                        commandBuffersModule->commandBuffersWrapper.commandBuffers[
-			                                        currentFrame], currentFrame);
+		                                        imageIndex);
 		recreateSwapchain(result);
 	}
 
 	void RenderModule::drawFrame()
 	{
-		recordCommandBuffer();
+		beginSecondaryCommandBuffer(commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
+		                            swapchainModule->renderPassWrapper.renderPass,
+		                            swapchainModule->framebuffersWrapper.framebuffers[imageIndex]);
 
-		vk::Result result = spite::drawFrame(commandBuffersModule->commandBuffersWrapper.commandBuffers[currentFrame],
-		                                     syncObjectsWrapper.inFlightFences[currentFrame],
-		                                     syncObjectsWrapper.imageAvailableSemaphores[currentFrame],
-		                                     syncObjectsWrapper.renderFinishedSemaphores[currentFrame],
-		                                     baseModule->graphicsQueue,
-		                                     baseModule->presentQueue,
-		                                     swapchainModule->swapchainWrapper.swapchain,
-		                                     currentFrame);
+
+		for (sizet i = 0, size = models.size(); i < size; ++i)
+		{
+			recordSecondaryCommandBuffer(
+				commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
+				graphicsPipelineWrapper.graphicsPipeline, graphicsPipelineWrapper.pipelineLayout,
+				descriptorModule->descriptorSetsWrapper.descriptorSets[currentFrame],
+				swapchainModule->swapchainDetailsWrapper.extent,
+				models[i]->modelBuffer.buffer, models[i]->vertSize, models[i]->indicesCount);
+		}
+
+		endSecondaryCommandBuffer(commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
+
+		recordPrimaryCommandBuffer(commandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
+		                           swapchainModule->swapchainDetailsWrapper.extent,
+		                           swapchainModule->renderPassWrapper.renderPass,
+		                           swapchainModule->framebuffersWrapper.framebuffers[imageIndex],
+		                           graphicsPipelineWrapper.graphicsPipeline,
+		                           commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
+
+		vk::Result result = spite::drawFrame(
+			commandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
+			syncObjectsWrapper.inFlightFences[currentFrame],
+			syncObjectsWrapper.imageAvailableSemaphores[currentFrame],
+			syncObjectsWrapper.renderFinishedSemaphores[currentFrame],
+			baseModule->graphicsQueue,
+			baseModule->presentQueue,
+			swapchainModule->swapchainWrapper.swapchain,
+			imageIndex);
 
 		recreateSwapchain(result);
 	}

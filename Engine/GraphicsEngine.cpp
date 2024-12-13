@@ -101,7 +101,7 @@ namespace spite
 
 		if (ENABLE_VALIDATION_LAYERS)
 		{
-			destroyDebugUtilsMessengerExt(m_instance, m_debugMessenger, nullptr);
+			//destroyDebugUtilsMessengerExt(m_instance, m_debugMessenger, nullptr);
 		}
 
 		m_instance.destroySurfaceKHR(m_surface);

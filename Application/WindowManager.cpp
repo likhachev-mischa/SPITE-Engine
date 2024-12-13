@@ -26,7 +26,7 @@ namespace spite
 		SASSERTM(result, "Error on SDL set metadata!");
 
 		m_window = SDL_CreateWindow("SPITE", WIDTH, HEIGHT,SDL_WINDOW_VULKAN |
-		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS );
+		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
 		SASSERTM(m_window != nullptr, "Error on SDL Vulkan window creation!")
 	}
 
@@ -88,20 +88,33 @@ namespace spite
 		return m_shouldTerminate;
 	}
 
-	vk::SurfaceKHR WindowManager::createWindowSurface(const vk::Instance& instance)
+	vk::SurfaceKHR WindowManager::createWindowSurface(const vk::Instance& instance,
+	                                                  vk::AllocationCallbacks* allocationCallbacks)
 	{
 		VkSurfaceKHR tempSurface;
-		bool result = SDL_Vulkan_CreateSurface(m_window, instance, nullptr, &tempSurface);
+		bool result = SDL_Vulkan_CreateSurface(m_window, instance,
+		                                       //   reinterpret_cast<VkAllocationCallbacks*>(allocationCallbacks),
+		                                       nullptr,
+		                                       &tempSurface);
 		SASSERTM(result, "Error on window surface creation!")
 
-		return tempSurface;
+		m_surface = tempSurface;
+		return m_surface;
+	}
+
+	void WindowManager::cleanup(const vk::Instance& instance, vk::AllocationCallbacks* allocationCallbacks) const
+	{
+		SDL_Vulkan_DestroySurface(instance, m_surface,
+			// reinterpret_cast<VkAllocationCallbacks*>(allocationCallbacks));
+			nullptr);
 	}
 
 	//TODO: destroy surface
 	WindowManager::~WindowManager()
 	{
 		SDL_DestroyWindow(m_window);
-	//	SDL_Vulkan_DestroySurface();
+		//	SDL_Vulkan_DestroySurface();
+		//SDL_Vulkan_DestroySurface()
 		SDL_Quit();
 	}
 }

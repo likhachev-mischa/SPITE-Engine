@@ -23,6 +23,7 @@ namespace spite
 		void* pUserData)
 	{
 		SDEBUG_LOG("validation layer: %s", pCallbackData->pMessage)
+		SDEBUG_LOG("\n")
 		return VK_FALSE;
 	}
 

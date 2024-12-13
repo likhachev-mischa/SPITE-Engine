@@ -4,14 +4,24 @@
 
 namespace spite
 {
-	void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
-	                         const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                         const vk::Pipeline& graphicsPipeline, const vk::Buffer& buffer,
-	                         const vk::DeviceSize& indicesOffset, const vk::PipelineLayout& pipelineLayout,
-	                         const vk::DescriptorSet& descriptorSet, const u32 indicesCount);
+	void beginSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::RenderPass& renderPass,
+	                                 const vk::Framebuffer& framebuffer);
+
+	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Pipeline& graphicsPipeline,
+	                                  const vk::PipelineLayout& pipelineLayout, const vk::DescriptorSet& descriptorSet,
+	                                  const vk::Extent2D& swapchainExtent,
+	                                  const vk::Buffer& buffer, const vk::DeviceSize& indicesOffset,
+	                                  const u32 indicesCount);
+
+	void endSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer);
+
+	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
+	                                const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
+	                                const vk::Pipeline& graphicsPipeline,
+	                                const vk::CommandBuffer& secondaryCommandBuffer);
 
 	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
-	                        const vk::Semaphore& imageAvaliableSemaphore, const vk::CommandBuffer& commandBuffer,
+	                        const vk::Semaphore& imageAvaliableSemaphore,
 	                        u32& imageIndex);
 
 	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer, const vk::Fence& inFlightFence,

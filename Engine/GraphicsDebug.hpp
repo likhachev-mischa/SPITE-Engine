@@ -1,8 +1,9 @@
 #pragma once
 #include <array>
 #include <iostream>
-#include "VulkanUsage.hpp"
+
 #include "Base/Memory.hpp"
+#include "Base/VulkanUsage.hpp"
 
 namespace spite
 {

@@ -157,8 +157,7 @@ namespace spite
 	{
 		QueueFamilyIndices indices;
 
-		std::vector<vk::QueueFamilyProperties, spite::HeapAllocator> queueFamilies = physicalDevice.
-			getQueueFamilyProperties<spite::HeapAllocator>(allocator);
+		std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
 
 		int i = 0;
 		for (const auto& queueFamily : queueFamilies)
@@ -424,8 +423,23 @@ namespace spite
 		return shaderStageInfo;
 	}
 
+
+	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
+	                                        const vk::DescriptorSetLayout& descriptorSetLayout,
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo(
+			{},
+			1,
+			&descriptorSetLayout);
+
+		auto [result,pipelineLayout] = device.createPipelineLayout(pipelineLayoutInfo, pAllocationCallbacks);
+		SASSERT_VULKAN(result);
+		return pipelineLayout;
+	}
+
 	//TODO: add pipeline cache 
-	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
+	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::PipelineLayout& pipelineLayout,
 	                                    const vk::Extent2D& swapchainExtent, const vk::RenderPass& renderPass,
 	                                    const eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator>&
 	                                    shaderStages, const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
@@ -496,14 +510,6 @@ namespace spite
 			1,
 			&colorBlendAttachment);
 
-		vk::PipelineLayoutCreateInfo pipelineLayoutInfo(
-			{},
-			1,
-			&descriptorSetLayout);
-
-		auto [result,pipelineLayout] = device.createPipelineLayout(pipelineLayoutInfo, pAllocationCallbacks);
-		SASSERT_VULKAN(result);
-
 		vk::GraphicsPipelineCreateInfo pipelineInfo({},
 		                                            static_cast<u32>(shaderStages.size()),
 		                                            shaderStages.data(),
@@ -519,8 +525,8 @@ namespace spite
 		                                            pipelineLayout,
 		                                            renderPass,
 		                                            0);
-		vk::Pipeline graphicsPipeline;
-		std::tie(result, graphicsPipeline) =
+
+		auto [result, graphicsPipeline] =
 			device.createGraphicsPipeline({}, pipelineInfo, pAllocationCallbacks);
 
 		SASSERT_VULKAN(result);
@@ -603,7 +609,7 @@ namespace spite
 	{
 		vk::CommandBufferAllocateInfo allocInfo(transferCommandPool, vk::CommandBufferLevel::ePrimary, 1);
 
-		auto [result,commandBuffers] = device.allocateCommandBuffers(allocInfo, pAllocationCallbacks);
+		auto [result,commandBuffers] = device.allocateCommandBuffers(allocInfo);
 		SASSERT_VULKAN(result);
 
 		vk::CommandBuffer commandBuffer = commandBuffers[0];
@@ -629,12 +635,12 @@ namespace spite
 
 	vk::DescriptorPool createDescriptorPool(const vk::Device& device,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks,
-	                                        vk::DescriptorType& type,
+	                                        const vk::DescriptorType& type,
 	                                        const u32 size)
 	{
 		vk::DescriptorPoolSize poolSize(type, size);
 		vk::DescriptorPoolCreateInfo poolInfo(
-			{},
+			vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 			size,
 			1,
 			&poolSize);
@@ -658,7 +664,7 @@ namespace spite
 		                                        count,
 		                                        layouts.data());
 
-		auto [result, descriptorSets] = device.allocateDescriptorSets(allocInfo, pAllocationCallbacks);
+		auto [result, descriptorSets] = device.allocateDescriptorSets(allocInfo);
 		SASSERT_VULKAN(result);
 		return descriptorSets;
 	}
@@ -681,10 +687,11 @@ namespace spite
 
 	std::vector<vk::CommandBuffer> createGraphicsCommandBuffers(const vk::Device& device,
 	                                                            const vk::CommandPool& graphicsCommandPool,
+	                                                            const vk::CommandBufferLevel& level,
 	                                                            const u32 count)
 	{
 		vk::CommandBufferAllocateInfo allocInfo(graphicsCommandPool,
-		                                        vk::CommandBufferLevel::ePrimary,
+		                                        level,
 		                                        count);
 
 		auto [result, commandBuffers] = device.allocateCommandBuffers(allocInfo);

@@ -1,4 +1,7 @@
 #pragma once
+#include "Base/Platform.hpp"
+#include "Base/VulkanUsage.hpp"
+
 
 namespace spite
 {

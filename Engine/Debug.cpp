@@ -2,9 +2,10 @@
 
 #include "Base/Assert.hpp"
 
+#include "Engine/Common.hpp"
+
 namespace spite
 {
-	
 	vk::DebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo()
 	{
 		vk::DebugUtilsMessengerCreateInfoEXT createInfo({},
@@ -20,8 +21,8 @@ namespace spite
 
 	bool checkValidationLayerSupport(const spite::HeapAllocator& allocator)
 	{
-		std::vector<vk::LayerProperties, spite::HeapAllocator> availableLayers =
-			vk::enumerateInstanceLayerProperties<spite::HeapAllocator>(&allocator);
+		auto [result, availableLayers] = vk::enumerateInstanceLayerProperties();
+		SASSERT_VULKAN(result);
 
 		for (const char* layerName : VALIDATION_LAYERS)
 		{
@@ -46,7 +47,8 @@ namespace spite
 	}
 
 	VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-		const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+	                                      const VkAllocationCallbacks* pAllocator,
+	                                      VkDebugUtilsMessengerEXT* pDebugMessenger)
 	{
 		auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
 			instance,
@@ -62,7 +64,7 @@ namespace spite
 	}
 
 	VkDebugUtilsMessengerEXT createDebugUtilsMessenger(const vk::Instance& instance,
-		const vk::AllocationCallbacks* pAllocationCallbacks)
+	                                                   const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		VkDebugUtilsMessengerCreateInfoEXT createInfo =
 			createDebugMessengerCreateInfo();
@@ -78,7 +80,7 @@ namespace spite
 	}
 
 	void destroyDebugUtilsMessenger(const vk::Instance& instance, VkDebugUtilsMessengerEXT& debugMessenger,
-		const VkAllocationCallbacks* pAllocator)
+	                                const VkAllocationCallbacks* pAllocator)
 	{
 		auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
 			instance,

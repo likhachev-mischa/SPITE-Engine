@@ -42,15 +42,6 @@
     <ClInclude Include="Model2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\GraphicsDebug.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\GraphicsEngine.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\GraphicsUtility.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
@@ -124,15 +115,6 @@
     </ClCompile>
     <ClCompile Include="Base\VmaUsage.cpp">
       <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\GraphicsDebug.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\GraphicsEngine.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\GraphicsUtility.cpp">
-      <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Application\EventManager.cpp">
       <Filter>Application</Filter>

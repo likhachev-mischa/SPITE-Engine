@@ -12,4 +12,4 @@ float magnitudeSqr(const glm::vec4& vec);
 std::vector<char> readBinaryFile(const std::string& filename);
 
 void readModelInfoFile(const std::string& filename, std::vector<glm::vec2>& vertices,
-                       std::vector<uint16_t>& indices);
+                       std::vector<uint32_t>& indices);

@@ -202,6 +202,7 @@ namespace spite
 
 	void BlockAllocator::shutdown()
 	{
+#if defined(DEBUG)
 		if (m_allocator.mnCurrentSize != 0)
 		{
 			SDEBUG_LOG(
@@ -213,5 +214,6 @@ namespace spite
 			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_allocator.get_name())
 		}
 		SASSERT(m_allocator.mnCurrentSize == 0, "Allocations still present. Check your code!\n")
+#endif
 	}
 }

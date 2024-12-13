@@ -78,7 +78,11 @@ namespace spite
 	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
+	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
+	                                        const vk::DescriptorSetLayout& descriptorSetLayout,
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
+
+	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::PipelineLayout& pipelineLayout,
 	                                    const vk::Extent2D& swapchainExtent, const vk::RenderPass& renderPass,
 	                                    const eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator>&
 	                                    shaderStages, const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
@@ -116,7 +120,7 @@ namespace spite
 	vk::DescriptorPool createDescriptorPool(const vk::Device& device,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks,
 	                                        const vk::DescriptorType& type,
-	                                        const u32 size = MAX_FRAMES_IN_FLIGHT);
+	                                        const u32 size);
 
 	std::vector<vk::DescriptorSet> createDescriptorSets(const vk::Device& device,
 	                                                    const vk::DescriptorSetLayout& descriptorSetLayout,
@@ -130,6 +134,7 @@ namespace spite
 
 	std::vector<vk::CommandBuffer> createGraphicsCommandBuffers(const vk::Device& device,
 	                                                            const vk::CommandPool& graphicsCommandPool,
+	                                                            const vk::CommandBufferLevel& level,
 	                                                            const u32 count = MAX_FRAMES_IN_FLIGHT);
 
 	vk::Semaphore createSemaphore(const vk::Device device, const vk::SemaphoreCreateInfo& createInfo,

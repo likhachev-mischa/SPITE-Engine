@@ -38,16 +38,15 @@ vk::DebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo()
 	                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
 	                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
 	                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-	                                                debugCallback);
+	                                                spite::debugCallback);
 	return createInfo;
 }
 
 bool checkValidationLayerSupport(const spite::HeapAllocator& allocator)
 {
-	std::vector<vk::LayerProperties, spite::HeapAllocator> availableLayers =
-		vk::enumerateInstanceLayerProperties<spite::HeapAllocator>(&allocator).value;
+	auto [result, availableLayers] = vk::enumerateInstanceLayerProperties();
 
-	for (const char* layerName : VALIDATION_LAYERS)
+	for (const char* layerName : spite::VALIDATION_LAYERS)
 	{
 		bool layerFound = false;
 

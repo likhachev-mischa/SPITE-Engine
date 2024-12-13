@@ -1,7 +1,7 @@
 #pragma once
-#include <format>
 #include <EASTL/allocator.h>
 #include <EASTL/fixed_allocator.h>
+
 #include "Platform.hpp"
 
 namespace spite

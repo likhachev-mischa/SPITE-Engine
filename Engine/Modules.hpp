@@ -1,5 +1,5 @@
 #pragma once
-#include <EASTL/map.h>
+#include <EASTL/hash_map.h>
 #include <EASTL/string.h>
 
 #include <glm/vec3.hpp>
@@ -21,23 +21,26 @@ namespace spite
 		BaseModule& operator=(BaseModule&& other) = delete;
 
 		const AllocationCallbacksWrapper allocationCallbacksWrapper;
+		const InstanceExtensions extensions;
+		const InstanceWrapper instanceWrapper;
 		const vk::SurfaceKHR surface;
 		const PhysicalDeviceWrapper physicalDeviceWrapper;
 		const QueueFamilyIndices indices;
-		const InstanceExtensions extensions;
-		const InstanceWrapper instanceWrapper;
 		const DeviceWrapper deviceWrapper;
 		const GpuAllocatorWrapper gpuAllocatorWrapper;
 
 		const CommandPoolWrapper transferCommandPool;
 
+		const DebugMessengerWrapper debugMessengerWrapper;
+
 		vk::Queue transferQueue;
 		vk::Queue presentQueue;
 		vk::Queue graphicsQueue;
 
+		//TODO: REMOVE WINDOWMANAGER
 		BaseModule(spite::HeapAllocator& allocator,
 		           char const* const* windowExtensions, const u32 windowExtensionCount,
-		           const vk::SurfaceKHR& surface);
+		           spite::WindowManager* windowManager);
 
 		~BaseModule() = default;
 	};
@@ -95,7 +98,8 @@ namespace spite
 		ShaderServiceModule& operator=(ShaderServiceModule&& other) = delete;
 
 		const std::shared_ptr<BaseModule> baseModule;
-		eastl::map<eastl::string, ShaderModuleWrapper, spite::HeapAllocator> shaderModules;
+		eastl::hash_map<eastl::string, ShaderModuleWrapper, eastl::hash<eastl::string>, eastl::equal_to<eastl::string>,
+		                spite::HeapAllocator> shaderModules;
 
 		const spite::HeapAllocator& bufferAllocator;
 
@@ -117,7 +121,8 @@ namespace spite
 		const std::shared_ptr<BaseModule> baseModule;
 
 		CommandPoolWrapper commandPoolWrapper;
-		CommandBuffersWrapper commandBuffersWrapper;
+		CommandBuffersWrapper primaryCommandBuffersWrapper;
+		CommandBuffersWrapper secondaryCommandBuffersWrapper;
 
 		GraphicsCommandModule(std::shared_ptr<BaseModule> baseModulePtr, const vk::CommandPoolCreateFlagBits& flagBits,
 		                      const u32 count);
@@ -136,6 +141,7 @@ namespace spite
 
 		//offset for indices
 		vk::DeviceSize vertSize;
+		u32 indicesCount;
 		const std::shared_ptr<BaseModule> baseModule;
 
 		ModelDataModule(std::shared_ptr<BaseModule> baseModulePtr,
@@ -177,13 +183,14 @@ namespace spite
 		const SyncObjectsWrapper syncObjectsWrapper;
 
 		u32 currentFrame;
+		u32 imageIndex;
 
 		RenderModule(std::shared_ptr<BaseModule> baseModulePtr, std::shared_ptr<SwapchainModule> swapchainModulePtr,
 		             std::shared_ptr<DescriptorModule> descriptorModulePtr,
 		             std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
 		             eastl::vector<std::shared_ptr<ModelDataModule>> models,
 		             const spite::HeapAllocator& allocator,
-		             const eastl::vector<eastl::tuple<ShaderModuleWrapper*, const char*>, spite::HeapAllocator>&
+		             const eastl::vector<eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 		             shaderModules,
 		             const VertexInputDescriptionsWrapper& vertexInputDescriptions, spite::WindowManager* windowManager,
 		             const u32 framesInFlight);

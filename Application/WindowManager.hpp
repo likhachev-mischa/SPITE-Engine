@@ -31,14 +31,19 @@ namespace spite
 
 		bool shouldTerminate();
 
-		vk::SurfaceKHR createWindowSurface(const vk::Instance& instance);
+		vk::SurfaceKHR createWindowSurface(const vk::Instance& instance,
+		                                   vk::AllocationCallbacks* allocationCallbacks = nullptr);
 
+		void cleanup(const vk::Instance& instance, vk::AllocationCallbacks* allocationCallbacks = nullptr) const;
 		~WindowManager();
 
 	private:
 		SDL_Window* m_window{};
 		EventManager* m_eventManager;
 		InputManager* m_inputManager;
+
+		vk::SurfaceKHR m_surface;
+
 		bool m_shouldTerminate = false;
 	};
 }

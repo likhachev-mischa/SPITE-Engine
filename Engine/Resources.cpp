@@ -17,8 +17,9 @@ namespace spite
 			&vkAllocate,
 			&vkReallocate,
 			&vkFree,
-			&vkAllocationCallback,
-			&vkFreeCallback);
+			//		&vkAllocationCallback,
+			//		&vkFreeCallback);
+			nullptr, nullptr);
 	}
 
 	AllocationCallbacksWrapper::~AllocationCallbacksWrapper()
@@ -296,8 +297,8 @@ namespace spite
 		device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorPool = createDescriptorPool(device, allocationCallbacks, type,
-		                                      size);
+		descriptorPool = spite::createDescriptorPool(device, allocationCallbacks, type,
+		                                             size);
 	}
 
 	DescriptorPoolWrapper::~DescriptorPoolWrapper()
@@ -329,8 +330,7 @@ namespace spite
 
 	DescriptorSetsWrapper::~DescriptorSetsWrapper()
 	{
-		device.freeDescriptorSets(descriptorPool, descriptorSets,
-		                          &allocationCallbacks);
+		device.freeDescriptorSets(descriptorPool, descriptorSets);
 		descriptorSets.clear();
 	}
 
@@ -344,9 +344,41 @@ namespace spite
 		shaderModule = createShaderModule(device, code, allocationCallbacks);
 	}
 
+	ShaderModuleWrapper& ShaderModuleWrapper::operator=(ShaderModuleWrapper&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		shaderModule = other.shaderModule;
+		stage = other.stage;
+		device = other.device;
+		allocationCallbacks = other.allocationCallbacks;
+
+		other.shaderModule = nullptr;
+		other.device = nullptr;
+		other.allocationCallbacks = nullptr;
+
+		return *this;
+	}
+
+	ShaderModuleWrapper::ShaderModuleWrapper(ShaderModuleWrapper&& other) noexcept: shaderModule(other.shaderModule),
+		stage(other.stage),
+		device(other.device),
+		allocationCallbacks(other.allocationCallbacks)
+	{
+		other.shaderModule = nullptr;
+		other.device = nullptr;
+		other.allocationCallbacks = nullptr;
+	}
+
 	ShaderModuleWrapper::~ShaderModuleWrapper()
 	{
-		device.destroyShaderModule(shaderModule, allocationCallbacks);
+		if (device)
+		{
+			device.destroyShaderModule(shaderModule, allocationCallbacks);
+		}
 	}
 
 	VertexInputDescriptionsWrapper::VertexInputDescriptionsWrapper(
@@ -362,7 +394,7 @@ namespace spite
 	                                                 const RenderPassWrapper& renderPassWrapper,
 	                                                 const spite::HeapAllocator& allocator,
 	                                                 const eastl::vector<
-		                                                 eastl::tuple<ShaderModuleWrapper*, const char*>,
+		                                                 eastl::tuple<ShaderModuleWrapper&, const char*>,
 		                                                 spite::HeapAllocator>& shaderModules,
 	                                                 const VertexInputDescriptionsWrapper& vertexInputDescription,
 	                                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper):
@@ -383,13 +415,15 @@ namespace spite
 		{
 			vk::PipelineShaderStageCreateInfo createInfo(
 				{},
-				eastl::get<0>(shaderModule)->stage,
-				eastl::get<0>(shaderModule)->shaderModule,
+				eastl::get<0>(shaderModule).stage,
+				eastl::get<0>(shaderModule).shaderModule,
 				eastl::get<1>(shaderModule));
 			shaderStages.push_back(createInfo);
 		}
 
-		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayout,
+		pipelineLayout = createPipelineLayout(device, descriptorSetLayout, allocationCallbacks);
+
+		graphicsPipeline = createGraphicsPipeline(device, pipelineLayout,
 		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
 		                                          vertexInputInfo,
 		                                          allocationCallbacks);
@@ -399,7 +433,8 @@ namespace spite
 	                                       const RenderPassWrapper& renderPassWrapper)
 	{
 		device.destroyPipeline(graphicsPipeline, allocationCallbacks);
-		graphicsPipeline = createGraphicsPipeline(device, descriptorSetLayout,
+
+		graphicsPipeline = createGraphicsPipeline(device, pipelineLayout,
 		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
 		                                          vertexInputInfo,
 		                                          allocationCallbacks);
@@ -408,6 +443,7 @@ namespace spite
 	GraphicsPipelineWrapper::~GraphicsPipelineWrapper()
 	{
 		device.destroyPipeline(graphicsPipeline, allocationCallbacks);
+		device.destroyPipelineLayout(pipelineLayout, allocationCallbacks);
 	}
 
 	FramebuffersWrapper::FramebuffersWrapper(const DeviceWrapper& deviceWrapper,
@@ -508,7 +544,7 @@ namespace spite
 	                               transferCommandPool, const vk::Queue transferQueue,
 	                               const vk::AllocationCallbacks* allocationCallbacks) const
 	{
-		SASSERT(size == other.size, "Buffer sizes are not equal");
+		SASSERTM(size == other.size, "Buffer sizes are not equal");
 		spite::copyBuffer(other.buffer, buffer, size, transferCommandPool, device, transferQueue, allocationCallbacks);
 	}
 
@@ -538,11 +574,12 @@ namespace spite
 	}
 
 	CommandBuffersWrapper::CommandBuffersWrapper(const DeviceWrapper& deviceWrapper,
-	                                             const CommandPoolWrapper& commandPoolWrapper, const u32 count):
+	                                             const CommandPoolWrapper& commandPoolWrapper,
+	                                             const vk::CommandBufferLevel& level, const u32 count):
 		commandPool(commandPoolWrapper.commandPool),
 		device(deviceWrapper.device)
 	{
-		commandBuffers = createGraphicsCommandBuffers(device, commandPool, count);
+		commandBuffers = createGraphicsCommandBuffers(device, commandPool, level, count);
 	}
 
 	CommandBuffersWrapper::~CommandBuffersWrapper()

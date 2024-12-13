@@ -130,12 +130,12 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -183,9 +183,6 @@
     <ClInclude Include="Engine\RenderingCore.hpp" />
     <ClInclude Include="Engine\ResourcesCore.hpp" />
     <ClInclude Include="Engine\Debug.hpp" />
-    <ClInclude Include="Engine\GraphicsDebug.hpp" />
-    <ClInclude Include="Engine\GraphicsEngine.hpp" />
-    <ClInclude Include="Engine\GraphicsUtility.hpp" />
     <ClInclude Include="Engine\Modules.hpp" />
     <ClInclude Include="Engine\Resources.hpp" />
     <ClInclude Include="Engine\VulkanAllocator.hpp" />
@@ -205,9 +202,6 @@
     <ClCompile Include="Engine\RenderingCore.cpp" />
     <ClCompile Include="Engine\ResourcesCore.cpp" />
     <ClCompile Include="Engine\Debug.cpp" />
-    <ClCompile Include="Engine\GraphicsDebug.cpp" />
-    <ClCompile Include="Engine\GraphicsEngine.cpp" />
-    <ClCompile Include="Engine\GraphicsUtility.cpp" />
     <ClCompile Include="Engine\Resources.cpp" />
     <ClCompile Include="Engine\VulkanAllocator.cpp" />
     <ClCompile Include="External\tlsf.c" />
@@ -236,6 +230,7 @@
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgInstalledDir>
     </VcpkgInstalledDir>
+    <VcpkgUseStatic>true</VcpkgUseStatic>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <VcpkgInstalledDir>

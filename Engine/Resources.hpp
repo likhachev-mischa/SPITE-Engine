@@ -134,6 +134,8 @@ namespace spite
 		vma::Allocator allocator;
 		vk::DeviceSize size;
 
+		BufferWrapper() = default;
+
 		BufferWrapper(const u64 size, const vk::BufferUsageFlags& usage,
 		              const vk::MemoryPropertyFlags memoryProperty,
 		              const vma::AllocationCreateFlags& allocationFlag, const QueueFamilyIndices& indices,
@@ -320,20 +322,23 @@ namespace spite
 
 	struct ShaderModuleWrapper
 	{
-		ShaderModuleWrapper(const ShaderModuleWrapper& other) = delete;
-		ShaderModuleWrapper(ShaderModuleWrapper&& other) = delete;
 		ShaderModuleWrapper& operator=(const ShaderModuleWrapper& other) = delete;
-		ShaderModuleWrapper& operator=(ShaderModuleWrapper&& other) = delete;
 
 		vk::ShaderModule shaderModule;
-		const vk::ShaderStageFlagBits stage;
+		vk::ShaderStageFlagBits stage;
 
-		const vk::Device device;
+		vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
 		ShaderModuleWrapper(const DeviceWrapper& deviceWrapper, const eastl::vector<char, spite::HeapAllocator>& code,
 		                    const vk::ShaderStageFlagBits& stageFlag,
 		                    const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+		ShaderModuleWrapper(const ShaderModuleWrapper& other) = delete;
+
+		ShaderModuleWrapper& operator=(ShaderModuleWrapper&& other) noexcept;
+
+		ShaderModuleWrapper(ShaderModuleWrapper&& other) noexcept;
+
 		~ShaderModuleWrapper();
 	};
 
@@ -355,6 +360,7 @@ namespace spite
 		GraphicsPipelineWrapper& operator=(const GraphicsPipelineWrapper& other) = delete;
 		GraphicsPipelineWrapper& operator=(GraphicsPipelineWrapper&& other) = delete;
 
+		vk::PipelineLayout pipelineLayout;
 		vk::Pipeline graphicsPipeline;
 		eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator> shaderStages;
 
@@ -369,7 +375,7 @@ namespace spite
 		                        const SwapchainDetailsWrapper& detailsWrapper,
 		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
 		                        const eastl::vector<
-			                        eastl::tuple<ShaderModuleWrapper*, const char*>, spite::HeapAllocator>
+			                        eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>
 		                        & shaderModules, const VertexInputDescriptionsWrapper& vertexInputDescription,
 		                        const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
@@ -436,6 +442,7 @@ namespace spite
 		const vk::Device device;
 
 		CommandBuffersWrapper(const DeviceWrapper& deviceWrapper, const CommandPoolWrapper& commandPoolWrapper,
+		                      const vk::CommandBufferLevel& level,
 		                      const u32 count);
 
 		~CommandBuffersWrapper();
