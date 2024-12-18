@@ -203,46 +203,47 @@ int main(int argc, char* argv[])
 
 	spite::HeapAllocator graphicsAllocator("Graphics allocator");
 	{
-		spite::InputManager inputManager;
-		spite::EventManager eventManager;
-		spite::WindowManager windowManager(&eventManager, &inputManager);
+		auto inputManager = std::make_shared<spite::InputManager>();
+		auto eventManager = std::make_shared<spite::EventManager>();
+
+		auto allocationCallbacks = std::make_shared<spite::AllocationCallbacksWrapper>(graphicsAllocator);
+
+		auto windowManager = std::make_shared<spite::WindowManager>(eventManager, inputManager);
+
 		u32 extensionCount;
-		auto extensions = windowManager.getExtensions(extensionCount);
-		auto base = std::make_shared<spite::BaseModule>(graphicsAllocator, extensions, extensionCount,
-		                                                &windowManager);
-		auto swapchainModule = std::make_shared<spite::SwapchainModule>(base, graphicsAllocator, 800, 600);
+		auto extensions = windowManager->getExtensions(extensionCount);
 
-		auto uniformBuffer = std::make_shared<spite::UboModule>(base, sizeof(Transform), 1);
+		auto core = std::make_shared<spite::CoreModule>(allocationCallbacks, extensions, extensionCount,
+		                                                graphicsAllocator);
+		auto base = std::make_shared<spite::BaseModule>(allocationCallbacks, core, graphicsAllocator,
+		                                                windowManager->createWindowSurface(
+			                                                core->instanceWrapper.instance));
+
+		auto swapchainModule = std::make_shared<spite::SwapchainModule>(allocationCallbacks, core, base,
+		                                                                graphicsAllocator, spite::WIDTH, spite::HEIGHT);
+
+		auto uniformBuffer = std::make_shared<spite::UboModule>(core, base, sizeof(Transform), 1);
 
 
-		auto descriptorModule = std::make_shared<spite::DescriptorModule>(
-			base, vk::DescriptorType::eUniformBufferDynamic,
-			spite::MAX_FRAMES_IN_FLIGHT,
-			uniformBuffer->uboBuffer, sizeof(Transform),
-			graphicsAllocator);
+		auto descriptorModule = std::make_shared<spite::DescriptorModule>(allocationCallbacks,
+		                                                                  base,
+		                                                                  vk::DescriptorType::eUniformBufferDynamic,
+		                                                                  spite::MAX_FRAMES_IN_FLIGHT,
+		                                                                  uniformBuffer->uboBuffer, sizeof(Transform),
+		                                                                  graphicsAllocator);
 
-		auto commandBuffersModule = std::make_shared<spite::GraphicsCommandModule>(
+		auto commandBuffersModule = std::make_shared<spite::GraphicsCommandModule>(allocationCallbacks,
 			base, vk::CommandPoolCreateFlagBits::eResetCommandBuffer, spite::MAX_FRAMES_IN_FLIGHT);
 
-		std::vector<glm::vec2> initVertices;
-		std::vector<u32> initIndices;
 
-		spite::readModelInfoFile("test.txt", initVertices, initIndices);
+		eastl::vector<glm::vec3, spite::HeapAllocator> vertices(graphicsAllocator);
+		eastl::vector<u32, spite::HeapAllocator> indices(graphicsAllocator);
+		spite::readModelInfoFile("test.txt", vertices, indices);
 
-		eastl::vector<glm::vec3> vertices(initVertices.size());
-		for (sizet i = 0, size = initVertices.size(); i < size; ++i)
-		{
-			vertices[i] = glm::vec3(initVertices[i], 0.f);
-		}
 
-		eastl::vector<u32> indices(initIndices.size());
-		for (sizet i = 0, size = indices.size(); i < size; ++i)
-		{
-			indices[i] = initIndices[i];
-		}
-
-		auto model = std::make_shared<spite::ModelDataModule>(base, vertices, indices);
-		auto shaderService = std::make_shared<spite::ShaderServiceModule>(base, graphicsAllocator);
+		auto model = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
+		auto shaderService = std::make_shared<spite::ShaderServiceModule>(allocationCallbacks,
+		                                                                  base, graphicsAllocator);
 
 		spite::ShaderModuleWrapper& vertShader = shaderService->getShaderModule(
 			"shaders/vert.spv", vk::ShaderStageFlagBits::eVertex);
@@ -255,30 +256,29 @@ int main(int argc, char* argv[])
 		shaderModules.push_back(eastl::make_tuple(std::ref(vertShader), "main"));
 		shaderModules.push_back(eastl::make_tuple(std::ref(fragShader), "main"));
 
+
 		spite::VertexInputDescriptionsWrapper vertexInputDescriptions(
 			{vk::VertexInputBindingDescription(0, sizeof(glm::vec3), vk::VertexInputRate::eVertex)},
 			{vk::VertexInputAttributeDescription(0, 0, vk::Format::eR32G32B32Sfloat)});
-		auto renderModule = std::make_shared<spite::RenderModule>(base, swapchainModule, descriptorModule,
+		auto renderModule = std::make_shared<spite::RenderModule>(allocationCallbacks, base, swapchainModule,
+		                                                          descriptorModule,
 		                                                          commandBuffersModule, eastl::vector{model},
 		                                                          graphicsAllocator,
 		                                                          shaderModules, vertexInputDescriptions,
-		                                                          &windowManager,
+		                                                          windowManager,
 		                                                          spite::MAX_FRAMES_IN_FLIGHT);
 		void* mem = uniformBuffer->uboBuffer.mapMemory();
 		Transform transform;
 		memcpy(mem, &transform, sizeof(transform));
-		while (!windowManager.shouldTerminate())
+		while (!windowManager->shouldTerminate())
 		{
-			windowManager.pollEvents();
-			eventManager.processEvents();
-			eventManager.discardPollEvents();
+			windowManager->pollEvents();
+			eventManager->processEvents();
+			eventManager->discardPollEvents();
 			renderModule->waitForFrame();
 			renderModule->drawFrame();
 		}
 		uniformBuffer->uboBuffer.unmapMemory();
-		base->deviceWrapper.device.waitIdle();
-
-		windowManager.cleanup(base->instanceWrapper.instance);
 	}
 	graphicsAllocator.shutdown();
 }

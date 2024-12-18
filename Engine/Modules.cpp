@@ -12,19 +12,30 @@
 
 namespace spite
 {
-	//TODO: REMOVE WINDOWMANAGER
-	BaseModule::BaseModule(spite::HeapAllocator& allocator, char const* const* windowExtensions,
-	                       const u32 windowExtensionCount, spite::WindowManager* windowManager):
-		allocationCallbacksWrapper(allocator), extensions(windowExtensions, windowExtensionCount, allocator),
-		instanceWrapper(allocator, allocationCallbacksWrapper, extensions),
-		surface(windowManager->createWindowSurface(instanceWrapper.instance)),
+	CoreModule::CoreModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                       char const* const* windowExtensions, const u32 extensionCount,
+	                       const spite::HeapAllocator& allocator):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
+		extensions(windowExtensions, extensionCount, allocator),
+		instanceWrapper(allocator, *allocationCallbacks, extensions),
 		physicalDeviceWrapper(instanceWrapper),
-		indices(spite::findQueueFamilies(surface, physicalDeviceWrapper.device, allocator)),
-		deviceWrapper(physicalDeviceWrapper, indices, allocator, allocationCallbacksWrapper),
-		gpuAllocatorWrapper(physicalDeviceWrapper, deviceWrapper, instanceWrapper, allocationCallbacksWrapper),
-		transferCommandPool(deviceWrapper, indices.transferFamily.value(), vk::CommandPoolCreateFlagBits::eTransient,
-		                    allocationCallbacksWrapper),
-		debugMessengerWrapper(instanceWrapper, allocationCallbacksWrapper)
+		debugMessengerWrapper(instanceWrapper, *allocationCallbacks)
+	{
+	}
+
+	BaseModule::BaseModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                       std::shared_ptr<CoreModule> coreModulePtr, const spite::HeapAllocator& allocator,
+	                       const vk::SurfaceKHR& surface):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
+		coreModule(std::move(coreModulePtr)),
+		surface(surface),
+		indices(spite::findQueueFamilies(surface, coreModule->physicalDeviceWrapper.device, allocator)),
+		deviceWrapper(coreModule->physicalDeviceWrapper, indices, allocator, *allocationCallbacks),
+		gpuAllocatorWrapper(coreModule->physicalDeviceWrapper, deviceWrapper, coreModule->instanceWrapper,
+		                    *allocationCallbacks),
+		transferCommandPool(deviceWrapper, indices.transferFamily.value(),
+		                    vk::CommandPoolCreateFlagBits::eTransient,
+		                    *allocationCallbacks)
 	{
 		vk::Device device = deviceWrapper.device;
 		transferQueue = device.getQueue(indices.transferFamily.value(), 0);
@@ -32,26 +43,35 @@ namespace spite
 		graphicsQueue = device.getQueue(indices.graphicsFamily.value(), 0);
 	}
 
-	SwapchainModule::SwapchainModule(std::shared_ptr<BaseModule> baseModulePtr, const spite::HeapAllocator& allocator,
+	BaseModule::~BaseModule()
+	{
+		coreModule->instanceWrapper.instance.destroySurfaceKHR(surface, nullptr);
+	}
+
+	SwapchainModule::SwapchainModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                                 std::shared_ptr<CoreModule> coreModulePtr,
+	                                 std::shared_ptr<BaseModule> baseModulePtr,
+	                                 const spite::HeapAllocator& allocator,
 	                                 const int width, const int height):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
+		coreModule(std::move(coreModulePtr)),
 		baseModule(std::move(baseModulePtr)),
-		swapchainDetailsWrapper(baseModule->physicalDeviceWrapper, baseModule->surface, width, height),
+		swapchainDetailsWrapper(coreModule->physicalDeviceWrapper, baseModule->surface, width, height),
 		swapchainWrapper(baseModule->deviceWrapper, baseModule->indices, swapchainDetailsWrapper,
 		                 baseModule->surface,
-		                 baseModule->allocationCallbacksWrapper),
+		                 *allocationCallbacks),
 		renderPassWrapper(baseModule->deviceWrapper, swapchainDetailsWrapper,
-		                  baseModule->allocationCallbacksWrapper),
+		                  *allocationCallbacks),
 		swapchainImagesWrapper(baseModule->deviceWrapper, swapchainWrapper),
-		imageViewsWrapper(baseModule->deviceWrapper, swapchainImagesWrapper, swapchainDetailsWrapper,
-		                  baseModule->allocationCallbacksWrapper),
+		imageViewsWrapper(baseModule->deviceWrapper, swapchainImagesWrapper, swapchainDetailsWrapper,allocator,*allocationCallbacks),
 		framebuffersWrapper(baseModule->deviceWrapper, allocator, imageViewsWrapper, swapchainDetailsWrapper,
-		                    renderPassWrapper, baseModule->allocationCallbacksWrapper)
+		                    renderPassWrapper, *allocationCallbacks)
 	{
 	}
 
 	void SwapchainModule::recreate(const int width, const int height)
 	{
-		swapchainDetailsWrapper = SwapchainDetailsWrapper(baseModule->physicalDeviceWrapper, baseModule->surface,
+		swapchainDetailsWrapper = SwapchainDetailsWrapper(coreModule->physicalDeviceWrapper, baseModule->surface,
 		                                                  width, height);
 		swapchainWrapper.recreate(swapchainDetailsWrapper);
 		renderPassWrapper.recreate(swapchainDetailsWrapper);
@@ -62,21 +82,25 @@ namespace spite
 		framebuffersWrapper.recreate(swapchainDetailsWrapper, imageViewsWrapper, renderPassWrapper);
 	}
 
-	DescriptorModule::DescriptorModule(std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type,
+	DescriptorModule::DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                                   std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type,
 	                                   const u32 size, const BufferWrapper& bufferWrapper,
 	                                   const sizet bufferElementSize,
 	                                   const spite::HeapAllocator& allocator):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
-		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, baseModule->allocationCallbacksWrapper),
+		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, *allocationCallbacks),
 		descriptorPoolWrapper(baseModule->deviceWrapper, type, size,
-		                      baseModule->allocationCallbacksWrapper),
+		                      *allocationCallbacks),
 		descriptorSetsWrapper(baseModule->deviceWrapper, descriptorSetLayoutWrapper, descriptorPoolWrapper,
-		                      allocator, baseModule->allocationCallbacksWrapper, size, bufferWrapper, bufferElementSize)
+		                      allocator, *allocationCallbacks, size, bufferWrapper, bufferElementSize)
 	{
 	}
 
-	ShaderServiceModule::ShaderServiceModule(std::shared_ptr<BaseModule> baseModulePtr,
+	ShaderServiceModule::ShaderServiceModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                                         std::shared_ptr<BaseModule> baseModulePtr,
 	                                         const spite::HeapAllocator& allocator):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
 		shaderModules(allocator),
 		bufferAllocator(allocator)
@@ -94,7 +118,7 @@ namespace spite
 			shaderModules.emplace(
 				shaderPathStr, ShaderModuleWrapper(baseModule->deviceWrapper,
 				                                   readBinaryFile(shaderPath, bufferAllocator),
-				                                   bits, baseModule->allocationCallbacksWrapper));
+				                                   bits, *allocationCallbacks));
 			return shaderModules.at(shaderPathStr);
 		}
 		return it->second;
@@ -114,11 +138,13 @@ namespace spite
 		shaderModules.clear();
 	}
 
-	GraphicsCommandModule::GraphicsCommandModule(std::shared_ptr<BaseModule> baseModulePtr,
+	GraphicsCommandModule::GraphicsCommandModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                                             std::shared_ptr<BaseModule> baseModulePtr,
 	                                             const vk::CommandPoolCreateFlagBits& flagBits, const u32 count):
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
 		commandPoolWrapper(baseModule->deviceWrapper, baseModule->indices.graphicsFamily.value(), flagBits,
-		                   baseModule->allocationCallbacksWrapper),
+		                   *allocationCallbacks),
 		primaryCommandBuffersWrapper(baseModule->deviceWrapper, commandPoolWrapper, vk::CommandBufferLevel::ePrimary,
 		                             count),
 		secondaryCommandBuffersWrapper(baseModule->deviceWrapper, commandPoolWrapper,
@@ -126,10 +152,13 @@ namespace spite
 	{
 	}
 
-	ModelDataModule::ModelDataModule(std::shared_ptr<BaseModule> baseModulePtr,
-	                                 const eastl::vector<glm::vec3>& vertices,
-	                                 const eastl::vector<u32>& indices): indicesCount(static_cast<u32>(indices.size())),
-	                                                                     baseModule(std::move(baseModulePtr))
+	ModelDataModule::ModelDataModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                                 std::shared_ptr<BaseModule> baseModulePtr,
+	                                 const eastl::vector<glm::vec3,spite::HeapAllocator>& vertices,
+	                                 const eastl::vector<u32,spite::HeapAllocator>& indices): allocationCallbacks(
+		                                                                     std::move(allocationCallbacksPtr)),
+	                                                                     baseModule(std::move(baseModulePtr)),
+	                                                                     indicesCount(static_cast<u32>(indices.size()))
 	{
 		vertSize = vertices.size() * sizeof(vertices[0]);
 		sizet indSize = indicesCount * sizeof(indices[0]);
@@ -155,22 +184,23 @@ namespace spite
 		modelBuffer.copyBuffer(stagingBuffer, baseModule->deviceWrapper.device,
 		                       baseModule->transferCommandPool.commandPool,
 		                       baseModule->transferQueue,
-		                       &baseModule->allocationCallbacksWrapper.allocationCallbacks);
+		                       &allocationCallbacks->allocationCallbacks);
 	}
 
-	UboModule::UboModule(std::shared_ptr<BaseModule> baseModulePtr,
-	                     const sizet elementSize, const sizet elementCount): baseModule(std::move(baseModulePtr))
+	UboModule::UboModule(const std::shared_ptr<CoreModule>& coreModulePtr,
+	                     const std::shared_ptr<BaseModule>& baseModulePtr,
+	                     const sizet elementSize, const sizet elementCount)
 	{
-		sizet minUboAlignment = baseModule->physicalDeviceWrapper.device.getProperties().limits.
-		                                    minUniformBufferOffsetAlignment;
+		sizet minUboAlignment = coreModulePtr->physicalDeviceWrapper.device.getProperties().limits.
+		                                       minUniformBufferOffsetAlignment;
 		sizet dynamicAlignment = (elementSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
 		elementAlignment = dynamicAlignment;
 
 		uboBuffer = BufferWrapper(elementCount * elementSize, vk::BufferUsageFlagBits::eUniformBuffer,
 		                          vk::MemoryPropertyFlagBits::eHostVisible |
 		                          vk::MemoryPropertyFlagBits::eHostCoherent,
-		                          vma::AllocationCreateFlagBits::eHostAccessSequentialWrite, baseModule->indices,
-		                          baseModule->gpuAllocatorWrapper);
+		                          vma::AllocationCreateFlagBits::eHostAccessSequentialWrite, baseModulePtr->indices,
+		                          baseModulePtr->gpuAllocatorWrapper);
 		memory = uboBuffer.mapMemory();
 	}
 
@@ -179,7 +209,8 @@ namespace spite
 		uboBuffer.unmapMemory();
 	}
 
-	RenderModule::RenderModule(std::shared_ptr<BaseModule> baseModulePtr,
+	RenderModule::RenderModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+	                           std::shared_ptr<BaseModule> baseModulePtr,
 	                           std::shared_ptr<SwapchainModule> swapchainModulePtr,
 	                           std::shared_ptr<DescriptorModule> descriptorModulePtr,
 	                           std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
@@ -189,18 +220,19 @@ namespace spite
 		                           eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 	                           shaderModules,
 	                           const VertexInputDescriptionsWrapper& vertexInputDescriptions,
-	                           WindowManager* windowManager, const u32 framesInFlight):
-		baseModule(std::move(baseModulePtr)),
-		swapchainModule(std::move(swapchainModulePtr)), descriptorModule(std::move(descriptorModulePtr)),
+	                           std::shared_ptr<WindowManager> windowManagerPtr, const u32 framesInFlight):
+		windowManager(std::move(windowManagerPtr)),
+		allocationCallbacks(std::move(allocationCallbacksPtr)),
+		baseModule(std::move(baseModulePtr)), swapchainModule(std::move(swapchainModulePtr)),
+		descriptorModule(std::move(descriptorModulePtr)),
 		commandBuffersModule(std::move(commandBuffersModulePtr)),
 		models(std::move(models)),
 		graphicsPipelineWrapper(baseModule->deviceWrapper, descriptorModule->descriptorSetLayoutWrapper,
 		                        swapchainModule->swapchainDetailsWrapper,
 		                        swapchainModule->renderPassWrapper, allocator, shaderModules,
-		                        vertexInputDescriptions, baseModule->allocationCallbacksWrapper),
-		syncObjectsWrapper(baseModule->deviceWrapper, framesInFlight, baseModule->allocationCallbacksWrapper),
-		currentFrame(0),
-		m_windowManager(windowManager)
+		                        vertexInputDescriptions, *allocationCallbacks),
+		syncObjectsWrapper(baseModule->deviceWrapper, framesInFlight, *allocationCallbacks),
+		currentFrame(0)
 	{
 	}
 
@@ -253,16 +285,22 @@ namespace spite
 		recreateSwapchain(result);
 	}
 
+	RenderModule::~RenderModule()
+	{
+		vk::Result result = baseModule->deviceWrapper.device.waitIdle();
+		SASSERT_VULKAN(result);
+	}
+
 	void RenderModule::recreateSwapchain(const vk::Result result)
 	{
 		if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR)
 		{
-			while (m_windowManager->isMinimized())
+			while (windowManager->isMinimized())
 			{
-				m_windowManager->waitWindowExpand();
+				windowManager->waitWindowExpand();
 			}
 			int width = 0, height = 0;
-			m_windowManager->getFramebufferSize(width, height);
+			windowManager->getFramebufferSize(width, height);
 
 			vk::Result waitResult = baseModule->deviceWrapper.device.waitIdle();
 			SASSERT_VULKAN(waitResult);

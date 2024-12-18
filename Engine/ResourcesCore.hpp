@@ -61,6 +61,7 @@ namespace spite
 	eastl::vector<vk::ImageView, spite::HeapAllocator> createImageViews(const vk::Device& device,
 	                                                                    const std::vector<vk::Image>& swapchainImages,
 	                                                                    const vk::Format& imageFormat,
+	                                                                    const spite::HeapAllocator& allocator,
 	                                                                    const vk::AllocationCallbacks*
 	                                                                    pAllocationCallbacks);
 

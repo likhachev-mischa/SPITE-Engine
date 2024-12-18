@@ -1,7 +1,8 @@
 #pragma once
+#include <SDL3/SDL.h>
+
 #include "Base/Platform.hpp"
 #include "Base/VulkanUsage.hpp"
-#include <SDL3/SDL.h>
 
 namespace spite
 {
@@ -16,34 +17,31 @@ namespace spite
 		WindowManager& operator=(const WindowManager& other) = delete;
 		WindowManager& operator=(WindowManager&& other) = delete;
 
-		explicit WindowManager(EventManager* eventManager, InputManager* inputManager);
-
-		void initWindow();
+		WindowManager(std::shared_ptr<EventManager> eventManager, std::shared_ptr<InputManager> inputManager);
 
 		void pollEvents();
 
-		void waitWindowExpand();
+		void waitWindowExpand() const;
 
-		void getFramebufferSize(int& width, int& height);
-		bool isMinimized();
+		void getFramebufferSize(int& width, int& height) const;
+		bool isMinimized() const;
 
-		char const* const* getExtensions(u32& extensionCount);
+		char const* const* getExtensions(u32& extensionCount) const;
 
-		bool shouldTerminate();
+		bool shouldTerminate() const;
 
 		vk::SurfaceKHR createWindowSurface(const vk::Instance& instance,
 		                                   vk::AllocationCallbacks* allocationCallbacks = nullptr);
 
-		void cleanup(const vk::Instance& instance, vk::AllocationCallbacks* allocationCallbacks = nullptr) const;
 		~WindowManager();
 
 	private:
 		SDL_Window* m_window{};
-		EventManager* m_eventManager;
-		InputManager* m_inputManager;
-
-		vk::SurfaceKHR m_surface;
+		std::shared_ptr<EventManager> m_eventManager;
+		std::shared_ptr<InputManager> m_inputManager;
 
 		bool m_shouldTerminate = false;
+
+		void initWindow();
 	};
 }

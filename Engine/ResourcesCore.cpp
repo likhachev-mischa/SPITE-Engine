@@ -4,7 +4,6 @@
 
 #include "Common.hpp"
 #include "Debug.hpp"
-#include "GraphicsUtility.hpp"
 
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
@@ -309,10 +308,11 @@ namespace spite
 	eastl::vector<vk::ImageView, spite::HeapAllocator> createImageViews(const vk::Device& device,
 	                                                                    const std::vector<vk::Image>& swapchainImages,
 	                                                                    const vk::Format& imageFormat,
+	                                                                    const spite::HeapAllocator& allocator,
 	                                                                    const vk::AllocationCallbacks*
 	                                                                    pAllocationCallbacks)
 	{
-		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews;
+		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews(allocator);
 		imageViews.reserve(swapchainImages.size());
 		for (const auto& image : swapchainImages)
 		{

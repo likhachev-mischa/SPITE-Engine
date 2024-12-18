@@ -28,14 +28,17 @@ namespace spite
 	struct InstanceExtensions
 	{
 		InstanceExtensions(const InstanceExtensions& other) = delete;
-		InstanceExtensions(InstanceExtensions&& other) = delete;
 		InstanceExtensions& operator=(const InstanceExtensions& other) = delete;
 		InstanceExtensions& operator=(InstanceExtensions&& other) = delete;
 
 		eastl::vector<const char*, spite::HeapAllocator> extensions;
 
+		InstanceExtensions() = default;
+
 		InstanceExtensions(char const* const* windowExtensions, const u32 windowExtensionsCount,
 		                   const spite::HeapAllocator& allocator);
+
+		InstanceExtensions(InstanceExtensions&& other) noexcept;
 
 		~InstanceExtensions() = default;
 	};
@@ -132,7 +135,7 @@ namespace spite
 		vma::Allocation allocation;
 
 		vma::Allocator allocator;
-		vk::DeviceSize size;
+		vk::DeviceSize size{};
 
 		BufferWrapper() = default;
 
@@ -226,13 +229,14 @@ namespace spite
 		ImageViewsWrapper& operator=(const ImageViewsWrapper& other) = delete;
 		ImageViewsWrapper& operator=(ImageViewsWrapper&& other) = delete;
 
-		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews{};
+		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews;
 
 		const vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
 		ImageViewsWrapper(const DeviceWrapper& deviceWrapper, const SwapchainImagesWrapper& swapchainImagesWrapper,
 		                  const SwapchainDetailsWrapper& detailsWrapper,
+		                  const spite::HeapAllocator& allocator,
 		                  const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		void recreate(const SwapchainImagesWrapper& swapchainImagesWrapper,
@@ -344,12 +348,12 @@ namespace spite
 
 	struct VertexInputDescriptionsWrapper
 	{
-		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
-		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions;
+		eastl::array<vk::VertexInputBindingDescription> bindingDescriptions;
+		eastl::array<vk::VertexInputAttributeDescription> attributeDescriptions;
 
 		VertexInputDescriptionsWrapper(
-			eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
-			eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>
+			eastl::array<vk::VertexInputBindingDescription> bindingDescriptions,
+			eastl::array<vk::VertexInputAttributeDescription>
 			attributeDescriptions);
 	};
 

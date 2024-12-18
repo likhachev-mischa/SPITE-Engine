@@ -20,10 +20,10 @@
 #define SPITE_CONCAT_OPERATOR(x, y)                x y
 #endif // MSVC
 
-#define SPITE_STRINGIZE( L )                       #L 
+#define SPITE_STRINGIZE( L )                       #L
 #define SPITE_MAKESTRING( L )                      SPITE_STRINGIZE( L )
 #define SPITE_CONCAT(x, y)                         SPITE_CONCAT_OPERATOR(x, y)
-#define SPITE_LINE_STRING                          SPITE_MAKESTRING( __LINE__ ) 
+#define SPITE_LINE_STRING                          SPITE_MAKESTRING( __LINE__ )
 #define SPITE_FILELINE(MESSAGE)                    __FILE__ "(" SPITE_LINE_STRING ") : " MESSAGE
 
 //native types
@@ -40,7 +40,7 @@ typedef int64_t i64;
 typedef float f32;
 typedef double f64;
 
-typedef size_t sizet;
+typedef long long unsigned sizet;
 
 typedef const char* cstring;
 

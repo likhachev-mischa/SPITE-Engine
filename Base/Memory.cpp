@@ -8,12 +8,12 @@
 #endif
 
 
-void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+void* operator new[](sizet size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
 	return operator new[](size);
 }
 
-void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags,
+void* operator new[](sizet size, sizet alignment, sizet alignmentOffset, const char* pName, int flags,
                      unsigned debugFlags, const char* file, int line)
 {
 	return operator new[](size, static_cast<std::align_val_t>(alignment));
@@ -89,7 +89,7 @@ namespace spite
 		return mem;
 	}
 
-	void* HeapAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
+	void* HeapAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
 	//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
@@ -101,7 +101,7 @@ namespace spite
 		return tlsf_realloc(m_tlsfHandle, original, size);
 	}
 
-	void HeapAllocator::deallocate(void* p, size_t n)
+	void HeapAllocator::deallocate(void* p, sizet n)
 	{
 		tlsf_free(m_tlsfHandle, p);
 	}
@@ -172,21 +172,21 @@ namespace spite
 		return *this;
 	}
 
-	void* BlockAllocator::allocate(size_t size, int flags)
+	void* BlockAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = m_allocator.allocate(size, flags);
 	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
-	void* BlockAllocator::allocate(size_t size, size_t alignment, size_t offset, int flags)
+	void* BlockAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
 		void* mem = m_allocator.allocate(size, alignment, offset, flags);
 	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
-	void BlockAllocator::deallocate(void* p, size_t n)
+	void BlockAllocator::deallocate(void* p, sizet n)
 	{
 		m_allocator.deallocate(p, n);
 	}

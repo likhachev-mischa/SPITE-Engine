@@ -11,8 +11,32 @@ namespace spite
 	class WindowManager;
 	//TODO: use eastl:: smart ptrs
 
-	//immutable objects, base for others (has to be destroyed last)
-	//TODO: consider callbacks as separate mutable module
+	//immutable objects, core (has to be destroyed last)
+	struct CoreModule
+	{
+		CoreModule(const CoreModule& other) = delete;
+		CoreModule(CoreModule&& other) = delete;
+		CoreModule& operator=(const CoreModule& other) = delete;
+		CoreModule& operator=(CoreModule&& other) = delete;
+
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
+
+		const InstanceExtensions extensions;
+
+		const InstanceWrapper instanceWrapper;
+		const PhysicalDeviceWrapper physicalDeviceWrapper;
+
+		const DebugMessengerWrapper debugMessengerWrapper;
+
+		CoreModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		           char const* const* windowExtensions, u32 extensionCount,
+		           const spite::HeapAllocator& allocator);
+
+		~CoreModule() = default;
+	};
+
+	//based
+	//destroys surface on destruction
 	struct BaseModule
 	{
 		BaseModule(const BaseModule& other) = delete;
@@ -20,29 +44,26 @@ namespace spite
 		BaseModule& operator=(const BaseModule& other) = delete;
 		BaseModule& operator=(BaseModule&& other) = delete;
 
-		const AllocationCallbacksWrapper allocationCallbacksWrapper;
-		const InstanceExtensions extensions;
-		const InstanceWrapper instanceWrapper;
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
+		const std::shared_ptr<CoreModule> coreModule;
+
 		const vk::SurfaceKHR surface;
-		const PhysicalDeviceWrapper physicalDeviceWrapper;
+
 		const QueueFamilyIndices indices;
 		const DeviceWrapper deviceWrapper;
 		const GpuAllocatorWrapper gpuAllocatorWrapper;
 
 		const CommandPoolWrapper transferCommandPool;
 
-		const DebugMessengerWrapper debugMessengerWrapper;
-
 		vk::Queue transferQueue;
 		vk::Queue presentQueue;
 		vk::Queue graphicsQueue;
 
-		//TODO: REMOVE WINDOWMANAGER
-		BaseModule(spite::HeapAllocator& allocator,
-		           char const* const* windowExtensions, const u32 windowExtensionCount,
-		           spite::WindowManager* windowManager);
+		BaseModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		           std::shared_ptr<CoreModule> coreModule, const spite::HeapAllocator& allocator,
+		           const vk::SurfaceKHR& surface);
 
-		~BaseModule() = default;
+		~BaseModule();
 	};
 
 	struct SwapchainModule
@@ -52,7 +73,10 @@ namespace spite
 		SwapchainModule& operator=(const SwapchainModule& other) = delete;
 		SwapchainModule& operator=(SwapchainModule&& other) = delete;
 
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
+		const std::shared_ptr<CoreModule> coreModule;
 		const std::shared_ptr<BaseModule> baseModule;
+
 		SwapchainDetailsWrapper swapchainDetailsWrapper;
 		SwapchainWrapper swapchainWrapper;
 		RenderPassWrapper renderPassWrapper;
@@ -60,7 +84,9 @@ namespace spite
 		ImageViewsWrapper imageViewsWrapper;
 		FramebuffersWrapper framebuffersWrapper;
 
-		SwapchainModule(std::shared_ptr<BaseModule> baseModulePtr, const spite::HeapAllocator& allocator,
+		SwapchainModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		                std::shared_ptr<CoreModule> coreModulePtr, std::shared_ptr<BaseModule> baseModulePtr,
+		                const spite::HeapAllocator& allocator,
 		                const int width, const int height);
 
 		void recreate(const int width, const int height);
@@ -75,12 +101,16 @@ namespace spite
 		DescriptorModule& operator=(const DescriptorModule& other) = delete;
 		DescriptorModule& operator=(DescriptorModule&& other) = delete;
 
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
 		const std::shared_ptr<BaseModule> baseModule;
+
 		DescriptorSetLayoutWrapper descriptorSetLayoutWrapper;
 		DescriptorPoolWrapper descriptorPoolWrapper;
 		DescriptorSetsWrapper descriptorSetsWrapper;
 
-		DescriptorModule(std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type, const u32 size,
+		DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		                 std::shared_ptr<BaseModule> baseModulePtr,
+		                 const vk::DescriptorType& type, const u32 size,
 		                 const BufferWrapper& bufferWrapper,
 		                 const sizet bufferElementSize,
 		                 const spite::HeapAllocator& allocator);
@@ -97,13 +127,17 @@ namespace spite
 		ShaderServiceModule& operator=(const ShaderServiceModule& other) = delete;
 		ShaderServiceModule& operator=(ShaderServiceModule&& other) = delete;
 
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
 		const std::shared_ptr<BaseModule> baseModule;
+
 		eastl::hash_map<eastl::string, ShaderModuleWrapper, eastl::hash<eastl::string>, eastl::equal_to<eastl::string>,
 		                spite::HeapAllocator> shaderModules;
 
 		const spite::HeapAllocator& bufferAllocator;
 
-		ShaderServiceModule(std::shared_ptr<BaseModule> baseModulePtr, const spite::HeapAllocator& allocator);
+		ShaderServiceModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		                    std::shared_ptr<BaseModule> baseModulePtr,
+		                    const spite::HeapAllocator& allocator);
 
 		ShaderModuleWrapper& getShaderModule(const char* shaderPath, const vk::ShaderStageFlagBits& bits);
 		void removeShaderModule(const char* shaderPath);
@@ -118,13 +152,15 @@ namespace spite
 		GraphicsCommandModule& operator=(const GraphicsCommandModule& other) = delete;
 		GraphicsCommandModule& operator=(GraphicsCommandModule&& other) = delete;
 
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
 		const std::shared_ptr<BaseModule> baseModule;
 
 		CommandPoolWrapper commandPoolWrapper;
 		CommandBuffersWrapper primaryCommandBuffersWrapper;
 		CommandBuffersWrapper secondaryCommandBuffersWrapper;
 
-		GraphicsCommandModule(std::shared_ptr<BaseModule> baseModulePtr, const vk::CommandPoolCreateFlagBits& flagBits,
+		GraphicsCommandModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		                      std::shared_ptr<BaseModule> baseModulePtr, const vk::CommandPoolCreateFlagBits& flagBits,
 		                      const u32 count);
 
 		~GraphicsCommandModule() = default;
@@ -137,16 +173,19 @@ namespace spite
 		ModelDataModule& operator=(const ModelDataModule& other) = delete;
 		ModelDataModule& operator=(ModelDataModule&& other) = delete;
 
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
+		const std::shared_ptr<BaseModule> baseModule;
+
 		BufferWrapper modelBuffer;
 
 		//offset for indices
-		vk::DeviceSize vertSize;
+		vk::DeviceSize vertSize{};
 		u32 indicesCount;
-		const std::shared_ptr<BaseModule> baseModule;
 
-		ModelDataModule(std::shared_ptr<BaseModule> baseModulePtr,
-		                const eastl::vector<glm::vec3>& vertices,
-		                const eastl::vector<u32>& indices);
+		ModelDataModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
+		                std::shared_ptr<BaseModule> baseModulePtr,
+		                const eastl::vector<glm::vec3, spite::HeapAllocator>& vertices,
+		                const eastl::vector<u32, spite::HeapAllocator>& indices);
 
 		~ModelDataModule() = default;
 	};
@@ -162,9 +201,7 @@ namespace spite
 		sizet elementAlignment;
 		void* memory{};
 
-		const std::shared_ptr<BaseModule> baseModule;
-
-		UboModule(std::shared_ptr<BaseModule> baseModulePtr,
+		UboModule(const std::shared_ptr<CoreModule>& coreModulePtr, const std::shared_ptr<BaseModule>& baseModulePtr,
 		          sizet elementSize, sizet elementCount);
 
 		~UboModule();
@@ -172,6 +209,14 @@ namespace spite
 
 	struct RenderModule
 	{
+		RenderModule(const RenderModule& other) = delete;
+		RenderModule(RenderModule&& other) = delete;
+		RenderModule& operator=(const RenderModule& other) = delete;
+		RenderModule& operator=(RenderModule&& other) = delete;
+
+		std::shared_ptr<spite::WindowManager> windowManager;
+
+		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
 		std::shared_ptr<BaseModule> baseModule;
 		std::shared_ptr<SwapchainModule> swapchainModule;
 		std::shared_ptr<DescriptorModule> descriptorModule;
@@ -183,24 +228,27 @@ namespace spite
 		const SyncObjectsWrapper syncObjectsWrapper;
 
 		u32 currentFrame;
-		u32 imageIndex;
+		u32 imageIndex{};
 
-		RenderModule(std::shared_ptr<BaseModule> baseModulePtr, std::shared_ptr<SwapchainModule> swapchainModulePtr,
+		RenderModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks,
+		             std::shared_ptr<BaseModule> baseModulePtr, std::shared_ptr<SwapchainModule> swapchainModulePtr,
 		             std::shared_ptr<DescriptorModule> descriptorModulePtr,
 		             std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
 		             eastl::vector<std::shared_ptr<ModelDataModule>> models,
 		             const spite::HeapAllocator& allocator,
 		             const eastl::vector<eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 		             shaderModules,
-		             const VertexInputDescriptionsWrapper& vertexInputDescriptions, spite::WindowManager* windowManager,
+		             const VertexInputDescriptionsWrapper& vertexInputDescriptions,
+		             std::shared_ptr<spite::WindowManager> windowManagerPtr,
 		             const u32 framesInFlight);
 
 		void waitForFrame();
 
 		void drawFrame();
 
+		~RenderModule();
+
 	private:
-		spite::WindowManager* m_windowManager;
 		void recreateSwapchain(const vk::Result result);
 	};
 }

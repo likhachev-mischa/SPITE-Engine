@@ -1,18 +1,21 @@
 #include "WindowManager.hpp"
-#include "EventManager.hpp"
-#include "AppConifg.hpp"
-#include "InputManager.hpp"
+
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_vulkan.h>
+
+#include "Application/AppConifg.hpp"
+#include "Application/EventManager.hpp"
+#include "Application/InputManager.hpp"
 
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
 
-#include <SDL3/SDL_vulkan.h>
-#include <SDL3/SDL_events.h>
-
 namespace spite
 {
-	WindowManager::WindowManager(EventManager* eventManager, InputManager* inputManager) : m_eventManager(eventManager),
-		m_inputManager(inputManager)
+	WindowManager::WindowManager(std::shared_ptr<EventManager> eventManager,
+	                             std::shared_ptr<InputManager> inputManager) :
+		m_eventManager(std::move(eventManager)),
+		m_inputManager(std::move(inputManager))
 	{
 		initWindow();
 	}
@@ -58,7 +61,7 @@ namespace spite
 		}
 	}
 
-	void WindowManager::waitWindowExpand()
+	void WindowManager::waitWindowExpand() const
 	{
 		SDL_Event event;
 		while (SDL_WaitEvent(&event))
@@ -68,22 +71,22 @@ namespace spite
 		}
 	}
 
-	void WindowManager::getFramebufferSize(int& width, int& height)
+	void WindowManager::getFramebufferSize(int& width, int& height) const
 	{
 		SDL_GetWindowSize(m_window, &width, &height);
 	}
 
-	bool WindowManager::isMinimized()
+	bool WindowManager::isMinimized() const
 	{
 		return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_MINIMIZED);
 	}
 
-	char const* const* WindowManager::getExtensions(uint32_t& extensionCount)
+	char const* const* WindowManager::getExtensions(u32& extensionCount) const
 	{
 		return SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 	}
 
-	bool WindowManager::shouldTerminate()
+	bool WindowManager::shouldTerminate() const
 	{
 		return m_shouldTerminate;
 	}
@@ -91,30 +94,19 @@ namespace spite
 	vk::SurfaceKHR WindowManager::createWindowSurface(const vk::Instance& instance,
 	                                                  vk::AllocationCallbacks* allocationCallbacks)
 	{
-		VkSurfaceKHR tempSurface;
+		VkSurfaceKHR surface;
 		bool result = SDL_Vulkan_CreateSurface(m_window, instance,
 		                                       //   reinterpret_cast<VkAllocationCallbacks*>(allocationCallbacks),
 		                                       nullptr,
-		                                       &tempSurface);
+		                                       &surface);
 		SASSERTM(result, "Error on window surface creation!")
 
-		m_surface = tempSurface;
-		return m_surface;
+		return surface;
 	}
 
-	void WindowManager::cleanup(const vk::Instance& instance, vk::AllocationCallbacks* allocationCallbacks) const
-	{
-		SDL_Vulkan_DestroySurface(instance, m_surface,
-			// reinterpret_cast<VkAllocationCallbacks*>(allocationCallbacks));
-			nullptr);
-	}
-
-	//TODO: destroy surface
 	WindowManager::~WindowManager()
 	{
 		SDL_DestroyWindow(m_window);
-		//	SDL_Vulkan_DestroySurface();
-		//SDL_Vulkan_DestroySurface()
 		SDL_Quit();
 	}
 }

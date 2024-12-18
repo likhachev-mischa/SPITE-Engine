@@ -30,14 +30,17 @@ namespace spite
 
 		HeapAllocator(const char* pName = EASTL_NAME_VAL(EASTL_ALLOCATOR_DEFAULT_NAME),
 		              sizet size = MAXIMUM_DINAMIC_SIZE);
+
+		//copied allocator manages the same memory pool
+		//create new allocator if otherwise desired
 		HeapAllocator(const HeapAllocator& x);
 		HeapAllocator(const HeapAllocator& x, const char* pName);
 
 
-		void* allocate(size_t size, int flags = 0);
-		void* allocate(size_t size, size_t alignment, size_t offset = 0, int flags = 0);
+		void* allocate(sizet size, int flags = 0);
+		void* allocate(sizet size, sizet alignment, sizet offset = 0, int flags = 0);
 		void* reallocate(void* original, sizet size);
-		void deallocate(void* p, size_t n = 0);
+		void deallocate(void* p, sizet n = 0);
 
 		const char* get_name() const;
 		void set_name(const char* pName);
@@ -71,9 +74,9 @@ namespace spite
 
 		BlockAllocator& operator=(const BlockAllocator& other);
 
-		void* allocate(size_t size, int flags = 0);
-		void* allocate(size_t size, size_t alignment, size_t offset, int flags = 0);
-		void deallocate(void* p, size_t n);
+		void* allocate(sizet size, int flags = 0);
+		void* allocate(sizet size, sizet alignment, sizet offset, int flags = 0);
+		void deallocate(void* p, sizet n);
 
 		void init(void* pMemory, sizet memorySize, sizet nodeSize, sizet alignment,
 		          sizet alignmentOffset = 0);

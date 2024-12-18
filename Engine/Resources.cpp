@@ -28,9 +28,13 @@ namespace spite
 	}
 
 	InstanceExtensions::InstanceExtensions(char const* const* windowExtensions, const u32 windowExtensionsCount,
-	                                       const spite::HeapAllocator& allocator)
+	                                       const spite::HeapAllocator& allocator) : extensions(allocator)
 	{
 		extensions = getRequiredExtensions(allocator, windowExtensions, windowExtensionsCount);
+	}
+
+	InstanceExtensions::InstanceExtensions(InstanceExtensions&& other) noexcept: extensions(std::move(other.extensions))
+	{
 	}
 
 	InstanceWrapper::InstanceWrapper(const spite::HeapAllocator& allocator,
@@ -224,12 +228,14 @@ namespace spite
 	ImageViewsWrapper::ImageViewsWrapper(const DeviceWrapper& deviceWrapper,
 	                                     const SwapchainImagesWrapper& swapchainImagesWrapper,
 	                                     const SwapchainDetailsWrapper& detailsWrapper,
+	                                     const spite::HeapAllocator& allocator,
 	                                     const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		imageViews(allocator),
 		device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
 		imageViews = createImageViews(device, swapchainImagesWrapper.images, detailsWrapper.surfaceFormat.format,
-		                              allocationCallbacks);
+		                              allocator, allocationCallbacks);
 	}
 
 	void ImageViewsWrapper::recreate(const SwapchainImagesWrapper& swapchainImagesWrapper,
@@ -242,7 +248,7 @@ namespace spite
 		imageViews.clear();
 
 		imageViews = createImageViews(device, swapchainImagesWrapper.images, detailsWrapper.surfaceFormat.format,
-		                              allocationCallbacks);
+		                              imageViews.get_allocator(), allocationCallbacks);
 	}
 
 	ImageViewsWrapper::~ImageViewsWrapper()
@@ -382,9 +388,9 @@ namespace spite
 	}
 
 	VertexInputDescriptionsWrapper::VertexInputDescriptionsWrapper(
-		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions,
-		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions) :
-		bindingDescriptions(std::move(bindingDescriptions)), attributeDescriptions(std::move(attributeDescriptions))
+		const eastl::array<vk::VertexInputBindingDescription> bindingDescriptions,
+		const eastl::array<vk::VertexInputAttributeDescription> attributeDescriptions) :
+		bindingDescriptions(bindingDescriptions), attributeDescriptions(attributeDescriptions)
 	{
 	}
 
@@ -452,6 +458,7 @@ namespace spite
 	                                         const SwapchainDetailsWrapper& detailsWrapper,
 	                                         const RenderPassWrapper& renderPassWrapper,
 	                                         const AllocationCallbacksWrapper& allocationCallbacksWrapper):
+		framebuffers(allocator),
 		device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
@@ -544,7 +551,7 @@ namespace spite
 	                               transferCommandPool, const vk::Queue transferQueue,
 	                               const vk::AllocationCallbacks* allocationCallbacks) const
 	{
-		SASSERTM(size == other.size, "Buffer sizes are not equal");
+		SASSERTM(size == other.size, "Buffer sizes are not equal")
 		spite::copyBuffer(other.buffer, buffer, size, transferCommandPool, device, transferQueue, allocationCallbacks);
 	}
 
@@ -552,13 +559,13 @@ namespace spite
 	                               const vk::DeviceSize& localOffset) const
 	{
 		vk::Result result = allocator.copyMemoryToAllocation(data, allocation, localOffset, memorySize);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 	}
 
 	void* BufferWrapper::mapMemory() const
 	{
 		auto [result,memory] = allocator.mapMemory(allocation);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 		return memory;
 	}
 
