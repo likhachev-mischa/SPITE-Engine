@@ -319,6 +319,7 @@ namespace spite
 	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper,
 	                                             const u32 count, const BufferWrapper& bufferWrapper,
 	                                             const sizet bufferElementSize):
+		dynamicOffset(static_cast<u32>(bufferElementSize)),
 		descriptorPool(descriptorPoolWrapper.descriptorPool),
 		device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)

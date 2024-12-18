@@ -299,6 +299,7 @@ namespace spite
 		~DescriptorPoolWrapper();
 	};
 
+	//dynamic sets
 	struct DescriptorSetsWrapper
 	{
 		DescriptorSetsWrapper(const DescriptorSetsWrapper& other) = delete;
@@ -307,6 +308,7 @@ namespace spite
 		DescriptorSetsWrapper& operator=(DescriptorSetsWrapper&& other) = delete;
 
 		std::vector<vk::DescriptorSet> descriptorSets{};
+		const u32 dynamicOffset;
 
 		const vk::DescriptorPool descriptorPool;
 		const vk::Device device;

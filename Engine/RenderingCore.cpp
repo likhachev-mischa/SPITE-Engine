@@ -11,19 +11,19 @@ namespace spite
 	                                 const vk::Framebuffer& framebuffer)
 	{
 		vk::Result result = commandBuffer.reset();
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		vk::CommandBufferInheritanceInfo inheritanceInfo(renderPass, 0, framebuffer);
 		vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eRenderPassContinue, &inheritanceInfo);
 
 		result = commandBuffer.begin(beginInfo);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 	}
 
 	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Pipeline& graphicsPipeline,
 	                                  const vk::PipelineLayout& pipelineLayout, const vk::DescriptorSet& descriptorSet,
 	                                  const vk::Extent2D& swapchainExtent,
-	                                  const vk::Buffer& buffer, const vk::DeviceSize& indicesOffset,
+	                                  const vk::Buffer& buffer,const u32 dynamicOffset, const vk::DeviceSize& indicesOffset,
 	                                  const u32 indicesCount)
 
 	{
@@ -32,7 +32,6 @@ namespace spite
 		commandBuffer.bindVertexBuffers(0, 1, &buffer, &offset);
 		commandBuffer.bindIndexBuffer(buffer, indicesOffset, vk::IndexType::eUint32);
 
-		u32 dynamicOffset = 0;
 		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 		                                 pipelineLayout,
 		                                 0,
@@ -60,20 +59,19 @@ namespace spite
 	void endSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer)
 	{
 		vk::Result result = commandBuffer.end();
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 	}
 
 	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
 	                                const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                                const vk::Pipeline& graphicsPipeline,
 	                                const vk::CommandBuffer& secondaryCommandBuffer)
 	{
 		vk::Result result = commandBuffer.reset();
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		vk::CommandBufferBeginInfo beginInfo;
 		result = commandBuffer.begin(beginInfo);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		vk::Rect2D renderArea({}, swapchainExtent);
 		vk::ClearValue clearColor({0.0f, 0.0f, 0.0f, 1.0f});
@@ -90,7 +88,7 @@ namespace spite
 		commandBuffer.endRenderPass();
 
 		result = commandBuffer.end();
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 	}
 
 	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
@@ -98,10 +96,10 @@ namespace spite
 	                        u32& imageIndex)
 	{
 		vk::Result result = device.waitForFences(1, &inFlightFence, vk::True, UINT64_MAX);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		result = device.resetFences({inFlightFence});
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		result = device.acquireNextImageKHR(swapchain,
 		                                    UINT64_MAX,
@@ -133,7 +131,7 @@ namespace spite
 
 
 		vk::Result result = graphicsQueue.submit({submitInfo}, inFlightFence);
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &swapchain, &imageIndex, &result);
 		result = presentQueue.presentKHR(presentInfo);

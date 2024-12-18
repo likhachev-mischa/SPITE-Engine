@@ -1,34 +1,22 @@
 #include <chrono>
-#include <iostream>
-
 #include <thread>
+
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
-#include "Model2D.h"
+#include<glm/gtc/quaternion.hpp>
 
+#include "Application/AppConifg.hpp"
 #include "Application/EventManager.hpp"
 #include "Application/InputManager.hpp"
 #include "Application/WindowManager.hpp"
-#include "Base/Memory.hpp"
-#include "Engine/Modules.hpp"
-#include "Application/AppConifg.hpp"
 
 #include "Base/File.hpp"
+#include "Base/Memory.hpp"
 
+#include "Engine/Modules.hpp"
+#include "Engine/ECS/ComponentsCore.hpp"
+#include "Engine/ECS/SystemsCore.hpp"
 
-struct Transform
-{
-	glm::mat4 model;
-	glm::vec4 color;
-
-	Transform() : model(1.0f), color(1.0f)
-	{
-	}
-};
-
-glm::vec4 RED(1.f, 0.f, 0.f, 1.f);
-glm::vec4 BLU(0.f, 1.f, 0.f, 1.f);
-glm::vec4 GRN(0.f, 0.f, 1.f, 1.f);
 
 //struct EventContext
 //{
@@ -222,26 +210,32 @@ int main(int argc, char* argv[])
 		auto swapchainModule = std::make_shared<spite::SwapchainModule>(allocationCallbacks, core, base,
 		                                                                graphicsAllocator, spite::WIDTH, spite::HEIGHT);
 
-		auto uniformBuffer = std::make_shared<spite::UboModule>(core, base, sizeof(Transform), 1);
+		eastl::vector<glm::vec3, spite::HeapAllocator> vertices(graphicsAllocator);
+		eastl::vector<u32, spite::HeapAllocator> indices(graphicsAllocator);
+		spite::readModelInfoFile("test.txt", vertices, indices);
+		auto model1 = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
+		spite::readModelInfoFile("test2.txt", vertices, indices);
+		auto model2 = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
+		eastl::vector<std::shared_ptr<spite::ModelDataModule>, spite::HeapAllocator> models(graphicsAllocator);
+		models.push_back(model1);
+		models.push_back(model2);
+
+		auto transformUniformBuffer = std::make_shared<spite::UboModule>(
+			core, base, sizeof(spite::TransformMatrix), models.size());
 
 
 		auto descriptorModule = std::make_shared<spite::DescriptorModule>(allocationCallbacks,
 		                                                                  base,
 		                                                                  vk::DescriptorType::eUniformBufferDynamic,
 		                                                                  spite::MAX_FRAMES_IN_FLIGHT,
-		                                                                  uniformBuffer->uboBuffer, sizeof(Transform),
+		                                                                  transformUniformBuffer->uboBuffer,
+		                                                                  transformUniformBuffer->elementAlignment,
 		                                                                  graphicsAllocator);
 
 		auto commandBuffersModule = std::make_shared<spite::GraphicsCommandModule>(allocationCallbacks,
 			base, vk::CommandPoolCreateFlagBits::eResetCommandBuffer, spite::MAX_FRAMES_IN_FLIGHT);
 
 
-		eastl::vector<glm::vec3, spite::HeapAllocator> vertices(graphicsAllocator);
-		eastl::vector<u32, spite::HeapAllocator> indices(graphicsAllocator);
-		spite::readModelInfoFile("test.txt", vertices, indices);
-
-
-		auto model = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
 		auto shaderService = std::make_shared<spite::ShaderServiceModule>(allocationCallbacks,
 		                                                                  base, graphicsAllocator);
 
@@ -260,25 +254,55 @@ int main(int argc, char* argv[])
 		spite::VertexInputDescriptionsWrapper vertexInputDescriptions(
 			{vk::VertexInputBindingDescription(0, sizeof(glm::vec3), vk::VertexInputRate::eVertex)},
 			{vk::VertexInputAttributeDescription(0, 0, vk::Format::eR32G32B32Sfloat)});
+
+
 		auto renderModule = std::make_shared<spite::RenderModule>(allocationCallbacks, base, swapchainModule,
 		                                                          descriptorModule,
-		                                                          commandBuffersModule, eastl::vector{model},
+		                                                          commandBuffersModule, models,
 		                                                          graphicsAllocator,
 		                                                          shaderModules, vertexInputDescriptions,
 		                                                          windowManager,
 		                                                          spite::MAX_FRAMES_IN_FLIGHT);
-		void* mem = uniformBuffer->uboBuffer.mapMemory();
-		Transform transform;
-		memcpy(mem, &transform, sizeof(transform));
+
+		/*
+		eastl::vector<spite::TransformMatrix, spite::HeapAllocator> transforms(graphicsAllocator);
+		spite::TransformMatrix transform;
+		transform.matrix = glm::translate(glm::mat4(1.0f), {0.5f, 0.5f, 0.0f});
+		transforms.push_back(transform);
+		transforms.push_back({});
+
+		void* mem = transformUniformBuffer->memory;
+		auto dynamicData = static_cast<u8*>(mem);
+		for (sizet i = 0, size = transforms.size(); i < size; ++i)
+		{
+			auto transforma = reinterpret_cast<spite::TransformMatrix*>(dynamicData + i * transformUniformBuffer->
+				elementAlignment);
+			*transforma = transforms[i];
+		}
+		*/
+		eastl::vector<spite::Transform, spite::HeapAllocator> transforms(graphicsAllocator);
+		transforms.resize(models.size());
+		eastl::vector<spite::TransformMatrix, spite::HeapAllocator> transformMatrices(graphicsAllocator);
+		transformMatrices.resize(models.size());
+
+		transforms[0].position = {0.5f, 0.5f, 0.0f};
+		transforms[1].position = {-0.5f, -0.5f, 0.0f};
+
 		while (!windowManager->shouldTerminate())
 		{
+			renderModule->waitForFrame();
 			windowManager->pollEvents();
 			eventManager->processEvents();
 			eventManager->discardPollEvents();
-			renderModule->waitForFrame();
+
+			transforms[0].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+			spite::updateTransformMatricesSystem(transforms, transformMatrices);
+			spite::updateTransformUboSystem(transformUniformBuffer->memory, transformUniformBuffer->elementAlignment,
+			                                transformMatrices);
+
 			renderModule->drawFrame();
 		}
-		uniformBuffer->uboBuffer.unmapMemory();
 	}
 	graphicsAllocator.shutdown();
 }

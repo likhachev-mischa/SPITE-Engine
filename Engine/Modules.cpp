@@ -63,7 +63,8 @@ namespace spite
 		renderPassWrapper(baseModule->deviceWrapper, swapchainDetailsWrapper,
 		                  *allocationCallbacks),
 		swapchainImagesWrapper(baseModule->deviceWrapper, swapchainWrapper),
-		imageViewsWrapper(baseModule->deviceWrapper, swapchainImagesWrapper, swapchainDetailsWrapper,allocator,*allocationCallbacks),
+		imageViewsWrapper(baseModule->deviceWrapper, swapchainImagesWrapper, swapchainDetailsWrapper, allocator,
+		                  *allocationCallbacks),
 		framebuffersWrapper(baseModule->deviceWrapper, allocator, imageViewsWrapper, swapchainDetailsWrapper,
 		                    renderPassWrapper, *allocationCallbacks)
 	{
@@ -84,16 +85,16 @@ namespace spite
 
 	DescriptorModule::DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 	                                   std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type,
-	                                   const u32 size, const BufferWrapper& bufferWrapper,
+	                                   const u32 count, const BufferWrapper& bufferWrapper,
 	                                   const sizet bufferElementSize,
 	                                   const spite::HeapAllocator& allocator):
 		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
 		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, *allocationCallbacks),
-		descriptorPoolWrapper(baseModule->deviceWrapper, type, size,
+		descriptorPoolWrapper(baseModule->deviceWrapper, type, count,
 		                      *allocationCallbacks),
 		descriptorSetsWrapper(baseModule->deviceWrapper, descriptorSetLayoutWrapper, descriptorPoolWrapper,
-		                      allocator, *allocationCallbacks, size, bufferWrapper, bufferElementSize)
+		                      allocator, *allocationCallbacks, count, bufferWrapper, bufferElementSize)
 	{
 	}
 
@@ -154,11 +155,11 @@ namespace spite
 
 	ModelDataModule::ModelDataModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 	                                 std::shared_ptr<BaseModule> baseModulePtr,
-	                                 const eastl::vector<glm::vec3,spite::HeapAllocator>& vertices,
-	                                 const eastl::vector<u32,spite::HeapAllocator>& indices): allocationCallbacks(
-		                                                                     std::move(allocationCallbacksPtr)),
-	                                                                     baseModule(std::move(baseModulePtr)),
-	                                                                     indicesCount(static_cast<u32>(indices.size()))
+	                                 const eastl::vector<glm::vec3, spite::HeapAllocator>& vertices,
+	                                 const eastl::vector<u32, spite::HeapAllocator>& indices): allocationCallbacks(
+			std::move(allocationCallbacksPtr)),
+		baseModule(std::move(baseModulePtr)),
+		indicesCount(static_cast<u32>(indices.size()))
 	{
 		vertSize = vertices.size() * sizeof(vertices[0]);
 		sizet indSize = indicesCount * sizeof(indices[0]);
@@ -196,7 +197,7 @@ namespace spite
 		sizet dynamicAlignment = (elementSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
 		elementAlignment = dynamicAlignment;
 
-		uboBuffer = BufferWrapper(elementCount * elementSize, vk::BufferUsageFlagBits::eUniformBuffer,
+		uboBuffer = BufferWrapper(elementCount * elementAlignment, vk::BufferUsageFlagBits::eUniformBuffer,
 		                          vk::MemoryPropertyFlagBits::eHostVisible |
 		                          vk::MemoryPropertyFlagBits::eHostCoherent,
 		                          vma::AllocationCreateFlagBits::eHostAccessSequentialWrite, baseModulePtr->indices,
@@ -214,7 +215,7 @@ namespace spite
 	                           std::shared_ptr<SwapchainModule> swapchainModulePtr,
 	                           std::shared_ptr<DescriptorModule> descriptorModulePtr,
 	                           std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
-	                           eastl::vector<std::shared_ptr<ModelDataModule>> models,
+	                           eastl::vector<std::shared_ptr<ModelDataModule>, spite::HeapAllocator> models,
 	                           const spite::HeapAllocator& allocator,
 	                           const eastl::vector<
 		                           eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
@@ -255,12 +256,14 @@ namespace spite
 
 		for (sizet i = 0, size = models.size(); i < size; ++i)
 		{
+			u32 dynamicOffset = i * descriptorModule->descriptorSetsWrapper.dynamicOffset;
+			std::shared_ptr<ModelDataModule> model = models[i];
 			recordSecondaryCommandBuffer(
 				commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
 				graphicsPipelineWrapper.graphicsPipeline, graphicsPipelineWrapper.pipelineLayout,
 				descriptorModule->descriptorSetsWrapper.descriptorSets[currentFrame],
 				swapchainModule->swapchainDetailsWrapper.extent,
-				models[i]->modelBuffer.buffer, models[i]->vertSize, models[i]->indicesCount);
+				model->modelBuffer.buffer, dynamicOffset, model->vertSize, model->indicesCount);
 		}
 
 		endSecondaryCommandBuffer(commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
@@ -269,7 +272,6 @@ namespace spite
 		                           swapchainModule->swapchainDetailsWrapper.extent,
 		                           swapchainModule->renderPassWrapper.renderPass,
 		                           swapchainModule->framebuffersWrapper.framebuffers[imageIndex],
-		                           graphicsPipelineWrapper.graphicsPipeline,
 		                           commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
 
 		vk::Result result = spite::drawFrame(
@@ -281,6 +283,8 @@ namespace spite
 			baseModule->presentQueue,
 			swapchainModule->swapchainWrapper.swapchain,
 			imageIndex);
+
+		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
 		recreateSwapchain(result);
 	}

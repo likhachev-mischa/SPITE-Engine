@@ -180,6 +180,8 @@
     <ClInclude Include="Base\VmaUsage.hpp" />
     <ClInclude Include="Base\VulkanUsage.hpp" />
     <ClInclude Include="Engine\Common.hpp" />
+    <ClInclude Include="Engine\ECS\ComponentsCore.hpp" />
+    <ClInclude Include="Engine\ECS\SystemsCore.hpp" />
     <ClInclude Include="Engine\RenderingCore.hpp" />
     <ClInclude Include="Engine\ResourcesCore.hpp" />
     <ClInclude Include="Engine\Debug.hpp" />
@@ -198,6 +200,7 @@
     <ClCompile Include="Base\Logging.cpp" />
     <ClCompile Include="Base\Memory.cpp" />
     <ClCompile Include="Base\VmaUsage.cpp" />
+    <ClCompile Include="Engine\ECS\SystemsCore.cpp" />
     <ClCompile Include="Engine\Modules.cpp" />
     <ClCompile Include="Engine\RenderingCore.cpp" />
     <ClCompile Include="Engine\ResourcesCore.cpp" />

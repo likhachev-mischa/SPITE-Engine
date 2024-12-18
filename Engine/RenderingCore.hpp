@@ -10,14 +10,13 @@ namespace spite
 	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Pipeline& graphicsPipeline,
 	                                  const vk::PipelineLayout& pipelineLayout, const vk::DescriptorSet& descriptorSet,
 	                                  const vk::Extent2D& swapchainExtent,
-	                                  const vk::Buffer& buffer, const vk::DeviceSize& indicesOffset,
+	                                  const vk::Buffer& buffer,const u32 dynamicOffset, const vk::DeviceSize& indicesOffset,
 	                                  const u32 indicesCount);
 
 	void endSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer);
 
 	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
 	                                const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                                const vk::Pipeline& graphicsPipeline,
 	                                const vk::CommandBuffer& secondaryCommandBuffer);
 
 	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,

@@ -110,7 +110,7 @@ namespace spite
 
 		DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 		                 std::shared_ptr<BaseModule> baseModulePtr,
-		                 const vk::DescriptorType& type, const u32 size,
+		                 const vk::DescriptorType& type, const u32 count,
 		                 const BufferWrapper& bufferWrapper,
 		                 const sizet bufferElementSize,
 		                 const spite::HeapAllocator& allocator);
@@ -190,6 +190,7 @@ namespace spite
 		~ModelDataModule() = default;
 	};
 
+	//dynamic ubo
 	struct UboModule
 	{
 		UboModule(const UboModule& other) = delete;
@@ -222,7 +223,7 @@ namespace spite
 		std::shared_ptr<DescriptorModule> descriptorModule;
 		std::shared_ptr<GraphicsCommandModule> commandBuffersModule;
 
-		eastl::vector<std::shared_ptr<ModelDataModule>> models;
+		eastl::vector<std::shared_ptr<ModelDataModule>,spite::HeapAllocator> models;
 
 		GraphicsPipelineWrapper graphicsPipelineWrapper;
 		const SyncObjectsWrapper syncObjectsWrapper;
@@ -234,7 +235,7 @@ namespace spite
 		             std::shared_ptr<BaseModule> baseModulePtr, std::shared_ptr<SwapchainModule> swapchainModulePtr,
 		             std::shared_ptr<DescriptorModule> descriptorModulePtr,
 		             std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
-		             eastl::vector<std::shared_ptr<ModelDataModule>> models,
+		             eastl::vector<std::shared_ptr<ModelDataModule>,spite::HeapAllocator> models,
 		             const spite::HeapAllocator& allocator,
 		             const eastl::vector<eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 		             shaderModules,
