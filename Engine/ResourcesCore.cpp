@@ -184,7 +184,7 @@ namespace spite
 		}
 		if (!indices.transferFamily.has_value())
 		{
-			indices.transferFamily.value() = indices.graphicsFamily.value();
+			indices.transferFamily = indices.graphicsFamily.value();
 		}
 
 		SASSERTM(indices.isComplete(), "Failed to find queue families!")
@@ -280,7 +280,7 @@ namespace spite
 			indices.graphicsFamily.value(), indices.presentFamily.value()
 		};
 
-		if (indices.graphicsFamily != indices.presentFamily)
+		if (indices.graphicsFamily.value() != indices.transferFamily)
 		{
 			createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
 			createInfo.queueFamilyIndexCount = 2;
@@ -592,7 +592,15 @@ namespace spite
 			indices.transferFamily.value()
 		};
 
-		vk::BufferCreateInfo bufferInfo({}, size, usage, vk::SharingMode::eConcurrent, 2, queues);
+		vk::BufferCreateInfo bufferInfo;
+		if (indices.graphicsFamily.value() != indices.transferFamily.value())
+		{
+			bufferInfo = vk::BufferCreateInfo({}, size, usage, vk::SharingMode::eConcurrent, 2, queues);
+		}
+		else
+		{
+			bufferInfo = vk::BufferCreateInfo({}, size, usage, vk::SharingMode::eExclusive, 0, nullptr);
+		}
 
 		vma::AllocationCreateInfo allocInfo(allocationFlags, vma::MemoryUsage::eAuto, properties);
 

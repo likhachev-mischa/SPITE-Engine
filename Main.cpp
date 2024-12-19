@@ -295,7 +295,8 @@ int main(int argc, char* argv[])
 			eventManager->processEvents();
 			eventManager->discardPollEvents();
 
-			transforms[0].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 0.0f, 1.0f));
+			transforms[0].rotation *= glm::angleAxis(glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
+			transforms[1].rotation *= glm::angleAxis(glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 			spite::updateTransformMatricesSystem(transforms, transformMatrices);
 			spite::updateTransformUboSystem(transformUniformBuffer->memory, transformUniformBuffer->elementAlignment,
