@@ -2,6 +2,7 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+#include "Base/Common.hpp"
 #include "Base/Memory.hpp"
 
 namespace spite
@@ -45,5 +46,17 @@ namespace spite
 	void updateCameraUboSystem(void* memory, const CameraMatrices& matrices)
 	{
 		memcpy(memory, &matrices, sizeof(CameraMatrices));
+	}
+
+	void updateFragUboSystem(void* memory, sizet elementAlignment,
+	                         const eastl::vector<FragmentData, spite::HeapAllocator>& fragmentDatas)
+	{
+
+		auto dynamicData = static_cast<u8*>(memory);
+		for (sizet i = 0, size = fragmentDatas.size(); i < size; ++i)
+		{
+			auto transform = reinterpret_cast<FragmentData*>(dynamicData + i * elementAlignment);
+			*transform = fragmentDatas[i];
+		}
 	}
 }

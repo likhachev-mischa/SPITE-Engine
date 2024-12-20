@@ -277,6 +277,7 @@ namespace spite
 
 		DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper, const vk::DescriptorType& type,
 		                           const u32 bindingIndex,
+		                           const vk::ShaderStageFlags& stage,
 		                           const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		~DescriptorSetLayoutWrapper();
@@ -352,13 +353,13 @@ namespace spite
 
 	struct VertexInputDescriptionsWrapper
 	{
-		eastl::array<vk::VertexInputBindingDescription> bindingDescriptions;
-		eastl::array<vk::VertexInputAttributeDescription> attributeDescriptions;
+		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
+		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions;
 
 		VertexInputDescriptionsWrapper(
-			eastl::array<vk::VertexInputBindingDescription> bindingDescriptions,
-			eastl::array<vk::VertexInputAttributeDescription>
-			attributeDescriptions);
+			const eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator>& bindingDescriptions,
+			const eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>
+			& attributeDescriptions);
 	};
 
 	struct GraphicsPipelineWrapper
@@ -377,7 +378,8 @@ namespace spite
 
 		GraphicsPipelineWrapper() = default;
 		GraphicsPipelineWrapper(const DeviceWrapper& deviceWrapper,
-		                        const eastl::vector<DescriptorSetLayoutWrapper*,spite::HeapAllocator>& descriptorSetLayouts,
+		                        const eastl::vector<DescriptorSetLayoutWrapper*, spite::HeapAllocator>&
+		                        descriptorSetLayouts,
 		                        const SwapchainDetailsWrapper& detailsWrapper,
 		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
 		                        const eastl::vector<

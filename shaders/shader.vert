@@ -12,9 +12,18 @@ layout (set = 1,binding = 1) uniform CameraMatrices
 
 
 layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+
+layout (location = 0) out vec3 fragPosition;
+layout (location = 1) out vec3 fragNormal;
+
 
 void main()
 {
-	gl_Position =cam.projection* cam.view*
-	ubo.model * vec4(position,1.0);
+	fragPosition = vec3(ubo.model * vec4(position,1.0));
+
+	fragNormal = mat3(transpose(inverse(ubo.model))) * normal; 
+
+	gl_Position =cam.projection* cam.view*ubo.model * vec4(position,1.0);
+
 }

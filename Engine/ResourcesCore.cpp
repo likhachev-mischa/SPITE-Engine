@@ -377,13 +377,14 @@ namespace spite
 
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
 	                                                  const u32 bindingIndex,
+	                                                  const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::DescriptorSetLayoutBinding uboLayoutBinding(
 			bindingIndex,
 			type,
 			1,
-			vk::ShaderStageFlagBits::eVertex,
+			stage,
 			{});
 
 		vk::DescriptorSetLayoutCreateInfo layoutInfo(
@@ -482,7 +483,7 @@ namespace spite
 		                                                    vk::False,
 		                                                    vk::False,
 		                                                    vk::PolygonMode::eFill,
-		                                                    vk::CullModeFlagBits::eNone,
+		                                                    vk::CullModeFlagBits::eFront,
 		                                                    vk::FrontFace::eCounterClockwise,
 		                                                    vk::False);
 

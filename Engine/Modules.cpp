@@ -3,6 +3,7 @@
 #include "Application/WindowManager.hpp"
 
 #include "Base/Assert.hpp"
+#include "Base/Common.hpp"
 #include "Base/File.hpp"
 #include "Base/Logging.hpp"
 
@@ -87,12 +88,13 @@ namespace spite
 	                                   std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type,
 	                                   const u32 count,
 	                                   const u32 bindingIndex,
+	                                   const vk::ShaderStageFlags& stage,
 	                                   const BufferWrapper& bufferWrapper,
 	                                   const sizet bufferElementSize,
 	                                   const spite::HeapAllocator& allocator):
 		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
-		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, bindingIndex, *allocationCallbacks),
+		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, bindingIndex,stage, *allocationCallbacks),
 		descriptorPoolWrapper(baseModule->deviceWrapper, type, count,
 		                      *allocationCallbacks),
 		descriptorSetsWrapper(baseModule->deviceWrapper, descriptorSetLayoutWrapper, descriptorPoolWrapper,
@@ -157,7 +159,7 @@ namespace spite
 
 	ModelDataModule::ModelDataModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 	                                 std::shared_ptr<BaseModule> baseModulePtr,
-	                                 const eastl::vector<glm::vec3, spite::HeapAllocator>& vertices,
+	                                 const eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 	                                 const eastl::vector<u32, spite::HeapAllocator>& indices): allocationCallbacks(
 			std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
@@ -274,7 +276,7 @@ namespace spite
 			std::vector<vk::DescriptorSet> descriptorSets(descriptorModules.size());
 			std::vector<u32> dynamicOffsets(descriptorModules.size());
 
-			for (sizet j = 0, size2 = descriptorModules.size() - 1; j < size2; ++j)
+			for (sizet j = 0, size2 = descriptorModules.size(); j < size2; ++j)
 			{
 				u32 dynamicOffset = i * descriptorModules[j]->descriptorSetsWrapper.dynamicOffset;
 				dynamicOffsets[j] = dynamicOffset;

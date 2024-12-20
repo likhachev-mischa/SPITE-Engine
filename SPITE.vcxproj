@@ -173,6 +173,7 @@
     <ClInclude Include="Application\InputManager.hpp" />
     <ClInclude Include="Application\WindowManager.hpp" />
     <ClInclude Include="Base\Assert.hpp" />
+    <ClInclude Include="Base\Common.hpp" />
     <ClInclude Include="Base\File.hpp" />
     <ClInclude Include="Base\Logging.hpp" />
     <ClInclude Include="Base\Memory.hpp" />

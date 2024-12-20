@@ -8,8 +8,10 @@
 
 namespace spite
 {
+	struct Vertex;
 	class WindowManager;
 	//TODO: use eastl:: smart ptrs
+
 
 	//immutable objects, core (has to be destroyed last)
 	struct CoreModule
@@ -112,6 +114,7 @@ namespace spite
 		                 std::shared_ptr<BaseModule> baseModulePtr,
 		                 const vk::DescriptorType& type, const u32 count,
 		                 const u32 bindingIndex,
+		                 const vk::ShaderStageFlags& stage,
 		                 const BufferWrapper& bufferWrapper,
 		                 const sizet bufferElementSize,
 		                 const spite::HeapAllocator& allocator);
@@ -185,7 +188,7 @@ namespace spite
 
 		ModelDataModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 		                std::shared_ptr<BaseModule> baseModulePtr,
-		                const eastl::vector<glm::vec3, spite::HeapAllocator>& vertices,
+		                const eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 		                const eastl::vector<u32, spite::HeapAllocator>& indices);
 
 		~ModelDataModule() = default;

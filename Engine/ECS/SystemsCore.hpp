@@ -8,6 +8,7 @@
 
 namespace spite
 {
+	struct FragmentData;
 	class HeapAllocator;
 
 	void updateTransformMatricesSystem(const eastl::vector<Transform, spite::HeapAllocator>& transforms,
@@ -21,4 +22,6 @@ namespace spite
 	                              const eastl::vector<TransformMatrix, spite::HeapAllocator>& transformMatrices);
 
 	void updateCameraUboSystem(void* memory, const CameraMatrices& matrices);
+	void updateFragUboSystem(void* memory, sizet elementAlignment,
+		const eastl::vector<FragmentData, spite::HeapAllocator>& fragmentDatas);
 }

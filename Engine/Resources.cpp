@@ -285,11 +285,12 @@ namespace spite
 	DescriptorSetLayoutWrapper::DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
 	                                                       const vk::DescriptorType& type,
 	                                                       const u32 bindingIndex,
+	                                                       const vk::ShaderStageFlags& stage,
 	                                                       const AllocationCallbacksWrapper&
 	                                                       allocationCallbacksWrapper): device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSetLayout = createDescriptorSetLayout(device, type, bindingIndex,
+		descriptorSetLayout = createDescriptorSetLayout(device, type, bindingIndex,stage,
 		                                                allocationCallbacks);
 	}
 
@@ -392,8 +393,8 @@ namespace spite
 	}
 
 	VertexInputDescriptionsWrapper::VertexInputDescriptionsWrapper(
-		const eastl::array<vk::VertexInputBindingDescription> bindingDescriptions,
-		const eastl::array<vk::VertexInputAttributeDescription> attributeDescriptions) :
+		const eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator>& bindingDescriptions,
+		const eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>& attributeDescriptions) :
 		bindingDescriptions(bindingDescriptions), attributeDescriptions(attributeDescriptions)
 	{
 	}
@@ -446,7 +447,8 @@ namespace spite
 		                                          allocationCallbacks);
 	}
 
-	GraphicsPipelineWrapper::GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) noexcept:pipelineLayout(other.pipelineLayout),
+	GraphicsPipelineWrapper::GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) noexcept:
+		pipelineLayout(other.pipelineLayout),
 		graphicsPipeline(other.graphicsPipeline),
 		shaderStages(std::move(other.shaderStages)),
 		vertexInputInfo(other.vertexInputInfo),

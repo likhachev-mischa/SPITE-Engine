@@ -6,6 +6,7 @@
 #include <glm/vec3.hpp>
 
 #include "Base/Assert.hpp"
+#include "Base/Common.hpp"
 #include "Base/Logging.hpp"
 #include "Base/Memory.hpp"
 
@@ -30,39 +31,90 @@ namespace spite
 		return buffer;
 	}
 
-	void readModelInfoFile(cstring filename, eastl::vector<glm::vec3, spite::HeapAllocator>& vertices,
-	                       eastl::vector<u32, spite::HeapAllocator>& indices)
+	void readModelInfoFile(
+		cstring filename,
+		eastl::vector<Vertex, spite::HeapAllocator>& vertices,
+		eastl::vector<u32, spite::HeapAllocator>& indices,
+		const spite::HeapAllocator& allocator)
 	{
 		vertices.clear();
 		indices.clear();
 
+		eastl::vector<glm::vec3, spite::HeapAllocator> tempPositions(allocator);
+		eastl::vector<glm::vec3, spite::HeapAllocator> tempNormals(allocator);
+		eastl::vector<u32, spite::HeapAllocator> positionIndices(allocator);
+		eastl::vector<u32, spite::HeapAllocator> normalIndices(allocator);
+
 		std::ifstream file(filename, std::ios::in);
 		SASSERT(file.is_open())
 
-		std::string str;
+		std::string line;
 
-		while (std::getline(file, str))
+		while (std::getline(file, line))
 		{
-			char key = str[0];
-			str.erase(0, 1);
-			std::istringstream iss(str);
-			if (key == 'v')
+			if (line.empty() || line[0] == '#')
+				continue;
+
+			std::istringstream iss(line);
+			std::string prefix;
+			iss >> prefix;
+
+			if (prefix == "v")
 			{
 				glm::vec3 vertex;
-				for (int i = 0; i < 3; ++i)
-				{
-					iss >> vertex[i];
-				}
-				vertices.push_back(vertex);
+				iss >> vertex.x >> vertex.y >> vertex.z;
+				tempPositions.push_back(vertex);
 			}
-			else if (key == 'f')
+			else if (prefix == "vn")
 			{
-				int index;
-				while (iss >> index)
+				glm::vec3 normal;
+				iss >> normal.x >> normal.y >> normal.z;
+				tempNormals.push_back(normal);
+			}
+			else if (prefix == "f")
+			{
+				std::string vertexInfo;
+				while (iss >> vertexInfo)
 				{
-					indices.push_back(index);
+					std::istringstream viss(vertexInfo);
+					std::string vIndexStr, vtIndexStr, vnIndexStr;
+
+					std::getline(viss, vIndexStr, '/');
+
+					if (viss.peek() != '/')
+					{
+						std::getline(viss, vtIndexStr, '/');
+					}
+					else
+					{
+						viss.get();
+					}
+
+					std::getline(viss, vnIndexStr, '/');
+
+					int vIndex = std::stoi(vIndexStr) - 1;
+					positionIndices.push_back(static_cast<u32>(vIndex));
+
+					if (!vnIndexStr.empty())
+					{
+						int vnIndex = std::stoi(vnIndexStr) - 1;
+						normalIndices.push_back(static_cast<u32>(vnIndex));
+					}
+					else
+					{
+						normalIndices.push_back(0);
+					}
 				}
 			}
+		}
+
+		for (sizet i = 0; i < positionIndices.size(); ++i)
+		{
+			Vertex vertex = {};
+			vertex.position = tempPositions[positionIndices[i]];
+			vertex.normal = tempNormals[normalIndices[i]];
+			vertices.push_back(vertex);
+			indices.push_back(static_cast<u32>(i));
 		}
 	}
 }

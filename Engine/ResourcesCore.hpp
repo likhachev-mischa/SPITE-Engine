@@ -70,6 +70,7 @@ namespace spite
 
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
 	                                                  const u32 bindingIndex,
+	                                                  const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
