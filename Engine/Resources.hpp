@@ -276,6 +276,7 @@ namespace spite
 		const vk::AllocationCallbacks* allocationCallbacks;
 
 		DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper, const vk::DescriptorType& type,
+		                           const u32 bindingIndex,
 		                           const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		~DescriptorSetLayoutWrapper();
@@ -320,6 +321,7 @@ namespace spite
 		                      const spite::HeapAllocator& allocator,
 		                      const AllocationCallbacksWrapper& allocationCallbacksWrapper,
 		                      const u32 count,
+		                      const u32 bindingIndex,
 		                      const BufferWrapper& bufferWrapper,
 		                      const sizet bufferElementSize);
 
@@ -362,28 +364,30 @@ namespace spite
 	struct GraphicsPipelineWrapper
 	{
 		GraphicsPipelineWrapper(const GraphicsPipelineWrapper& other) = delete;
-		GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) = delete;
 		GraphicsPipelineWrapper& operator=(const GraphicsPipelineWrapper& other) = delete;
-		GraphicsPipelineWrapper& operator=(GraphicsPipelineWrapper&& other) = delete;
 
 		vk::PipelineLayout pipelineLayout;
 		vk::Pipeline graphicsPipeline;
 		eastl::vector<vk::PipelineShaderStageCreateInfo, spite::HeapAllocator> shaderStages;
 
-		const vk::DescriptorSetLayout descriptorSetLayout;
-		const vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+		vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
-		const vk::Device device;
+		vk::Device device;
 		const vk::AllocationCallbacks* allocationCallbacks;
 
+		GraphicsPipelineWrapper() = default;
 		GraphicsPipelineWrapper(const DeviceWrapper& deviceWrapper,
-		                        const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+		                        const eastl::vector<DescriptorSetLayoutWrapper*,spite::HeapAllocator>& descriptorSetLayouts,
 		                        const SwapchainDetailsWrapper& detailsWrapper,
 		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
 		                        const eastl::vector<
 			                        eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>
 		                        & shaderModules, const VertexInputDescriptionsWrapper& vertexInputDescription,
 		                        const AllocationCallbacksWrapper& allocationCallbacksWrapper);
+
+		GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) noexcept;
+
+		GraphicsPipelineWrapper& operator=(GraphicsPipelineWrapper&& other) noexcept;
 
 		void recreate(const SwapchainDetailsWrapper& detailsWrapper,
 		              const RenderPassWrapper& renderPassWrapper);
@@ -438,18 +442,20 @@ namespace spite
 	struct CommandBuffersWrapper
 	{
 		CommandBuffersWrapper(const CommandBuffersWrapper& other) = delete;
-		CommandBuffersWrapper(CommandBuffersWrapper&& other) = delete;
 		CommandBuffersWrapper& operator=(const CommandBuffersWrapper& other) = delete;
-		CommandBuffersWrapper& operator=(CommandBuffersWrapper&& other) = delete;
 
 		std::vector<vk::CommandBuffer> commandBuffers{};
 
-		const vk::CommandPool commandPool;
-		const vk::Device device;
+		vk::CommandPool commandPool;
+		vk::Device device;
 
 		CommandBuffersWrapper(const DeviceWrapper& deviceWrapper, const CommandPoolWrapper& commandPoolWrapper,
 		                      const vk::CommandBufferLevel& level,
 		                      const u32 count);
+
+		CommandBuffersWrapper(CommandBuffersWrapper&& other) noexcept;
+
+		CommandBuffersWrapper& operator=(CommandBuffersWrapper&& other) noexcept;
 
 		~CommandBuffersWrapper();
 	};

@@ -10,7 +10,9 @@
 #include "Application/InputManager.hpp"
 #include "Application/WindowManager.hpp"
 
+#include "Base/Assert.hpp"
 #include "Base/File.hpp"
+#include "Base/Logging.hpp"
 #include "Base/Memory.hpp"
 
 #include "Engine/Modules.hpp"
@@ -214,7 +216,7 @@ int main(int argc, char* argv[])
 		eastl::vector<u32, spite::HeapAllocator> indices(graphicsAllocator);
 		spite::readModelInfoFile("test.txt", vertices, indices);
 		auto model1 = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
-		spite::readModelInfoFile("test2.txt", vertices, indices);
+		spite::readModelInfoFile("cube.txt", vertices, indices);
 		auto model2 = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
 		eastl::vector<std::shared_ptr<spite::ModelDataModule>, spite::HeapAllocator> models(graphicsAllocator);
 		models.push_back(model1);
@@ -228,6 +230,7 @@ int main(int argc, char* argv[])
 		                                                                  base,
 		                                                                  vk::DescriptorType::eUniformBufferDynamic,
 		                                                                  spite::MAX_FRAMES_IN_FLIGHT,
+		                                                                  0,
 		                                                                  transformUniformBuffer->uboBuffer,
 		                                                                  transformUniformBuffer->elementAlignment,
 		                                                                  graphicsAllocator);
@@ -256,53 +259,157 @@ int main(int argc, char* argv[])
 			{vk::VertexInputAttributeDescription(0, 0, vk::Format::eR32G32B32Sfloat)});
 
 
+		auto cameraBindCommandPool = spite::CommandPoolWrapper(base->deviceWrapper,
+		                                                       base->indices.graphicsFamily.value(),
+		                                                       vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		                                                       *allocationCallbacks);
+
+		auto cameraBindCommandBuffers = std::make_shared<spite::CommandBuffersWrapper>(base->deviceWrapper,
+			cameraBindCommandPool,
+			vk::CommandBufferLevel::eSecondary, 1);
+
+		eastl::vector<std::shared_ptr<spite::CommandBuffersWrapper>, spite::HeapAllocator> extraCommandBuffers(
+			graphicsAllocator);
+		//extraCommandBuffers.push_back(cameraBindCommandBuffers);
+
+		auto cameraUniformBuffer = std::make_shared<spite::UboModule>(
+			core, base, sizeof(spite::CameraMatrices), 1);
+
+		auto cameraDesciptorModule = std::make_shared<spite::DescriptorModule>(allocationCallbacks,
+		                                                                       base,
+		                                                                       vk::DescriptorType::eUniformBufferDynamic,
+		                                                                       spite::MAX_FRAMES_IN_FLIGHT, 1,
+		                                                                       cameraUniformBuffer->uboBuffer,
+		                                                                       cameraUniformBuffer->elementAlignment,
+		                                                                       graphicsAllocator);
+
+		eastl::vector<std::shared_ptr<spite::DescriptorModule>, spite::HeapAllocator> descriptorModules(
+			graphicsAllocator);
+		descriptorModules.push_back(descriptorModule);
+		descriptorModules.push_back(cameraDesciptorModule);
+
 		auto renderModule = std::make_shared<spite::RenderModule>(allocationCallbacks, base, swapchainModule,
-		                                                          descriptorModule,
+		                                                          descriptorModules,
 		                                                          commandBuffersModule, models,
 		                                                          graphicsAllocator,
 		                                                          shaderModules, vertexInputDescriptions,
 		                                                          windowManager,
-		                                                          spite::MAX_FRAMES_IN_FLIGHT);
+		                                                          spite::MAX_FRAMES_IN_FLIGHT, extraCommandBuffers);
 
-		/*
-		eastl::vector<spite::TransformMatrix, spite::HeapAllocator> transforms(graphicsAllocator);
-		spite::TransformMatrix transform;
-		transform.matrix = glm::translate(glm::mat4(1.0f), {0.5f, 0.5f, 0.0f});
-		transforms.push_back(transform);
-		transforms.push_back({});
 
-		void* mem = transformUniformBuffer->memory;
-		auto dynamicData = static_cast<u8*>(mem);
-		for (sizet i = 0, size = transforms.size(); i < size; ++i)
-		{
-			auto transforma = reinterpret_cast<spite::TransformMatrix*>(dynamicData + i * transformUniformBuffer->
-				elementAlignment);
-			*transforma = transforms[i];
-		}
-		*/
+		vk::CommandBufferInheritanceInfo inheritanceInfo(swapchainModule->renderPassWrapper.renderPass, 0,
+		                                                 swapchainModule->framebuffersWrapper.framebuffers[0]);
+
+
 		eastl::vector<spite::Transform, spite::HeapAllocator> transforms(graphicsAllocator);
-		transforms.resize(models.size());
+		transforms.resize(models.size() + 1);
 		eastl::vector<spite::TransformMatrix, spite::HeapAllocator> transformMatrices(graphicsAllocator);
-		transformMatrices.resize(models.size());
+		transformMatrices.resize(models.size() + 1);
 
 		transforms[0].position = {0.5f, 0.5f, 0.0f};
 		transforms[1].position = {-0.5f, -0.5f, 0.0f};
 
+		transforms[2].position = {0.0f, 0.0f, 0.0f};
+
+		f32 aspectRatio = static_cast<float>(spite::WIDTH) / static_cast<float>(spite::HEIGHT);
+		spite::CameraData cameraData{45.0f, aspectRatio, 0.1f, 100.0f};
+		spite::CameraMatrices cameraMatrices{};
+
+		eventManager->subscribeToEvent(spite::Events::BCKWD_BUTTON_RESS, [&transforms]()
+		{
+			glm::vec3 fwd = transforms[2].rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+			transforms[2].position += fwd * 0.1f;
+		});
+		eventManager->subscribeToEvent(spite::Events::FWD_BUTTON_PRESS, [&transforms]()
+		{
+			glm::vec3 fwd = transforms[2].rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+			transforms[2].position -= fwd * 0.1f;
+		});
+		eventManager->subscribeToEvent(spite::Events::RGHT_BUTTON_PRESS, [&transforms]()
+		{
+			glm::vec3 fwd = transforms[2].rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+			transforms[2].position += fwd * 0.1f;
+		});
+		eventManager->subscribeToEvent(spite::Events::LFT_BUTTON_PRESS, [&transforms]()
+		{
+			glm::vec3 fwd = transforms[2].rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+			transforms[2].position -= fwd * 0.1f;
+		});
+
+		eventManager->subscribeToEvent(spite::Events::LOOKLFT_BUTTON_PRESS, [&transforms]()
+		{
+			transforms[2].rotation *= glm::angleAxis(glm::radians(5.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			SDEBUG_LOG("LFT PRESS\n")
+		});
+		eventManager->subscribeToEvent(spite::Events::LOOKRGHT_BUTTON_PRESS, [&transforms]()
+		{
+			transforms[2].rotation *= glm::angleAxis(glm::radians(-5.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			SDEBUG_LOG("RIGHT PRESS\n")
+		});
+
+		eventManager->subscribeToEvent(spite::Events::LOOKUP_BUTTON_PRESS, [&transforms]()
+		{
+			transforms[2].rotation *= glm::angleAxis(glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			SDEBUG_LOG("UP PRESS\n")
+		});
+		eventManager->subscribeToEvent(spite::Events::LOOKDWN_BUTTON_PRESS, [&transforms]()
+		{
+			transforms[2].rotation *= glm::angleAxis(glm::radians(-5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			SDEBUG_LOG("DWN PRESS\n")
+		});
+
+
+		/*
+		auto lightCommandBuffersModule = std::make_shared<spite::GraphicsCommandModule>(allocationCallbacks,
+			base, vk::CommandPoolCreateFlagBits::eResetCommandBuffer, spite::MAX_FRAMES_IN_FLIGHT);
+		spite::ShaderModuleWrapper& lighFragShader = shaderService->getShaderModule(
+			"shaders/lightFrag.spv", vk::ShaderStageFlagBits::eFragment);
+		eastl::vector<eastl::tuple<spite::ShaderModuleWrapper&, const char*>, spite::HeapAllocator> lightShaderModules(
+			graphicsAllocator);
+		lightShaderModules.push_back(eastl::make_tuple(std::ref(vertShader), "main"));
+		lightShaderModules.push_back(eastl::make_tuple(std::ref(lighFragShader), "main"));
+
+		spite::readModelInfoFile("cube.txt", vertices, indices);
+		auto lightSourceModel = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
+		eastl::vector<std::shared_ptr<spite::ModelDataModule>, spite::HeapAllocator> lightModels(graphicsAllocator);
+		models.push_back(lightSourceModel);
+
+		auto lightRenderModule = std::make_shared<spite::RenderModule>(allocationCallbacks, base, swapchainModule,
+		                                                               descriptorModules, lightCommandBuffersModule,
+		                                                               lightModels,
+		                                                               graphicsAllocator, lightShaderModules,
+		                                                               vertexInputDescriptions, windowManager,
+		                                                               spite::MAX_FRAMES_IN_FLIGHT,
+		                                                               extraCommandBuffers);
+
+		transformMatrices.push_back();
+		transforms.push_back();
+		*/
+
 		while (!windowManager->shouldTerminate())
 		{
 			renderModule->waitForFrame();
+			//lightRenderModule->waitForFrame();
 			windowManager->pollEvents();
 			eventManager->processEvents();
 			eventManager->discardPollEvents();
 
-			transforms[0].rotation *= glm::angleAxis(glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
-			transforms[1].rotation *= glm::angleAxis(glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
+			transforms[0].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 0.0f, 1.0f));
+			transforms[1].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 1.0f, 1.0f));
+
 
 			spite::updateTransformMatricesSystem(transforms, transformMatrices);
+			//transformMatrices[2].matrix = glm::inverse(glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+			//                                                       glm::vec3(0.0f, 0.0f, 0.0f),
+			//                                                       glm::vec3(0.0f, 0.0f, 1.0f)));
 			spite::updateTransformUboSystem(transformUniformBuffer->memory, transformUniformBuffer->elementAlignment,
 			                                transformMatrices);
 
+			spite::updateCameraSystem(cameraData, transformMatrices, 2, cameraMatrices);
+			spite::updateCameraUboSystem(cameraUniformBuffer->memory, cameraMatrices);
+
 			renderModule->drawFrame();
+		//	lightRenderModule->drawFrame();
 		}
 	}
 	graphicsAllocator.shutdown();

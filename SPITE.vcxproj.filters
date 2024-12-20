@@ -28,6 +28,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{83c832cd-9b63-4419-80eb-a2b4b12c4fcc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ECS">
+      <UniqueIdentifier>{07865768-50a3-42b0-86d3-a3606107dec3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="vcpkg.json" />
@@ -37,11 +40,11 @@
     <None Include="Shaders\shader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\lightFrag.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Model2D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
@@ -108,6 +111,12 @@
     <ClInclude Include="Base\VulkanUsage.hpp">
       <Filter>Base</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\ECS\ComponentsCore.hpp">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ECS\SystemsCore.hpp">
+      <Filter>ECS</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -154,6 +163,9 @@
     </ClCompile>
     <ClCompile Include="Base\File.cpp">
       <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ECS\SystemsCore.cpp">
+      <Filter>ECS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

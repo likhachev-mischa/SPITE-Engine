@@ -280,7 +280,7 @@ namespace spite
 			indices.graphicsFamily.value(), indices.presentFamily.value()
 		};
 
-		if (indices.graphicsFamily.value() != indices.transferFamily)
+		if (indices.graphicsFamily.value() != indices.presentFamily.value())
 		{
 			createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
 			createInfo.queueFamilyIndexCount = 2;
@@ -376,10 +376,11 @@ namespace spite
 	}
 
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
+	                                                  const u32 bindingIndex,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::DescriptorSetLayoutBinding uboLayoutBinding(
-			0,
+			bindingIndex,
 			type,
 			1,
 			vk::ShaderStageFlagBits::eVertex,
@@ -425,13 +426,13 @@ namespace spite
 
 
 	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
-	                                        const vk::DescriptorSetLayout& descriptorSetLayout,
+	                                        const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo(
 			{},
-			1,
-			&descriptorSetLayout);
+			descriptorSetLayouts.size(),
+			descriptorSetLayouts.data());
 
 		auto [result,pipelineLayout] = device.createPipelineLayout(pipelineLayoutInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
@@ -481,8 +482,8 @@ namespace spite
 		                                                    vk::False,
 		                                                    vk::False,
 		                                                    vk::PolygonMode::eFill,
-		                                                    vk::CullModeFlagBits::eBack,
-		                                                    vk::FrontFace::eClockwise,
+		                                                    vk::CullModeFlagBits::eNone,
+		                                                    vk::FrontFace::eCounterClockwise,
 		                                                    vk::False);
 
 		vk::PipelineMultisampleStateCreateInfo multisampling(
@@ -659,7 +660,7 @@ namespace spite
 
 	std::vector<vk::DescriptorSet> createDescriptorSets(const vk::Device& device,
 	                                                    const vk::DescriptorSetLayout& descriptorSetLayout,
-	                                                    const vk::DescriptorPool& descriptorPool, sizet,
+	                                                    const vk::DescriptorPool& descriptorPool,
 	                                                    const spite::HeapAllocator& allocator,
 	                                                    const vk::AllocationCallbacks* pAllocationCallbacks,
 	                                                    const u32 count)
@@ -678,11 +679,12 @@ namespace spite
 	}
 
 	void updateDescriptorSets(const vk::Device& device, const vk::DescriptorSet& descriptorSet,
-	                          const vk::Buffer& buffer, const vk::DescriptorType& type, const sizet bufferElementSize)
+	                          const vk::Buffer& buffer, const vk::DescriptorType& type, const u32 bindingIndex,
+	                          const sizet bufferElementSize)
 	{
 		vk::DescriptorBufferInfo bufferInfo(buffer, 0, bufferElementSize);
 		vk::WriteDescriptorSet descriptorWrite(descriptorSet,
-		                                       0,
+		                                       bindingIndex,
 		                                       0,
 		                                       1,
 		                                       type,

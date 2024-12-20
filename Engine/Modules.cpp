@@ -85,16 +85,18 @@ namespace spite
 
 	DescriptorModule::DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 	                                   std::shared_ptr<BaseModule> baseModulePtr, const vk::DescriptorType& type,
-	                                   const u32 count, const BufferWrapper& bufferWrapper,
+	                                   const u32 count,
+	                                   const u32 bindingIndex,
+	                                   const BufferWrapper& bufferWrapper,
 	                                   const sizet bufferElementSize,
 	                                   const spite::HeapAllocator& allocator):
 		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)),
-		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, *allocationCallbacks),
+		descriptorSetLayoutWrapper(baseModule->deviceWrapper, type, bindingIndex, *allocationCallbacks),
 		descriptorPoolWrapper(baseModule->deviceWrapper, type, count,
 		                      *allocationCallbacks),
 		descriptorSetsWrapper(baseModule->deviceWrapper, descriptorSetLayoutWrapper, descriptorPoolWrapper,
-		                      allocator, *allocationCallbacks, count, bufferWrapper, bufferElementSize)
+		                      allocator, *allocationCallbacks, count, bindingIndex, bufferWrapper, bufferElementSize)
 	{
 	}
 
@@ -213,7 +215,8 @@ namespace spite
 	RenderModule::RenderModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 	                           std::shared_ptr<BaseModule> baseModulePtr,
 	                           std::shared_ptr<SwapchainModule> swapchainModulePtr,
-	                           std::shared_ptr<DescriptorModule> descriptorModulePtr,
+	                           eastl::vector<std::shared_ptr<DescriptorModule>, spite::HeapAllocator>
+	                           descriptorModulesVec,
 	                           std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
 	                           eastl::vector<std::shared_ptr<ModelDataModule>, spite::HeapAllocator> models,
 	                           const spite::HeapAllocator& allocator,
@@ -221,20 +224,31 @@ namespace spite
 		                           eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 	                           shaderModules,
 	                           const VertexInputDescriptionsWrapper& vertexInputDescriptions,
-	                           std::shared_ptr<WindowManager> windowManagerPtr, const u32 framesInFlight):
+	                           std::shared_ptr<WindowManager> windowManagerPtr, const u32 framesInFlight,
+	                           eastl::vector<std::shared_ptr<CommandBuffersWrapper>, spite::HeapAllocator>
+	                           extraCommandBuffers):
 		windowManager(std::move(windowManagerPtr)),
 		allocationCallbacks(std::move(allocationCallbacksPtr)),
 		baseModule(std::move(baseModulePtr)), swapchainModule(std::move(swapchainModulePtr)),
-		descriptorModule(std::move(descriptorModulePtr)),
-		commandBuffersModule(std::move(commandBuffersModulePtr)),
+		descriptorModules(std::move(descriptorModulesVec)),
+		graphicsCommandBuffersModule(std::move(commandBuffersModulePtr)),
+		extraCommandBuffers(std::move(extraCommandBuffers)),
 		models(std::move(models)),
-		graphicsPipelineWrapper(baseModule->deviceWrapper, descriptorModule->descriptorSetLayoutWrapper,
-		                        swapchainModule->swapchainDetailsWrapper,
-		                        swapchainModule->renderPassWrapper, allocator, shaderModules,
-		                        vertexInputDescriptions, *allocationCallbacks),
 		syncObjectsWrapper(baseModule->deviceWrapper, framesInFlight, *allocationCallbacks),
 		currentFrame(0)
 	{
+		eastl::vector<DescriptorSetLayoutWrapper*, spite::HeapAllocator> descriptorLayouts(allocator);
+		descriptorLayouts.resize(descriptorModules.size());
+
+		for (sizet i = 0, size = descriptorModules.size(); i < size; ++i)
+		{
+			descriptorLayouts[i] = &descriptorModules[i]->descriptorSetLayoutWrapper;
+		}
+
+		graphicsPipelineWrapper = GraphicsPipelineWrapper(baseModule->deviceWrapper, descriptorLayouts,
+		                                                  swapchainModule->swapchainDetailsWrapper,
+		                                                  swapchainModule->renderPassWrapper, allocator, shaderModules,
+		                                                  vertexInputDescriptions, *allocationCallbacks);
 	}
 
 	void RenderModule::waitForFrame()
@@ -249,33 +263,50 @@ namespace spite
 
 	void RenderModule::drawFrame()
 	{
-		beginSecondaryCommandBuffer(commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
-		                            swapchainModule->renderPassWrapper.renderPass,
-		                            swapchainModule->framebuffersWrapper.framebuffers[imageIndex]);
+		beginSecondaryCommandBuffer(
+			graphicsCommandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
+			swapchainModule->renderPassWrapper.renderPass,
+			swapchainModule->framebuffersWrapper.framebuffers[imageIndex]);
 
 
 		for (sizet i = 0, size = models.size(); i < size; ++i)
 		{
-			u32 dynamicOffset = i * descriptorModule->descriptorSetsWrapper.dynamicOffset;
+			std::vector<vk::DescriptorSet> descriptorSets(descriptorModules.size());
+			std::vector<u32> dynamicOffsets(descriptorModules.size());
+
+			for (sizet j = 0, size2 = descriptorModules.size() - 1; j < size2; ++j)
+			{
+				u32 dynamicOffset = i * descriptorModules[j]->descriptorSetsWrapper.dynamicOffset;
+				dynamicOffsets[j] = dynamicOffset;
+				descriptorSets[j] = descriptorModules[j]->descriptorSetsWrapper.descriptorSets[currentFrame];
+			}
+
+			dynamicOffsets[1] = 0;
+			descriptorSets[1] = descriptorModules[1]->descriptorSetsWrapper.descriptorSets[currentFrame];
+
 			std::shared_ptr<ModelDataModule> model = models[i];
 			recordSecondaryCommandBuffer(
-				commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
+				graphicsCommandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame],
 				graphicsPipelineWrapper.graphicsPipeline, graphicsPipelineWrapper.pipelineLayout,
-				descriptorModule->descriptorSetsWrapper.descriptorSets[currentFrame],
+				descriptorSets,
 				swapchainModule->swapchainDetailsWrapper.extent,
-				model->modelBuffer.buffer, dynamicOffset, model->vertSize, model->indicesCount);
+				model->modelBuffer.buffer, dynamicOffsets.data(), model->vertSize, model->indicesCount);
 		}
 
-		endSecondaryCommandBuffer(commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
+		endSecondaryCommandBuffer(
+			graphicsCommandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
 
-		recordPrimaryCommandBuffer(commandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
-		                           swapchainModule->swapchainDetailsWrapper.extent,
-		                           swapchainModule->renderPassWrapper.renderPass,
-		                           swapchainModule->framebuffersWrapper.framebuffers[imageIndex],
-		                           commandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]);
+		std::vector<vk::CommandBuffer> secondaryCommandBuffers;
+
+		recordPrimaryCommandBuffer(
+			graphicsCommandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
+			swapchainModule->swapchainDetailsWrapper.extent,
+			swapchainModule->renderPassWrapper.renderPass,
+			swapchainModule->framebuffersWrapper.framebuffers[imageIndex],
+			{graphicsCommandBuffersModule->secondaryCommandBuffersWrapper.commandBuffers[currentFrame]});
 
 		vk::Result result = spite::drawFrame(
-			commandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
+			graphicsCommandBuffersModule->primaryCommandBuffersWrapper.commandBuffers[currentFrame],
 			syncObjectsWrapper.inFlightFences[currentFrame],
 			syncObjectsWrapper.imageAvailableSemaphores[currentFrame],
 			syncObjectsWrapper.renderFinishedSemaphores[currentFrame],

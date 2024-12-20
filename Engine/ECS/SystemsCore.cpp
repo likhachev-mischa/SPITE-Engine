@@ -26,6 +26,7 @@ namespace spite
 	{
 		cameraMatrices.projection = glm::perspective(glm::radians(cameraData.fov), cameraData.aspectRatio,
 		                                             cameraData.nearPlane, cameraData.farPlane);
+		cameraMatrices.projection[1][1] *= -1;
 
 		cameraMatrices.view = glm::inverse(transformMatrices[cameraIdx].matrix);
 	}

@@ -28,7 +28,7 @@ namespace spite
 		}
 	};
 
-	struct CameraData : IComponent
+	struct CameraData //: IComponent
 	{
 		f32 fov;
 		f32 aspectRatio;

@@ -284,11 +284,12 @@ namespace spite
 
 	DescriptorSetLayoutWrapper::DescriptorSetLayoutWrapper(const DeviceWrapper& deviceWrapper,
 	                                                       const vk::DescriptorType& type,
+	                                                       const u32 bindingIndex,
 	                                                       const AllocationCallbacksWrapper&
 	                                                       allocationCallbacksWrapper): device(deviceWrapper.device),
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
-		descriptorSetLayout = createDescriptorSetLayout(device, type,
+		descriptorSetLayout = createDescriptorSetLayout(device, type, bindingIndex,
 		                                                allocationCallbacks);
 	}
 
@@ -317,7 +318,8 @@ namespace spite
 	                                             const DescriptorPoolWrapper& descriptorPoolWrapper,
 	                                             const spite::HeapAllocator& allocator,
 	                                             const AllocationCallbacksWrapper& allocationCallbacksWrapper,
-	                                             const u32 count, const BufferWrapper& bufferWrapper,
+	                                             const u32 count, const u32 bindingIndex,
+	                                             const BufferWrapper& bufferWrapper,
 	                                             const sizet bufferElementSize):
 		dynamicOffset(static_cast<u32>(bufferElementSize)),
 		descriptorPool(descriptorPoolWrapper.descriptorPool),
@@ -325,12 +327,13 @@ namespace spite
 		allocationCallbacks(&allocationCallbacksWrapper.allocationCallbacks)
 	{
 		descriptorSets = spite::createDescriptorSets(device, descriptorSetLayoutWrapper.descriptorSetLayout,
-		                                             descriptorPool, count, allocator,
-		                                             allocationCallbacks);
+		                                             descriptorPool, allocator,
+		                                             allocationCallbacks, count);
 		for (u32 i = 0; i < count; ++i)
 		{
 			spite::updateDescriptorSets(device, descriptorSets[i], bufferWrapper.buffer,
 			                            vk::DescriptorType::eUniformBufferDynamic,
+			                            bindingIndex,
 			                            bufferElementSize);
 		}
 	}
@@ -396,7 +399,9 @@ namespace spite
 	}
 
 	GraphicsPipelineWrapper::GraphicsPipelineWrapper(const DeviceWrapper& deviceWrapper,
-	                                                 const DescriptorSetLayoutWrapper& descriptorSetLayoutWrapper,
+	                                                 const eastl::vector<
+		                                                 DescriptorSetLayoutWrapper*, spite::HeapAllocator>&
+	                                                 descriptorSetLayouts,
 	                                                 const SwapchainDetailsWrapper& detailsWrapper,
 	                                                 const RenderPassWrapper& renderPassWrapper,
 	                                                 const spite::HeapAllocator& allocator,
@@ -406,7 +411,6 @@ namespace spite
 	                                                 const VertexInputDescriptionsWrapper& vertexInputDescription,
 	                                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper):
 		shaderStages(allocator),
-		descriptorSetLayout(descriptorSetLayoutWrapper.descriptorSetLayout),
 		vertexInputInfo(
 			{},
 			static_cast<u32>(vertexInputDescription.bindingDescriptions.size()),
@@ -428,12 +432,47 @@ namespace spite
 			shaderStages.push_back(createInfo);
 		}
 
-		pipelineLayout = createPipelineLayout(device, descriptorSetLayout, allocationCallbacks);
+		std::vector<vk::DescriptorSetLayout> layouts(descriptorSetLayouts.size());
+		for (sizet i = 0, size = layouts.size(); i < size; ++i)
+		{
+			layouts[i] = descriptorSetLayouts[i]->descriptorSetLayout;
+		}
+
+		pipelineLayout = createPipelineLayout(device, layouts, allocationCallbacks);
 
 		graphicsPipeline = createGraphicsPipeline(device, pipelineLayout,
 		                                          detailsWrapper.extent, renderPassWrapper.renderPass, shaderStages,
 		                                          vertexInputInfo,
 		                                          allocationCallbacks);
+	}
+
+	GraphicsPipelineWrapper::GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) noexcept:pipelineLayout(other.pipelineLayout),
+		graphicsPipeline(other.graphicsPipeline),
+		shaderStages(std::move(other.shaderStages)),
+		vertexInputInfo(other.vertexInputInfo),
+		device(other.device),
+		allocationCallbacks(other.allocationCallbacks)
+	{
+		other.device = nullptr;
+	}
+
+	GraphicsPipelineWrapper& GraphicsPipelineWrapper::operator=(GraphicsPipelineWrapper&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		pipelineLayout = other.pipelineLayout;
+		graphicsPipeline = other.graphicsPipeline;
+		shaderStages = std::move(other.shaderStages);
+		vertexInputInfo = other.vertexInputInfo;
+		device = other.device;
+		allocationCallbacks = other.allocationCallbacks;
+
+
+		other.device = nullptr;
+		return *this;
 	}
 
 	void GraphicsPipelineWrapper::recreate(const SwapchainDetailsWrapper& detailsWrapper,
@@ -449,6 +488,10 @@ namespace spite
 
 	GraphicsPipelineWrapper::~GraphicsPipelineWrapper()
 	{
+		if (!device)
+		{
+			return;
+		}
 		device.destroyPipeline(graphicsPipeline, allocationCallbacks);
 		device.destroyPipelineLayout(pipelineLayout, allocationCallbacks);
 	}
@@ -590,10 +633,37 @@ namespace spite
 		commandBuffers = createGraphicsCommandBuffers(device, commandPool, level, count);
 	}
 
+	CommandBuffersWrapper::CommandBuffersWrapper(CommandBuffersWrapper&& other) noexcept:
+		commandBuffers(std::move(other.commandBuffers)),
+		commandPool(other.commandPool),
+		device(other.device)
+	{
+		other.device = nullptr;
+		other.commandPool = nullptr;
+	}
+
+	CommandBuffersWrapper& CommandBuffersWrapper::operator=(CommandBuffersWrapper&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		commandBuffers = std::move(other.commandBuffers);
+		commandPool = other.commandPool;
+		device = other.device;
+
+		other.device = nullptr;
+		other.commandPool = nullptr;
+
+		return *this;
+	}
+
 	CommandBuffersWrapper::~CommandBuffersWrapper()
 	{
-		device.freeCommandBuffers(commandPool, static_cast<u32>(commandBuffers.size()),
-		                          commandBuffers.data());
+		if (device)
+			device.freeCommandBuffers(commandPool, static_cast<u32>(commandBuffers.size()),
+			                          commandBuffers.data());
 	}
 
 	SyncObjectsWrapper::SyncObjectsWrapper(const DeviceWrapper& deviceWrapper, const u32 count,

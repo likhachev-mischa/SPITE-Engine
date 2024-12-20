@@ -69,6 +69,7 @@ namespace spite
 	                                const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device, const vk::DescriptorType& type,
+	                                                  const u32 bindingIndex,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
@@ -80,7 +81,7 @@ namespace spite
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
-	                                        const vk::DescriptorSetLayout& descriptorSetLayout,
+	                                        const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::Pipeline createGraphicsPipeline(const vk::Device& device, const vk::PipelineLayout& pipelineLayout,
@@ -125,13 +126,13 @@ namespace spite
 
 	std::vector<vk::DescriptorSet> createDescriptorSets(const vk::Device& device,
 	                                                    const vk::DescriptorSetLayout& descriptorSetLayout,
-	                                                    const vk::DescriptorPool& descriptorPool, sizet,
+	                                                    const vk::DescriptorPool& descriptorPool, 
 	                                                    const spite::HeapAllocator& allocator,
 	                                                    const vk::AllocationCallbacks* pAllocationCallbacks,
 	                                                    const u32 count = MAX_FRAMES_IN_FLIGHT);
 
 	void updateDescriptorSets(const vk::Device& device, const vk::DescriptorSet& descriptorSet,
-	                          const vk::Buffer& buffer, const vk::DescriptorType& type, const sizet bufferElementSize);
+	                          const vk::Buffer& buffer, const vk::DescriptorType& type,const u32 bindingIndex, const sizet bufferElementSize);
 
 	std::vector<vk::CommandBuffer> createGraphicsCommandBuffers(const vk::Device& device,
 	                                                            const vk::CommandPool& graphicsCommandPool,

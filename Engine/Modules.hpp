@@ -111,6 +111,7 @@ namespace spite
 		DescriptorModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacksPtr,
 		                 std::shared_ptr<BaseModule> baseModulePtr,
 		                 const vk::DescriptorType& type, const u32 count,
+		                 const u32 bindingIndex,
 		                 const BufferWrapper& bufferWrapper,
 		                 const sizet bufferElementSize,
 		                 const spite::HeapAllocator& allocator);
@@ -220,10 +221,16 @@ namespace spite
 		const std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks;
 		std::shared_ptr<BaseModule> baseModule;
 		std::shared_ptr<SwapchainModule> swapchainModule;
-		std::shared_ptr<DescriptorModule> descriptorModule;
-		std::shared_ptr<GraphicsCommandModule> commandBuffersModule;
 
-		eastl::vector<std::shared_ptr<ModelDataModule>,spite::HeapAllocator> models;
+		eastl::vector<std::shared_ptr<DescriptorModule>, spite::HeapAllocator> descriptorModules;
+
+		std::shared_ptr<GraphicsCommandModule> graphicsCommandBuffersModule;
+
+		//prerecorded secondary command buffers
+		eastl::vector<std::shared_ptr<CommandBuffersWrapper>, spite::HeapAllocator> extraCommandBuffers;
+
+
+		eastl::vector<std::shared_ptr<ModelDataModule>, spite::HeapAllocator> models;
 
 		GraphicsPipelineWrapper graphicsPipelineWrapper;
 		const SyncObjectsWrapper syncObjectsWrapper;
@@ -233,15 +240,16 @@ namespace spite
 
 		RenderModule(std::shared_ptr<AllocationCallbacksWrapper> allocationCallbacks,
 		             std::shared_ptr<BaseModule> baseModulePtr, std::shared_ptr<SwapchainModule> swapchainModulePtr,
-		             std::shared_ptr<DescriptorModule> descriptorModulePtr,
+		             eastl::vector<std::shared_ptr<DescriptorModule>, spite::HeapAllocator> descriptorModulesVec,
 		             std::shared_ptr<GraphicsCommandModule> commandBuffersModulePtr,
-		             eastl::vector<std::shared_ptr<ModelDataModule>,spite::HeapAllocator> models,
+		             eastl::vector<std::shared_ptr<ModelDataModule>, spite::HeapAllocator> models,
 		             const spite::HeapAllocator& allocator,
 		             const eastl::vector<eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 		             shaderModules,
 		             const VertexInputDescriptionsWrapper& vertexInputDescriptions,
 		             std::shared_ptr<spite::WindowManager> windowManagerPtr,
-		             const u32 framesInFlight);
+		             const u32 framesInFlight,
+		             eastl::vector<std::shared_ptr<CommandBuffersWrapper>, spite::HeapAllocator> extraCommandBuffers);
 
 		void waitForFrame();
 

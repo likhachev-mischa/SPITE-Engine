@@ -11,7 +11,7 @@ namespace spite
 	class InputManager
 	{
 	public:
-		constexpr static sizet MAPPED_KEYS_COUNT = 4;
+		constexpr static sizet MAPPED_KEYS_COUNT = 11;
 
 		InputManager();
 		//return NONE if key is unmapped//invalid

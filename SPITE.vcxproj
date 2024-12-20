@@ -161,6 +161,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="Shaders\lightFrag.frag" />
     <None Include="Shaders\shader.frag" />
     <None Include="Shaders\shader.vert" />
     <None Include="vcpkg.json" />
@@ -190,7 +191,6 @@
     <ClInclude Include="Engine\VulkanAllocator.hpp" />
     <ClInclude Include="External\StackWalker.h" />
     <ClInclude Include="External\tlsf.h" />
-    <ClInclude Include="Model2D.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application\EventManager.cpp" />

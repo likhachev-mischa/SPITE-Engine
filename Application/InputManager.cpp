@@ -9,7 +9,15 @@ namespace spite
 		m_keymap.insert(eastl::make_pair(SDLK_R, spite::Events::ROTATION_BUTTON_PRESS));
 		m_keymap.insert(eastl::make_pair(SDLK_Q, spite::Events::NEXT_FIGURE_BUTTON_PRESS));
 		m_keymap.insert(eastl::make_pair(SDLK_T, spite::Events::TRANSLATION_BUTTON_PRESS));
-		m_keymap.insert(eastl::make_pair(SDLK_S, spite::Events::SCALING_BUTTON_PRESS));
+		//m_keymap.insert(eastl::make_pair(SDLK_S, spite::Events::SCALING_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_W, spite::Events::FWD_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_A, spite::Events::LFT_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_S, spite::Events::BCKWD_BUTTON_RESS));
+		m_keymap.insert(eastl::make_pair(SDLK_D, spite::Events::RGHT_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_UP, spite::Events::LOOKUP_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_LEFT, spite::Events::LOOKLFT_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_RIGHT, spite::Events::LOOKRGHT_BUTTON_PRESS));
+		m_keymap.insert(eastl::make_pair(SDLK_DOWN, spite::Events::LOOKDWN_BUTTON_PRESS));
 	}
 
 	Events InputManager::tryGetEvent(const u16 key)

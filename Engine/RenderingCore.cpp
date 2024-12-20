@@ -21,9 +21,11 @@ namespace spite
 	}
 
 	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Pipeline& graphicsPipeline,
-	                                  const vk::PipelineLayout& pipelineLayout, const vk::DescriptorSet& descriptorSet,
+	                                  const vk::PipelineLayout& pipelineLayout,
+	                                  const std::vector<vk::DescriptorSet>& descriptorSets,
 	                                  const vk::Extent2D& swapchainExtent,
-	                                  const vk::Buffer& buffer,const u32 dynamicOffset, const vk::DeviceSize& indicesOffset,
+	                                  const vk::Buffer& buffer, const u32* dynamicOffsets,
+	                                  const vk::DeviceSize& indicesOffset,
 	                                  const u32 indicesCount)
 
 	{
@@ -35,10 +37,10 @@ namespace spite
 		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 		                                 pipelineLayout,
 		                                 0,
-		                                 1,
-		                                 &descriptorSet,
-		                                 1,
-		                                 &dynamicOffset);
+		                                 descriptorSets.size(),
+		                                 descriptorSets.data(),
+		                                 descriptorSets.size(),
+		                                 dynamicOffsets);
 
 
 		vk::Rect2D renderArea({}, swapchainExtent);
@@ -64,7 +66,7 @@ namespace spite
 
 	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
 	                                const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                                const vk::CommandBuffer& secondaryCommandBuffer)
+	                                const std::vector<vk::CommandBuffer>& secondaryCommandBuffer)
 	{
 		vk::Result result = commandBuffer.reset();
 		SASSERT_VULKAN(result)
@@ -74,14 +76,14 @@ namespace spite
 		SASSERT_VULKAN(result)
 
 		vk::Rect2D renderArea({}, swapchainExtent);
-		vk::ClearValue clearColor({0.0f, 0.0f, 0.0f, 1.0f});
+		vk::ClearValue clearColor({0.2f, 0.2f, 0.2f, 1.0f});
 		vk::RenderPassBeginInfo renderPassInfo(renderPass,
 		                                       framebuffer,
 		                                       renderArea,
 		                                       1,
 		                                       &clearColor);
 
-		commandBuffer.beginRenderPass(renderPassInfo,vk::SubpassContents::eSecondaryCommandBuffers);
+		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
 
 		commandBuffer.executeCommands(secondaryCommandBuffer);
 
