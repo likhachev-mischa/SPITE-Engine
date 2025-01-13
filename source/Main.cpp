@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 		eastl::vector<spite::Vertex, spite::HeapAllocator> vertices(graphicsAllocator);
 		eastl::vector<u32, spite::HeapAllocator> indices(graphicsAllocator);
 
-		spite::readModelInfoFile("cube.txt", vertices, indices, graphicsAllocator);
+		spite::readModelInfoFile("models/cube.txt", vertices, indices, graphicsAllocator);
 		auto model2 = std::make_shared<spite::ModelDataModule>(allocationCallbacks, base, vertices, indices);
 		eastl::vector<std::shared_ptr<spite::ModelDataModule>, spite::HeapAllocator> models(graphicsAllocator);
 		models.push_back(model2);

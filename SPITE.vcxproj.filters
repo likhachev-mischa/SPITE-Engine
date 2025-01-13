@@ -34,146 +34,141 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="vcpkg.json" />
-    <None Include="Shaders\shader.frag">
+    <None Include="shaders\lightFrag.frag">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Shaders\shader.vert">
+    <None Include="shaders\shader.frag">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Shaders\lightFrag.frag">
+    <None Include="shaders\shader.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\AppConifg.hpp">
+    <ClInclude Include="source\application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Application\EventManager.hpp">
+    <ClInclude Include="source\application\EventManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Application\WindowManager.hpp">
+    <ClInclude Include="source\application\Events.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Base\Memory.hpp">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Base\Logging.hpp">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Base\Platform.hpp">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Base\Assert.hpp">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="External\StackWalker.h">
-      <Filter>External</Filter>
-    </ClInclude>
-    <ClInclude Include="External\tlsf.h">
-      <Filter>External</Filter>
-    </ClInclude>
-    <ClInclude Include="Base\Service.hpp">
-      <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\InputManager.hpp">
+    <ClInclude Include="source\application\InputManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Application\Events.hpp">
+    <ClInclude Include="source\application\WindowManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\VulkanAllocator.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\ResourcesCore.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Resources.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Debug.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Common.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Modules.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\RenderingCore.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Base\File.hpp">
+    <ClInclude Include="source\base\Assert.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Base\VmaUsage.hpp">
+    <ClInclude Include="source\base\Common.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Base\VulkanUsage.hpp">
+    <ClInclude Include="source\base\File.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\ECS\ComponentsCore.hpp">
+    <ClInclude Include="source\base\Logging.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Memory.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Platform.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Service.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\VmaUsage.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\VulkanUsage.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\Common.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\Debug.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\Modules.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\RenderingCore.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\Resources.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\ResourcesCore.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\VulkanAllocator.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\ecs\ComponentsCore.hpp">
       <Filter>ECS</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\ECS\SystemsCore.hpp">
+    <ClInclude Include="source\engine\ecs\SystemsCore.hpp">
       <Filter>ECS</Filter>
     </ClInclude>
-    <ClInclude Include="Base\Common.hpp">
-      <Filter>Base</Filter>
+    <ClInclude Include="source\external\StackWalker.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="source\external\tlsf.h">
+      <Filter>External</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="source\application\EventManager.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="source\application\InputManager.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="source\application\WindowManager.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\File.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\Logging.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\Memory.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\VmaUsage.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\Debug.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\Modules.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\RenderingCore.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\Resources.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\ResourcesCore.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\VulkanAllocator.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\ecs\SystemsCore.cpp">
+      <Filter>ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="source\external\tlsf.c">
+      <Filter>External</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Base\VmaUsage.cpp">
-      <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\EventManager.cpp">
-      <Filter>Application</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\WindowManager.cpp">
-      <Filter>Application</Filter>
-    </ClCompile>
-    <ClCompile Include="Base\Memory.cpp">
-      <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="External\tlsf.c">
-      <Filter>External</Filter>
-    </ClCompile>
-    <ClCompile Include="Base\Logging.cpp">
-      <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\InputManager.cpp">
-      <Filter>Application</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\ResourcesCore.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\VulkanAllocator.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Debug.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Resources.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\RenderingCore.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Modules.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Base\File.cpp">
-      <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\ECS\SystemsCore.cpp">
-      <Filter>ECS</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="test.txt" />
-    <Text Include="test2.txt" />
-    <Text Include="test3.txt" />
   </ItemGroup>
 </Project>

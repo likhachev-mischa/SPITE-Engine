@@ -128,7 +128,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./source/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -161,60 +161,55 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="Shaders\lightFrag.frag" />
-    <None Include="Shaders\shader.frag" />
-    <None Include="Shaders\shader.vert" />
+    <None Include="shaders\lightFrag.frag" />
+    <None Include="shaders\shader.frag" />
+    <None Include="shaders\shader.vert" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\AppConifg.hpp" />
-    <ClInclude Include="Application\EventManager.hpp" />
-    <ClInclude Include="Application\Events.hpp" />
-    <ClInclude Include="Application\InputManager.hpp" />
-    <ClInclude Include="Application\WindowManager.hpp" />
-    <ClInclude Include="Base\Assert.hpp" />
-    <ClInclude Include="Base\Common.hpp" />
-    <ClInclude Include="Base\File.hpp" />
-    <ClInclude Include="Base\Logging.hpp" />
-    <ClInclude Include="Base\Memory.hpp" />
-    <ClInclude Include="Base\Platform.hpp" />
-    <ClInclude Include="Base\Service.hpp" />
-    <ClInclude Include="Base\VmaUsage.hpp" />
-    <ClInclude Include="Base\VulkanUsage.hpp" />
-    <ClInclude Include="Engine\Common.hpp" />
-    <ClInclude Include="Engine\ECS\ComponentsCore.hpp" />
-    <ClInclude Include="Engine\ECS\SystemsCore.hpp" />
-    <ClInclude Include="Engine\RenderingCore.hpp" />
-    <ClInclude Include="Engine\ResourcesCore.hpp" />
-    <ClInclude Include="Engine\Debug.hpp" />
-    <ClInclude Include="Engine\Modules.hpp" />
-    <ClInclude Include="Engine\Resources.hpp" />
-    <ClInclude Include="Engine\VulkanAllocator.hpp" />
-    <ClInclude Include="External\StackWalker.h" />
-    <ClInclude Include="External\tlsf.h" />
+    <ClInclude Include="source\application\AppConifg.hpp" />
+    <ClInclude Include="source\application\EventManager.hpp" />
+    <ClInclude Include="source\application\Events.hpp" />
+    <ClInclude Include="source\application\InputManager.hpp" />
+    <ClInclude Include="source\application\WindowManager.hpp" />
+    <ClInclude Include="source\base\Assert.hpp" />
+    <ClInclude Include="source\base\Common.hpp" />
+    <ClInclude Include="source\base\File.hpp" />
+    <ClInclude Include="source\base\Logging.hpp" />
+    <ClInclude Include="source\base\Memory.hpp" />
+    <ClInclude Include="source\base\Platform.hpp" />
+    <ClInclude Include="source\base\Service.hpp" />
+    <ClInclude Include="source\base\VmaUsage.hpp" />
+    <ClInclude Include="source\base\VulkanUsage.hpp" />
+    <ClInclude Include="source\engine\Common.hpp" />
+    <ClInclude Include="source\engine\Debug.hpp" />
+    <ClInclude Include="source\engine\ecs\ComponentsCore.hpp" />
+    <ClInclude Include="source\engine\ecs\SystemsCore.hpp" />
+    <ClInclude Include="source\engine\Modules.hpp" />
+    <ClInclude Include="source\engine\RenderingCore.hpp" />
+    <ClInclude Include="source\engine\Resources.hpp" />
+    <ClInclude Include="source\engine\ResourcesCore.hpp" />
+    <ClInclude Include="source\engine\VulkanAllocator.hpp" />
+    <ClInclude Include="source\external\StackWalker.h" />
+    <ClInclude Include="source\external\tlsf.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Application\EventManager.cpp" />
-    <ClCompile Include="Application\InputManager.cpp" />
-    <ClCompile Include="Application\WindowManager.cpp" />
-    <ClCompile Include="Base\File.cpp" />
-    <ClCompile Include="Base\Logging.cpp" />
-    <ClCompile Include="Base\Memory.cpp" />
-    <ClCompile Include="Base\VmaUsage.cpp" />
-    <ClCompile Include="Engine\ECS\SystemsCore.cpp" />
-    <ClCompile Include="Engine\Modules.cpp" />
-    <ClCompile Include="Engine\RenderingCore.cpp" />
-    <ClCompile Include="Engine\ResourcesCore.cpp" />
-    <ClCompile Include="Engine\Debug.cpp" />
-    <ClCompile Include="Engine\Resources.cpp" />
-    <ClCompile Include="Engine\VulkanAllocator.cpp" />
-    <ClCompile Include="External\tlsf.c" />
-    <ClCompile Include="Main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="test.txt" />
-    <Text Include="test2.txt" />
-    <Text Include="test3.txt" />
+    <ClCompile Include="source\application\EventManager.cpp" />
+    <ClCompile Include="source\application\InputManager.cpp" />
+    <ClCompile Include="source\application\WindowManager.cpp" />
+    <ClCompile Include="source\base\File.cpp" />
+    <ClCompile Include="source\base\Logging.cpp" />
+    <ClCompile Include="source\base\Memory.cpp" />
+    <ClCompile Include="source\base\VmaUsage.cpp" />
+    <ClCompile Include="source\engine\Debug.cpp" />
+    <ClCompile Include="source\engine\ecs\SystemsCore.cpp" />
+    <ClCompile Include="source\engine\Modules.cpp" />
+    <ClCompile Include="source\engine\RenderingCore.cpp" />
+    <ClCompile Include="source\engine\Resources.cpp" />
+    <ClCompile Include="source\engine\ResourcesCore.cpp" />
+    <ClCompile Include="source\engine\VulkanAllocator.cpp" />
+    <ClCompile Include="source\external\tlsf.c" />
+    <ClCompile Include="source\Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
