@@ -28,7 +28,7 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{83c832cd-9b63-4419-80eb-a2b4b12c4fcc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ECS">
+    <Filter Include="ecs">
       <UniqueIdentifier>{07865768-50a3-42b0-86d3-a3606107dec3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -108,17 +108,26 @@
     <ClInclude Include="source\engine\VulkanAllocator.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\ecs\ComponentsCore.hpp">
-      <Filter>ECS</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\ecs\SystemsCore.hpp">
-      <Filter>ECS</Filter>
-    </ClInclude>
     <ClInclude Include="source\external\StackWalker.h">
       <Filter>External</Filter>
     </ClInclude>
     <ClInclude Include="source\external\tlsf.h">
       <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\ComponentsCore.hpp">
+      <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\SystemsCore.hpp">
+      <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\EntityManager.hpp">
+      <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Event.hpp">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\EntityObserver.hpp">
+      <Filter>ecs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -161,14 +170,14 @@
     <ClCompile Include="source\engine\VulkanAllocator.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\ecs\SystemsCore.cpp">
-      <Filter>ECS</Filter>
-    </ClCompile>
     <ClCompile Include="source\external\tlsf.c">
       <Filter>External</Filter>
     </ClCompile>
     <ClCompile Include="source\Main.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\SystemsCore.cpp">
+      <Filter>ecs</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

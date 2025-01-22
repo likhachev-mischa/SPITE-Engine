@@ -7,11 +7,7 @@
 
 namespace spite
 {
-	struct IComponent
-	{
-	};
-
-	struct Transform : IComponent
+	struct Transform 
 	{
 		glm::vec3 position{};
 		glm::vec3 scale{1.0f, 1.0f, 1.0f};
@@ -19,7 +15,7 @@ namespace spite
 		glm::quat rotation{1.0f,0.0f,0.0f,0.0f};
 	};
 
-	struct TransformMatrix : IComponent
+	struct TransformMatrix 
 	{
 		glm::mat4 matrix;
 
@@ -36,7 +32,7 @@ namespace spite
 		f32 farPlane;
 	};
 
-	struct CameraMatrices : IComponent
+	struct CameraMatrices 
 	{
 		glm::mat4 view;
 		glm::mat4 projection;

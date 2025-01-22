@@ -3,7 +3,7 @@
 
 #include "Base/Platform.hpp"
 
-#include "Engine/ECS/ComponentsCore.hpp"
+#include "ecs/ComponentsCore.hpp"
 
 
 namespace spite

@@ -19,9 +19,24 @@
 #include "Base/Memory.hpp"
 
 #include "Engine/Modules.hpp"
-#include "Engine/ECS/ComponentsCore.hpp"
-#include "Engine/ECS/SystemsCore.hpp"
+#include "ECS/ComponentsCore.hpp"
+#include "ECS/SystemsCore.hpp"
 
+#include "ecs/EntityManager.hpp"
+#include "ecs/EntityObserver.hpp"
+
+
+namespace spite
+{
+	struct TestComponent : IComponent
+	{
+		int value = 0;
+
+		TestComponent() : IComponent()
+		{
+		}
+	};
+}
 
 //struct EventContext
 //{
@@ -336,48 +351,47 @@ int main(int argc, char* argv[])
 		transforms[2].position = {1.f, 1.f, 1.f};
 
 
-
 		f32 aspectRatio = static_cast<float>(spite::WIDTH) / static_cast<float>(spite::HEIGHT);
 		spite::CameraData cameraData{45.0f, aspectRatio, 0.1f, 100.0f};
 		spite::CameraMatrices cameraMatrices{};
 
 		u32 selectedModelIdx = 3;
 		transforms[selectedModelIdx].position = {0.0f, 0.0f, 0.0f};
-		eventManager->subscribeToEvent(spite::Events::BCKWD_BUTTON_RESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::BCKWD_BUTTON_RESS, [&transforms, &selectedModelIdx]()
 		{
 			glm::vec3 fwd = transforms[selectedModelIdx].rotation * glm::vec3(0.0f, 0.0f, 1.0f);
 			transforms[selectedModelIdx].position += fwd * 0.1f;
 		});
-		eventManager->subscribeToEvent(spite::Events::FWD_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::FWD_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			glm::vec3 fwd = transforms[selectedModelIdx].rotation * glm::vec3(0.0f, 0.0f, 1.0f);
 			transforms[selectedModelIdx].position -= fwd * 0.1f;
 		});
-		eventManager->subscribeToEvent(spite::Events::RGHT_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::RGHT_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			glm::vec3 fwd = transforms[selectedModelIdx].rotation * glm::vec3(1.0f, 0.0f, 0.0f);
 			transforms[selectedModelIdx].position += fwd * 0.1f;
 		});
-		eventManager->subscribeToEvent(spite::Events::LFT_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::LFT_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			glm::vec3 fwd = transforms[selectedModelIdx].rotation * glm::vec3(1.0f, 0.0f, 0.0f);
 			transforms[selectedModelIdx].position -= fwd * 0.1f;
 		});
 
-		eventManager->subscribeToEvent(spite::Events::LOOKLFT_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::LOOKLFT_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			transforms[selectedModelIdx].rotation *= glm::angleAxis(glm::radians(5.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		});
-		eventManager->subscribeToEvent(spite::Events::LOOKRGHT_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::LOOKRGHT_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			transforms[selectedModelIdx].rotation *= glm::angleAxis(glm::radians(-5.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		});
 
-		eventManager->subscribeToEvent(spite::Events::LOOKUP_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::LOOKUP_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			transforms[selectedModelIdx].rotation *= glm::angleAxis(glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		});
-		eventManager->subscribeToEvent(spite::Events::LOOKDWN_BUTTON_PRESS, [&transforms,&selectedModelIdx]()
+		eventManager->subscribeToEvent(spite::Events::LOOKDWN_BUTTON_PRESS, [&transforms, &selectedModelIdx]()
 		{
 			transforms[selectedModelIdx].rotation *= glm::angleAxis(glm::radians(-5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		});
@@ -404,44 +418,99 @@ int main(int argc, char* argv[])
 		models.push_back(lightSourceModel);
 
 		auto lightRenderModule = std::make_shared<spite::RenderModule>(allocationCallbacks, base, swapchainModule,
-		                                                               descriptorModules, lightCommandBuffersModule,
-		                                                               lightModels,
-		                                                               graphicsAllocator, lightShaderModules,
-		                                                               vertexInputDescriptions, windowManager,
-		                                                               spite::MAX_FRAMES_IN_FLIGHT,
-		                                                               extraCommandBuffers);
+																	   descriptorModules, lightCommandBuffersModule,
+																	   lightModels,
+																	   graphicsAllocator, lightShaderModules,
+																	   vertexInputDescriptions, windowManager,
+																	   spite::MAX_FRAMES_IN_FLIGHT,
+																	   extraCommandBuffers);
 
 		transformMatrices.push_back();
 		transforms.push_back();
 		*/
 
-		fragmentData[1] = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) };
-		fragmentData[2] = { glm::vec4(0.0f,0.0f,1.0f,1.0f) };
+		fragmentData[1] = {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)};
+		fragmentData[2] = {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)};
 		u32 cameraIdx = 3;
+
+		auto entityManager = std::make_shared<spite::EntityManager>();
+		auto componentStorage = std::make_shared<spite::ComponentStorage>(graphicsAllocator);
+		auto componentLookup = std::make_shared<spite::ComponentLookup>(graphicsAllocator);
+		spite::EntityObserver entityObserver(entityManager.get(), componentStorage.get(), componentLookup.get());
+		auto componentManager = std::make_shared<spite::ComponentManager>(componentStorage, componentLookup);
+
+
+		using namespace spite;
+		auto queryBuilder = std::make_shared<QueryBuilder>(componentLookup, componentStorage);
+		Entity entity = entityManager->createEntity();
+		SDEBUG_LOG("entity %llu created\n", entity.getId());
+		Entity entity2 = entityManager->createEntity();
+		SDEBUG_LOG("entity %llu created\n", entity2.getId());
+
+		/*	componentManager->addComponent<TestComponent>(entity);
+			componentManager->addComponent<TestComponent>(entity2);
+			auto componentQuery = queryBuilder->getRawQuery<TestComponent>();
+	
+			for (auto& component : componentQuery)
+			{
+				SDEBUG_LOG("Component val: %i owner: %llu\n", component.value, component.owner);
+				component.value = 1488;
+			}
+	
+			auto& comp = componentLookup->getComponentRef<TestComponent>(entity);
+			SDEBUG_LOG("test Component val: %i\n", comp.value);
+			auto& comp2 = componentLookup->getComponentRef<TestComponent>(entity2);
+			comp2.value= 322;
+			auto& components2 = componentStorage->getComponentsAsserted<TestComponent>();
+			for (const auto& component : components2)
+			{
+				SDEBUG_LOG("SECOND TIME	Component val: %i\n", component.value);
+			}*/
+
+		eastl::vector<int, HeapAllocator> vec1;
+		vec1.reserve(10);
+		SDEBUG_LOG("vec1 size %llu\n", vec1.size());
+
+		eastl::vector<int, HeapAllocator> vec2;
+		vec2.reserve(10);
+		for (int i = 0; i < 10; ++i)
+		{
+			vec2.push_back(i);
+		}
+		SDEBUG_LOG("vec2 size %llu\n", vec2.size());
+
+		vec1.insert(vec1.cbegin(), vec2.begin(), vec2.end());
+		SDEBUG_LOG("vec1 size %llu\n", vec1.size());
+		SDEBUG_LOG("vec1 elems:\n");
+		for (int i = 0; i < 10; ++i)
+		{
+			SDEBUG_LOG("%i, ", vec1[i]);
+		}
+
 		while (!windowManager->shouldTerminate())
 		{
-			renderModule->waitForFrame();
-			//lightRenderModule->waitForFrame();
-			windowManager->pollEvents();
-			eventManager->processEvents();
-			eventManager->discardPollEvents();
+			//renderModule->waitForFrame();
+			////lightRenderModule->waitForFrame();
+			//windowManager->pollEvents();
+			//eventManager->processEvents();
+			//eventManager->discardPollEvents();
 
-			transforms[0].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//transforms[0].rotation *= glm::angleAxis(glm::radians(0.01f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-			transforms[2].scale -= 0.00001f;
-			spite::updateTransformMatricesSystem(transforms, transformMatrices);
-			//transformMatrices[2].matrix = glm::inverse(glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-			//                                                       glm::vec3(0.0f, 0.0f, 0.0f),
-			//                                                       glm::vec3(0.0f, 0.0f, 1.0f)));
-			spite::updateTransformUboSystem(transformUniformBuffer->memory, transformUniformBuffer->elementAlignment,
-			                                transformMatrices);
+			//transforms[2].scale -= 0.00001f;
+			//spite::updateTransformMatricesSystem(transforms, transformMatrices);
+			////transformMatrices[2].matrix = glm::inverse(glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+			////                                                       glm::vec3(0.0f, 0.0f, 0.0f),
+			////                                                       glm::vec3(0.0f, 0.0f, 1.0f)));
+			//spite::updateTransformUboSystem(transformUniformBuffer->memory, transformUniformBuffer->elementAlignment,
+			//                                transformMatrices);
 
-			spite::updateCameraSystem(cameraData, transformMatrices, cameraIdx, cameraMatrices);
-			spite::updateCameraUboSystem(cameraUniformBuffer->memory, cameraMatrices);
+			//spite::updateCameraSystem(cameraData, transformMatrices, cameraIdx, cameraMatrices);
+			//spite::updateCameraUboSystem(cameraUniformBuffer->memory, cameraMatrices);
 
-			spite::updateFragUboSystem(fragUbo->memory, fragUbo->elementAlignment, fragmentData);
+			//spite::updateFragUboSystem(fragUbo->memory, fragUbo->elementAlignment, fragmentData);
 
-			renderModule->drawFrame();
+			//renderModule->drawFrame();
 			//	lightRenderModule->drawFrame();
 		}
 	}
