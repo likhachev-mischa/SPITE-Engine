@@ -20,22 +20,24 @@
 
 #include "Engine/Modules.hpp"
 #include "ECS/ComponentsCore.hpp"
-#include "ECS/SystemsCore.hpp"
+#include "ecs/Core.hpp"
+#include "ecs/World.hpp"
+#include "ecs/Systems.hpp"
 
-#include "ecs/EntityManager.hpp"
-#include "ecs/EntityObserver.hpp"
+//#include "ecs/EntityManager.hpp"
+//#include "ecs/EntityObserver.hpp"
 
 
 namespace spite
 {
-	struct TestComponent : IComponent
-	{
-		int value = 0;
+	//struct TestComponent : IComponent
+	//{
+	//	int value = 0;
 
-		TestComponent() : IComponent()
-		{
-		}
-	};
+	//	TestComponent() : IComponent()
+	//	{
+	//	}
+	//};
 }
 
 //struct EventContext
@@ -155,6 +157,204 @@ void updateColor(EventContext& context)
 //	engine->setUbo({glm::mat4(1.f), {1.0f, 0.0f, 0.0f, 1.0f}});
 //}
 
+using namespace spite;
+
+struct Component : IComponent
+{
+	sizet data;
+
+	Component() : IComponent() { data = 0; }
+
+	Component(const Component& other)
+		: IComponent(other),
+		data(other.data)
+	{
+	}
+
+	Component(Component&& other) noexcept
+		: IComponent(std::move(other)),
+		data(other.data)
+	{
+	}
+
+	Component& operator=(const Component& other)
+	{
+		if (this == &other)
+			return *this;
+		IComponent::operator =(other);
+		data = other.data;
+		return *this;
+	}
+
+	Component& operator=(Component&& other) noexcept
+	{
+		if (this == &other)
+			return *this;
+
+		data = other.data;
+		IComponent::operator =(std::move(other));
+		return *this;
+	}
+
+	~Component() override = default;
+};
+
+struct UpdateCountComponent : IComponent
+{
+	sizet count;
+
+	UpdateCountComponent() : count(0)
+	{
+	}
+
+	UpdateCountComponent(const UpdateCountComponent& other)
+		: IComponent(other),
+		count(other.count)
+	{
+	}
+
+	UpdateCountComponent(UpdateCountComponent&& other) noexcept
+		: IComponent(std::move(other)),
+		count(other.count)
+	{
+	}
+
+	UpdateCountComponent& operator=(const UpdateCountComponent& other)
+	{
+		if (this == &other)
+			return *this;
+		IComponent::operator =(other);
+		count = other.count;
+		return *this;
+	}
+
+	UpdateCountComponent& operator=(UpdateCountComponent&& other) noexcept
+	{
+		if (this == &other)
+			return *this;
+
+		count = other.count;
+		IComponent::operator =(std::move(other));
+		return *this;
+	}
+
+	~UpdateCountComponent() override = default;
+};
+
+class CreateComponentSystem : public SystemBase
+{
+	Query1<UpdateCountComponent>* m_query{};
+
+public:
+	void onInitialize() override
+	{
+		Entity entity = m_entityService->entityManager()->createEntity();
+		m_entityService->componentManager()->addComponent<UpdateCountComponent>(entity);
+
+		auto queryBuilder = m_entityService->queryBuilder();
+
+		auto buildInfo = queryBuilder->getQueryBuildInfo();
+		m_query = queryBuilder->buildQuery<UpdateCountComponent>(buildInfo);
+	}
+
+	void onUpdate(float deltaTime) override
+	{
+		Entity entity = m_entityService->entityManager()->createEntity();
+		m_entityService->componentManager()->addComponent<Component>(entity);
+
+		auto& query = *m_query;
+		for (auto& updateCountComponent : query)
+		{
+			++updateCountComponent.count;
+		}
+	}
+};
+
+class WriteComponentSystem : public SystemBase
+{
+private:
+	Query1<Component>* m_query{};
+	std::type_index m_type = std::type_index(typeid(Component));
+
+	Query1<UpdateCountComponent>* m_updateQuery{};
+
+public:
+	void onInitialize() override
+	{
+		auto queryBuilder = m_entityService->queryBuilder();
+
+		auto buildInfo = queryBuilder->getQueryBuildInfo();
+		m_query = queryBuilder->buildQuery<Component>(buildInfo);
+
+		buildInfo = queryBuilder->getQueryBuildInfo();
+		m_updateQuery = queryBuilder->buildQuery<UpdateCountComponent>(buildInfo);
+	}
+
+	void onUpdate(float deltaTime) override
+	{
+		sizet querySize = m_query->getSize();
+
+
+		auto& updateQuery = *m_updateQuery;
+		sizet updateIteration = 0;
+
+		for (const auto& updateCountComponent : updateQuery)
+		{
+			updateIteration = updateCountComponent.count;
+		}
+
+		//new entity with component is added in prev system so the size must grow
+		SASSERT(querySize==updateIteration);
+
+		auto& query = *m_query;
+		for (auto& componentA : query)
+		{
+			componentA.data = updateIteration;
+		}
+	}
+};
+
+class ReadComponentSystem : public SystemBase
+{
+private:
+	Query1<Component>* m_query{};
+	std::type_index m_type = std::type_index(typeid(Component));
+
+
+	Query1<UpdateCountComponent>* m_updateQuery{};
+
+public:
+	void onInitialize() override
+	{
+		auto queryBuilder = m_entityService->queryBuilder();
+
+		auto buildInfo = queryBuilder->getQueryBuildInfo();
+		m_query = queryBuilder->buildQuery<Component>(buildInfo);
+
+		buildInfo = queryBuilder->getQueryBuildInfo();
+		m_updateQuery = queryBuilder->buildQuery<UpdateCountComponent>(buildInfo);
+	}
+
+	void onUpdate(float deltaTime) override
+	{
+		auto& updateQuery = *m_updateQuery;
+		sizet updateIteration = 0;
+
+		for (const auto& updateCountComponent : updateQuery)
+		{
+			updateIteration = updateCountComponent.count;
+		}
+
+		auto& query = *m_query;
+		for (auto& componentA : query)
+		{
+			SASSERT(componentA.data==updateIteration);
+		}
+
+		++updateIteration;
+	}
+};
+
 int main(int argc, char* argv[])
 {
 	/*
@@ -206,11 +406,36 @@ int main(int argc, char* argv[])
 		updateColor(context);
 		engine.drawFrame();
 	}
-*/
+*/	spite::HeapAllocator m_allocator("ECS TEST ALLOCATOR");
 
+	spite::EntityWorld* m_world;
+	m_world = new spite::EntityWorld(m_allocator, m_allocator);
+	spite::SystemBase* sys1 = new CreateComponentSystem;
+	spite::SystemBase* sys2 = new WriteComponentSystem;
+	spite::SystemBase* sys3 = new ReadComponentSystem;
+
+	m_world->addSystem(sys1);
+	m_world->addSystem(sys2);
+	m_world->addSystem(sys3);
+
+	m_world->start();
+	m_world->enable();
+
+	sizet iterationsCount = 40;
+	for (sizet i = 0; i < iterationsCount; ++i)
+	{
+		m_world->update(0.01f);
+		m_world->commitSystemsStructuralChange();
+	}
+
+	sizet structrualChangesCount = spite::getTestLogCount(
+		TESTLOG_ECS_STRUCTURAL_CHANGE_HAPPENED(typeid(Component).name()));
+
+	SASSERT(structrualChangesCount== iterationsCount);
 
 	spite::HeapAllocator graphicsAllocator("Graphics allocator");
 	{
+		//spite::EntityWorld world(graphicsAllocator, graphicsAllocator);
 		auto inputManager = std::make_shared<spite::InputManager>();
 		auto eventManager = std::make_shared<spite::EventManager>();
 
@@ -433,19 +658,19 @@ int main(int argc, char* argv[])
 		fragmentData[2] = {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)};
 		u32 cameraIdx = 3;
 
-		auto entityManager = std::make_shared<spite::EntityManager>();
-		auto componentStorage = std::make_shared<spite::ComponentStorage>(graphicsAllocator);
-		auto componentLookup = std::make_shared<spite::ComponentLookup>(graphicsAllocator);
-		spite::EntityObserver entityObserver(entityManager.get(), componentStorage.get(), componentLookup.get());
-		auto componentManager = std::make_shared<spite::ComponentManager>(componentStorage, componentLookup);
-
-
-		using namespace spite;
-		auto queryBuilder = std::make_shared<QueryBuilder>(componentLookup, componentStorage);
-		Entity entity = entityManager->createEntity();
-		SDEBUG_LOG("entity %llu created\n", entity.getId());
-		Entity entity2 = entityManager->createEntity();
-		SDEBUG_LOG("entity %llu created\n", entity2.getId());
+		/*	auto entityManager = std::make_shared<spite::EntityManager>();
+			auto componentStorage = std::make_shared<spite::ComponentStorage>(graphicsAllocator);
+			auto componentLookup = std::make_shared<spite::ComponentLookup>(graphicsAllocator);
+			spite::EntityObserver entityObserver(entityManager.get(), componentStorage.get(), componentLookup.get());
+			auto componentManager = std::make_shared<spite::ComponentManager>(componentStorage, componentLookup);
+	
+	
+			using namespace spite;
+			auto queryBuilder = std::make_shared<QueryBuilder>(componentLookup, componentStorage);
+			Entity entity = entityManager->createEntity();
+			SDEBUG_LOG("entity %llu created\n", entity.getId());
+			Entity entity2 = entityManager->createEntity();
+			SDEBUG_LOG("entity %llu created\n", entity2.getId());*/
 
 		/*	componentManager->addComponent<TestComponent>(entity);
 			componentManager->addComponent<TestComponent>(entity2);
@@ -467,25 +692,23 @@ int main(int argc, char* argv[])
 				SDEBUG_LOG("SECOND TIME	Component val: %i\n", component.value);
 			}*/
 
-		eastl::vector<int, HeapAllocator> vec1;
-		vec1.reserve(10);
-		SDEBUG_LOG("vec1 size %llu\n", vec1.size());
+		//using namespace spite;
 
-		eastl::vector<int, HeapAllocator> vec2;
-		vec2.reserve(10);
-		for (int i = 0; i < 10; ++i)
-		{
-			vec2.push_back(i);
-		}
-		SDEBUG_LOG("vec2 size %llu\n", vec2.size());
+		//EntityWorld world(graphicsAllocator, graphicsAllocator);
 
-		vec1.insert(vec1.cbegin(), vec2.begin(), vec2.end());
-		SDEBUG_LOG("vec1 size %llu\n", vec1.size());
-		SDEBUG_LOG("vec1 elems:\n");
-		for (int i = 0; i < 10; ++i)
-		{
-			SDEBUG_LOG("%i, ", vec1[i]);
-		}
+		//SystemBase* sys1 = new TestSystem1();
+		//SystemBase* sys2 = new TestSystem2();
+
+		//world.addSystem(sys1);
+		//world.addSystem(sys2);
+		//world.start();
+		//world.enable();
+
+		//for (int i = 0; i < 20; ++i)
+		//{
+		//	world.update(0.01f);
+		//}
+
 
 		while (!windowManager->shouldTerminate())
 		{

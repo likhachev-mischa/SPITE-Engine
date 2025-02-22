@@ -3,6 +3,12 @@
 #include "Platform.hpp"
 #include "Service.hpp"
 
+#if defined(SPITE_TEST)
+#include <string>
+#include <EASTL/hash_map.h>
+#include "Memory.hpp"
+#endif
+
 namespace spite
 {
 	struct LogService final : public Service
@@ -11,9 +17,71 @@ namespace spite
 		void printFormat(cstring format, ...);
 	};
 
- #if defined(_MSC_VER)
- #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,__VA_ARGS__);
- #else
+
+#if defined(_MSC_VER)
+#define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,__VA_ARGS__);
+#else
  #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,## __VA_ARGS__);
- #endif
+#endif
+
+	//made for counting test logs and asserting quantity of logged events
+#if defined(SPITE_TEST)
+
+	struct TestLogService
+	{
+		//key - string log, value - log's count
+		eastl::hash_map<std::string, sizet, std::hash<std::string>, std::equal_to<std::string>,
+		                spite::HeapAllocator> logsLookup;
+
+		TestLogService(const spite::HeapAllocator& allocator): logsLookup(allocator)
+		{
+		}
+
+		inline void printTestLog(const std::string& log)
+		{
+			recordTestLog(log);
+			SDEBUG_LOG(log.c_str())
+		}
+
+		inline void recordTestLog(const std::string& log)
+		{
+			if (logsLookup.find(log) == logsLookup.end())
+			{
+				logsLookup.emplace(log, 1);
+			}
+			else
+			{
+				++logsLookup.at(log);
+			}
+		}
+
+		void dispose()
+		{
+			logsLookup.clear();
+		}
+	};
+
+	inline TestLogService& getTestLoggerInstance()
+	{
+		static TestLogService instance(getGlobalAllocator());
+		return instance;
+	}
+
+	//should not be used in debug/release build, only for unit testing
+	inline sizet getTestLogCount(const std::string& log)
+	{
+		auto& lookup = getTestLoggerInstance().logsLookup;
+		if (lookup.find(log) == lookup.end())
+		{
+			return 0;
+		}
+		return lookup.at(log);
+	}
+
+#define STEST_LOG(string) spite::getTestLoggerInstance().printTestLog(string);
+#define STEST_LOG_UNPRINTED(string) spite::getTestLoggerInstance().recordTestLog(string);
+#else
+#define STEST_LOG(string) 
+#define STEST_LOG_UNPRINTED(string)
+#endif
 }

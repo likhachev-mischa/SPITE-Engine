@@ -27,7 +27,7 @@ add_executable(
   ${SOURCES})
 
 target_include_directories(Tests PRIVATE "../vcpkg_installed/x64-windows/include/")
-target_include_directories(Tests PRIVATE "../")
+target_include_directories(Tests PRIVATE "../source/")
 target_link_directories(
 	Tests
 PRIVATE

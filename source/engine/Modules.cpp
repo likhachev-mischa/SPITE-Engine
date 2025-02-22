@@ -325,7 +325,7 @@ namespace spite
 	RenderModule::~RenderModule()
 	{
 		vk::Result result = baseModule->deviceWrapper.device.waitIdle();
-		SASSERT_VULKAN(result);
+		//SASSERT_VULKAN(result);
 	}
 
 	void RenderModule::recreateSwapchain(const vk::Result result)

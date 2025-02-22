@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 #include <Base/Memory.hpp>
 
-
 class BlockAllocatorTest : public testing::Test
 {
 protected:

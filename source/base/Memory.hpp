@@ -4,6 +4,9 @@
 
 #include "Platform.hpp"
 
+//defines a global HeapAllocator instance that is used for non-specified allocations
+#define GLOBAL_ALLOCATOR 
+
 namespace spite
 {
 	constexpr sizet MAXIMUM_DINAMIC_SIZE = 32 * 1024 * 1024;
@@ -60,6 +63,12 @@ namespace spite
 		sizet m_maxSize;
 	};
 
+	inline spite::HeapAllocator& getGlobalAllocator()
+	{
+		static spite::HeapAllocator instance("GlobalAllocator");
+		return instance;
+	}
+
 	//CALL SHUTDOWN TO CHECK LEFTOVER ALLOCATIONS!
 	class BlockAllocator
 	{
@@ -86,5 +95,23 @@ namespace spite
 		eastl::fixed_allocator m_allocator;
 		sizet m_totalBytes = 0;
 	};
+}
 
+inline void* operator new[](sizet size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+#if defined (GLOBAL_ALLOCATOR)
+	return spite::getGlobalAllocator().allocate(size);
+#else
+	return operator new[](size);
+#endif
+}
+
+inline void* operator new[](sizet size, sizet alignment, sizet alignmentOffset, const char* pName, int flags,
+                            unsigned debugFlags, const char* file, int line)
+{
+#if defined (GLOBAL_ALLOCATOR)
+	return spite::getGlobalAllocator().allocate(size, alignment, alignmentOffset);
+#else
+	return operator new[](size, static_cast<std::align_val_t>(alignment));
+#endif
 }

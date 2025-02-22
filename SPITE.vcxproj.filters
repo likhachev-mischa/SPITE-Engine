@@ -117,17 +117,23 @@
     <ClInclude Include="source\ecs\ComponentsCore.hpp">
       <Filter>ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\SystemsCore.hpp">
+    <ClInclude Include="source\ecs\Systems.hpp">
       <Filter>ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\EntityManager.hpp">
+    <ClInclude Include="source\ecs\Core.hpp">
       <Filter>ecs</Filter>
     </ClInclude>
     <ClInclude Include="source\base\Event.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\EntityObserver.hpp">
+    <ClInclude Include="source\ecs\Queries.hpp">
       <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\World.hpp">
+      <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\LoggingTestStrings.hpp">
+      <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,10 +1,7 @@
 #pragma once
 #include <cstdint>
 
-//stolen from Mastering Vulkan
-
 //macros
-
 #define ARRAY_SIZE(array) (sizeof(array)/sizeof(array)[0])
 
 #if defined (_MSC_VER)

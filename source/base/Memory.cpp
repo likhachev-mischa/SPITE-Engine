@@ -8,17 +8,58 @@
 #endif
 
 
-void* operator new[](sizet size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+#if defined (GLOBAL_ALLOCATOR)
+
+void* operator new(sizet size)
 {
-	return operator new[](size);
+	return spite::getGlobalAllocator().allocate(size);
 }
 
-void* operator new[](sizet size, sizet alignment, sizet alignmentOffset, const char* pName, int flags,
-                     unsigned debugFlags, const char* file, int line)
+void operator delete(void* p) noexcept
 {
-	return operator new[](size, static_cast<std::align_val_t>(alignment));
+	spite::getGlobalAllocator().deallocate(p);
 }
 
+void operator delete(void* p, sizet size) noexcept
+{
+	spite::getGlobalAllocator().deallocate(p, size);
+}
+
+void* operator new[](sizet size)
+{
+	return spite::getGlobalAllocator().allocate(size);
+}
+
+void operator delete[](void* p) noexcept
+{
+	spite::getGlobalAllocator().deallocate(p);
+}
+
+void operator delete[](void* p, sizet size) noexcept
+{
+	spite::getGlobalAllocator().deallocate(p, size);
+}
+
+void* operator new(sizet size, std::align_val_t alignment)
+{
+	return spite::getGlobalAllocator().allocate(size, static_cast<sizet>(alignment));
+}
+
+void* operator new[](sizet size, std::align_val_t alignment)
+{
+	return spite::getGlobalAllocator().allocate(size, static_cast<sizet>(alignment));
+}
+
+void operator delete(void* p, std::align_val_t alignment) noexcept
+{
+	spite::getGlobalAllocator().deallocate(p);
+}
+
+void operator delete[](void* p, std::align_val_t alignment) noexcept
+{
+	spite::getGlobalAllocator().deallocate(p);
+}
+#endif
 namespace spite
 {
 	void exitWalker(void* ptr, sizet size, int used, void* user)
@@ -85,14 +126,14 @@ namespace spite
 	void* HeapAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = tlsf_malloc(m_tlsfHandle, size);
-	//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
 
 	void* HeapAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
-	//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
 		return mem;
 	}
 
@@ -175,14 +216,14 @@ namespace spite
 	void* BlockAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = m_allocator.allocate(size, flags);
-	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+		//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
 	void* BlockAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
 		void* mem = m_allocator.allocate(size, alignment, offset, flags);
-	//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
+		//	SDEBUG_LOG("BlockAllocator %s memory allocation: %p size %llu \n", m_allocator.get_name(), mem, size)
 		return mem;
 	}
 
@@ -213,7 +254,7 @@ namespace spite
 		{
 			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_allocator.get_name())
 		}
-		SASSERT(m_allocator.mnCurrentSize == 0, "Allocations still present. Check your code!\n")
+		SASSERTM(m_allocator.mnCurrentSize == 0, "Allocations still present. Check your code!\n")
 #endif
 	}
 }

@@ -1,0 +1,16 @@
+# CMake generation dependency list for this directory.
+C:/Computer Graphics/Vulkan/Projects/SPITE/tests/build/_deps/googletest-src/googletest/CMakeLists.txt
+C:/Computer Graphics/Vulkan/Projects/SPITE/tests/build/_deps/googletest-src/googletest/cmake/Config.cmake.in
+C:/Computer Graphics/Vulkan/Projects/SPITE/tests/build/_deps/googletest-src/googletest/cmake/gtest.pc.in
+C:/Computer Graphics/Vulkan/Projects/SPITE/tests/build/_deps/googletest-src/googletest/cmake/gtest_main.pc.in
+C:/Computer Graphics/Vulkan/Projects/SPITE/tests/build/_deps/googletest-src/googletest/cmake/internal_utils.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in
+C:/Programming/Cmake/share/cmake-3.30/Modules/CMakePackageConfigHelpers.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/CheckIncludeFile.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/CheckLibraryExists.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/FindPackageMessage.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/FindThreads.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake
+C:/Programming/Cmake/share/cmake-3.30/Modules/WriteBasicConfigVersionFile.cmake

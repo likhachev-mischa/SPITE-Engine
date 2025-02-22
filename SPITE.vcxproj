@@ -41,7 +41,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -126,7 +126,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;SPITE_TEST</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./source/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -177,15 +177,17 @@
     <ClInclude Include="source\base\Event.hpp" />
     <ClInclude Include="source\base\File.hpp" />
     <ClInclude Include="source\base\Logging.hpp" />
+    <ClInclude Include="source\base\LoggingTestStrings.hpp" />
     <ClInclude Include="source\base\Memory.hpp" />
     <ClInclude Include="source\base\Platform.hpp" />
     <ClInclude Include="source\base\Service.hpp" />
     <ClInclude Include="source\base\VmaUsage.hpp" />
     <ClInclude Include="source\base\VulkanUsage.hpp" />
     <ClInclude Include="source\ecs\ComponentsCore.hpp" />
-    <ClInclude Include="source\ecs\EntityManager.hpp" />
-    <ClInclude Include="source\ecs\EntityObserver.hpp" />
-    <ClInclude Include="source\ecs\SystemsCore.hpp" />
+    <ClInclude Include="source\ecs\Core.hpp" />
+    <ClInclude Include="source\ecs\Queries.hpp" />
+    <ClInclude Include="source\ecs\Systems.hpp" />
+    <ClInclude Include="source\ecs\World.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\Debug.hpp" />
     <ClInclude Include="source\engine\Modules.hpp" />

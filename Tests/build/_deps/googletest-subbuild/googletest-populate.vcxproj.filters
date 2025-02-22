@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\07ba8947aa74008bda975d434d85688c\googletest-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\9f024bcbc8800c9cfaa0d2665cbcbe90\googletest-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\419514a0e0f133c70c30b283038d44a1\googletest-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\build\_deps\googletest-subbuild\CMakeFiles\googletest-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{93A53041-2AEF-3853-A7AB-1807DCE151CD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
