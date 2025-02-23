@@ -59,6 +59,11 @@ namespace spite
 		{
 			logsLookup.clear();
 		}
+
+		~TestLogService()
+		{
+			dispose();
+		}
 	};
 
 	inline TestLogService& getTestLoggerInstance()

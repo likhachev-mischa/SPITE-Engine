@@ -300,8 +300,6 @@ namespace spite
 				if (matchesCondition)
 				{
 					m_indices.emplace_back(eastl::make_tuple(i, lookup->getComponentIndex(entity, t2Type)));
-					//m_indices1.push_back(i);
-					//m_indices2.push_back(lookup->getComponentIndex(entity, t2Type));
 				}
 			}
 		}
@@ -340,11 +338,100 @@ namespace spite
 				return tuple;
 			}
 
+			bool operator==(const iterator& other) const
+			{
+				return m_current == other.m_current;
+			}
+
 			bool operator!=(const iterator& other) const
 			{
 				return m_current != other.m_current;
 			}
 		};
+
+		class exclude_inactive_iterator
+		{
+			iterator m_current;
+			iterator m_end;
+
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using value_type = eastl::tuple<T1&, T2&>;
+			using difference_type = std::ptrdiff_t;
+			using pointer = eastl::tuple<T1&, T2&>*;
+			using reference = value_type;
+
+			exclude_inactive_iterator(const iterator& current,
+			                          const iterator& end)
+				: m_current(current), m_end(end)
+			{
+				while (m_current != m_end && (!eastl::get<0>(*m_current).isActive || !eastl::get<1>(*m_current).isActive))
+				{
+					++m_current;
+				}
+			}
+
+			exclude_inactive_iterator& operator++()
+			{
+				++m_current;
+
+				while (m_current != m_end && (!eastl::get<0>(*m_current).isActive || !eastl::get<1>(*m_current).isActive))
+				{
+					++m_current;
+				}
+
+				return *this;
+			}
+
+			value_type operator*() const
+			{
+				return *m_current;
+			}
+
+			bool operator==(const exclude_inactive_iterator& other) const
+			{
+				return m_current == other.m_current;
+			}
+
+			bool operator!=(const exclude_inactive_iterator& other) const
+			{
+				return m_current != other.m_current;
+			}
+		};
+
+		iterator begin()
+		{
+			return iterator(m_indices.begin(), m_indices.end(), m_table1, m_table2);
+		}
+
+		iterator end()
+		{
+			return iterator(m_indices.end(), m_indices.end(), m_table1, m_table2);
+		}
+
+		exclude_inactive_iterator exclude_inactive_begin()
+		{
+			return exclude_inactive_iterator(begin());
+		}
+
+		exclude_inactive_iterator exclude_inactive_end()
+		{
+			return exclude_inactive_iterator(end());
+		}
+
+		struct ExcludeInactiveView
+		{
+			Query2& query;
+
+			auto begin() { return query.exclude_inactive_begin(); }
+			auto end() { return query.exclude_inactive_end(); }
+		};
+
+		ExcludeInactiveView excludeInactive()
+		{
+			return ExcludeInactiveView{*this};
+		}
+
 
 		~Query2() override = default;
 	};
@@ -450,6 +537,8 @@ namespace spite
 				}
 			}
 		}
+
+
 
 		~Query3() override = default;
 	};
@@ -649,8 +738,9 @@ namespace spite
 				return static_cast<Query3<T1, T2, T3>*>(query);
 			}
 
-				STEST_LOG_UNPRINTED(
-					TESTLOG_ECS_NEW_QUERY_CREATED((std::string(typeid(T1).name()) + std::string(typeid(T2).name())+ std::string(typeid(T3).name())).c_str()))
+			STEST_LOG_UNPRINTED(
+				TESTLOG_ECS_NEW_QUERY_CREATED((std::string(typeid(T1).name()) + std::string(typeid(T2).name())+ std::
+					string(typeid(T3).name())).c_str()))
 			IQuery* query = new Query3<T1, T2, T3>(m_lookup.get(), m_storage.get(), m_allocator,
 			                                       buildInfo.m_hasComponents,
 			                                       buildInfo.m_hasNoComponents);

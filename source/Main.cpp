@@ -295,10 +295,10 @@ public:
 		sizet querySize = m_query->getSize();
 
 
-		auto& updateQuery = *m_updateQuery;
+		auto& updateQuery1 = *m_updateQuery;
 		sizet updateIteration = 0;
 
-		for (const auto& updateCountComponent : updateQuery)
+		for (const auto& updateCountComponent : updateQuery1)
 		{
 			updateIteration = updateCountComponent.count;
 		}
@@ -337,10 +337,10 @@ public:
 
 	void onUpdate(float deltaTime) override
 	{
-		auto& updateQuery = *m_updateQuery;
+		auto& updateQuery1 = *m_updateQuery;
 		sizet updateIteration = 0;
 
-		for (const auto& updateCountComponent : updateQuery)
+		for (const auto& updateCountComponent : updateQuery1)
 		{
 			updateIteration = updateCountComponent.count;
 		}
@@ -666,7 +666,7 @@ int main(int argc, char* argv[])
 	
 	
 			using namespace spite;
-			auto queryBuilder = std::make_shared<QueryBuilder>(componentLookup, componentStorage);
+			auto queryBuilder = std::make_shared<Query1Builder>(componentLookup, componentStorage);
 			Entity entity = entityManager->createEntity();
 			SDEBUG_LOG("entity %llu created\n", entity.getId());
 			Entity entity2 = entityManager->createEntity();
@@ -674,9 +674,9 @@ int main(int argc, char* argv[])
 
 		/*	componentManager->addComponent<TestComponent>(entity);
 			componentManager->addComponent<TestComponent>(entity2);
-			auto componentQuery = queryBuilder->getRawQuery<TestComponent>();
+			auto componentQuery1 = queryBuilder->getRawQuery<TestComponent>();
 	
-			for (auto& component : componentQuery)
+			for (auto& component : componentQuery1)
 			{
 				SDEBUG_LOG("Component val: %i owner: %llu\n", component.value, component.owner);
 				component.value = 1488;

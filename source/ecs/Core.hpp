@@ -104,6 +104,7 @@ namespace spite
 		using VectorType = eastl::vector<T, spite::HeapAllocator>;
 		VectorType m_vector;
 
+		//index of occupied top element
 		int m_topIdx;
 
 	public:
@@ -130,15 +131,15 @@ namespace spite
 			m_topIdx = -1;
 		}
 
-		sizet getTopIndex() const
+		//returns -1 if vector is empty
+		int getTopIndex() const
 		{
-			SASSERTM(m_topIdx > -1, "Vector is uninitialized");
 			return m_topIdx;
 		}
 
 		sizet getOccupiedSize() const
 		{
-			SASSERTM(m_topIdx >= -1, "Vector is uninitialized")
+			//SASSERTM(m_topIdx >= -1, "Vector is uninitialized")
 			return (m_topIdx + 1);
 		}
 
@@ -831,7 +832,8 @@ namespace spite
 		if (componentsSize != 0)
 		{
 			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-			sizet topIndex = componentTable.getTopIndex();
+
+			sizet topIndex = static_cast<sizet>(componentTable.getTopIndex() + 1);
 			componentTable.addElements(m_componentsToAdd.begin(), m_componentsToAdd.end());
 
 			for (sizet i = 0; i < componentsSize; ++i, ++topIndex)
@@ -843,7 +845,9 @@ namespace spite
 		if (entitesSize != 0)
 		{
 			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-			sizet topIndex = componentTable.getTopIndex();
+
+			SASSERTM(componentTable.getOccupiedSize() > 0, "Component table is already empty on removing using commandbuffer");
+			sizet topIndex = static_cast<sizet>(componentTable.getTopIndex());
 
 			for (sizet i = 0; i < entitesSize; ++i, --topIndex)
 			{

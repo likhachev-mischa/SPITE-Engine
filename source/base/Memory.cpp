@@ -165,13 +165,20 @@ namespace spite
 		SDEBUG_LOG("HeapAllocator %s of size %llu created\n", m_name, size)
 	}
 
-	void HeapAllocator::shutdown()
+	void HeapAllocator::shutdown(bool forceDealloc)
 	{
+		if (forceDealloc)
+		{
+			tlsf_destroy(m_tlsfHandle);
+			free(m_memory);
+			return;
+		}
+
 		MemoryStatistics stats{0, m_maxSize, 0};
 		pool_t pool = tlsf_get_pool(m_tlsfHandle);
 		tlsf_walk_pool(pool, exitWalker, &stats);
 
-		if (stats.allocatedBytes)
+		if (stats.allocatedBytes > 0)
 		{
 			SDEBUG_LOG(
 				"HeapAllocator %s Shutdown.\n===============\nFAILURE! Allocated memory detected. allocated %llu, total %llu\n===============\n\n",

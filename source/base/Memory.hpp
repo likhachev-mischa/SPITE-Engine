@@ -48,7 +48,12 @@ namespace spite
 		const char* get_name() const;
 		void set_name(const char* pName);
 
-		void shutdown();
+
+		/**
+		 * \brief 
+		 * \param forceDealloc if true, does not check if any allocations remain and silently deallocates anything 
+		 */
+		void shutdown(bool forceDealloc = false);
 
 	protected:
 		bool operator==(const HeapAllocator& b);
