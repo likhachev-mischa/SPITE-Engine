@@ -351,12 +351,12 @@ namespace spite
 		~ShaderModuleWrapper();
 	};
 
-	struct VertexInputDescriptionsWrapper
+	struct VertexInputDescriptions
 	{
 		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
 		eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator> attributeDescriptions;
 
-		VertexInputDescriptionsWrapper(
+		VertexInputDescriptions(
 			const eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator>& bindingDescriptions,
 			const eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>
 			& attributeDescriptions);
@@ -384,7 +384,7 @@ namespace spite
 		                        const RenderPassWrapper& renderPassWrapper, const spite::HeapAllocator& allocator,
 		                        const eastl::vector<
 			                        eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>
-		                        & shaderModules, const VertexInputDescriptionsWrapper& vertexInputDescription,
+		                        & shaderModules, const VertexInputDescriptions& vertexInputDescription,
 		                        const AllocationCallbacksWrapper& allocationCallbacksWrapper);
 
 		GraphicsPipelineWrapper(GraphicsPipelineWrapper&& other) noexcept;

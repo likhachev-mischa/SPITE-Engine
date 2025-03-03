@@ -225,7 +225,7 @@ namespace spite
 	                           const eastl::vector<
 		                           eastl::tuple<ShaderModuleWrapper&, const char*>, spite::HeapAllocator>&
 	                           shaderModules,
-	                           const VertexInputDescriptionsWrapper& vertexInputDescriptions,
+	                           const VertexInputDescriptions& vertexInputDescriptions,
 	                           std::shared_ptr<WindowManager> windowManagerPtr, const u32 framesInFlight,
 	                           eastl::vector<std::shared_ptr<CommandBuffersWrapper>, spite::HeapAllocator>
 	                           extraCommandBuffers):

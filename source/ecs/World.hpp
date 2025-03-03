@@ -77,6 +77,7 @@ namespace spite
 		}
 	};
 
+	//container for ecs operations
 	class EntityService
 	{
 		std::shared_ptr<ComponentStorage> m_componentStorage;
@@ -108,10 +109,10 @@ namespace spite
 			m_componentManager = std::make_shared<ComponentManager>(m_componentStorage, m_componentLookup,
 			                                                        m_structuralChangeHandler);
 			m_entityManager = std::make_shared<EntityManager>(m_componentStorage, m_componentLookup,
-			                                                  m_structuralChangeHandler);
+			                                                  m_structuralChangeHandler, m_allocator);
 		}
 
-		template <t_component TComponent>
+		template <t_plain_component TComponent>
 		CommandBuffer<TComponent> getCommandBuffer()
 		{
 			return CommandBuffer<TComponent>(m_componentStorage.get(), m_componentLookup.get(), m_allocator,

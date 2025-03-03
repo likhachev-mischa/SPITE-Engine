@@ -392,7 +392,7 @@ namespace spite
 		}
 	}
 
-	VertexInputDescriptionsWrapper::VertexInputDescriptionsWrapper(
+	VertexInputDescriptions::VertexInputDescriptions(
 		const eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator>& bindingDescriptions,
 		const eastl::vector<vk::VertexInputAttributeDescription, spite::HeapAllocator>& attributeDescriptions) :
 		bindingDescriptions(bindingDescriptions), attributeDescriptions(attributeDescriptions)
@@ -409,7 +409,7 @@ namespace spite
 	                                                 const eastl::vector<
 		                                                 eastl::tuple<ShaderModuleWrapper&, const char*>,
 		                                                 spite::HeapAllocator>& shaderModules,
-	                                                 const VertexInputDescriptionsWrapper& vertexInputDescription,
+	                                                 const VertexInputDescriptions& vertexInputDescription,
 	                                                 const AllocationCallbacksWrapper& allocationCallbacksWrapper):
 		shaderStages(allocator),
 		vertexInputInfo(

@@ -570,7 +570,7 @@ namespace test3
 			for (auto& componentA : query)
 			{
 				componentA.data = updateIteration;
-				componentA.isActive = false;
+				//componentA.isActive = false;
 			}
 		}
 	};

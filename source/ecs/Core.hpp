@@ -34,49 +34,51 @@ namespace spite
 		};
 	};
 
-
 	struct IComponent
 	{
-		bool isActive;
-		Entity owner;
-
-		IComponent(): isActive(false), owner(-1)
-		{
-		}
-
-		IComponent(const IComponent& other): isActive(other.isActive), owner(other.owner)
-		{
-		}
-
-		IComponent(IComponent&& other) noexcept: isActive(other.isActive), owner(other.owner)
-		{
-		}
-
-		IComponent& operator=(const IComponent& other)
-		{
-			if (this == &other)
-				return *this;
-
-			isActive = other.isActive;
-			owner = other.owner;
-			return *this;
-		}
-
-		IComponent& operator=(IComponent&& other) noexcept
-		{
-			if (this == &other)
-				return *this;
-
-			isActive = other.isActive;
-			owner = other.owner;
-			return *this;
-		}
-
+		IComponent() = default;
+		IComponent(const IComponent& other) = default;
+		IComponent(IComponent&& other) noexcept = default;
+		IComponent& operator=(const IComponent& other) = default;
+		IComponent& operator=(IComponent&& other) noexcept = default;
 		virtual ~IComponent() = default;
 	};
 
+	struct ISharedComponent : IComponent
+	{
+	};
+
+	struct ISingletonComponent : IComponent
+	{
+	};
+
+	//components in general
 	template <typename TComponent>
 	concept t_component = std::is_base_of_v<IComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
+		std::is_copy_constructible_v<TComponent> &&
+		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+
+	//specificly only IComponent
+	template <typename TComponent>
+	concept t_plain_component = std::is_base_of_v<IComponent, TComponent> && !std::is_base_of_v<
+			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
+		std::is_default_constructible_v<TComponent> &&
+		std::is_copy_constructible_v<TComponent> &&
+		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+
+	//specificly ISharedComponent
+	template <typename TComponent>
+	concept t_shared_component = std::is_base_of_v<ISharedComponent, TComponent> && !std::is_base_of_v<
+			ISingletonComponent, TComponent> && std::is_default_constructible_v<
+			TComponent> &&
+		std::is_copy_constructible_v<TComponent> &&
+		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+
+	//specificly ISingletonComponent
+	template <typename TComponent>
+	concept t_singleton_component = std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
+			ISharedComponent, TComponent> && std::is_default_constructible_v<
+			TComponent> &&
 		std::is_copy_constructible_v<TComponent> &&
 		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
 
@@ -85,10 +87,12 @@ namespace spite
 	class IComponentProvider
 	{
 	public:
-		virtual void removeComponent(sizet idx) = 0;
-		virtual void removeComponents(sizet* array, const sizet n) = 0;
+		//returns true if structural change is required
+		virtual bool removeComponent(const Entity owner, sizet idx) = 0;
+
 		virtual bool isEmpty() = 0;
-		virtual Entity getTopEntity() = 0;
+		//should return an array even if there is no/one entity
+		virtual Entity* getTopEntities(sizet& n) = 0;
 		virtual ~IComponentProvider() = default;
 	};
 
@@ -159,16 +163,21 @@ namespace spite
 			return getOccupiedSize() / static_cast<float>(m_vector.capacity());
 		}
 
+		void reserve(sizet n)
+		{
+			m_vector.reserve(n);
+		}
+
 		void setCapacity(sizet n)
 		{
-			SASSERTM(n < m_topIdx + 1, "SET CAPACITY WILL DELETE STORED ELEMENTS");
+			SASSERTM(n > m_topIdx, "SET CAPACITY WILL DELETE STORED ELEMENTS");
 			m_vector.set_capacity(n);
 		}
 
 		//preferable to use this
 		//WARNING: uses move assignment/insertion for passed params
 		template <typename InputIterator>
-		void addElements(const InputIterator& begin, const InputIterator& end)
+		void addElements(InputIterator& begin, InputIterator& end)
 		{
 			auto destIter = m_vector.begin() + m_topIdx + 1;
 			auto srcIter = begin;
@@ -184,12 +193,19 @@ namespace spite
 			if (srcIter != end)
 			{
 				sizet resizeCount = std::distance(srcIter, end);;
-				SDEBUG_LOG("pooled vector of type %s: insert %llu elems, fill factor: %f, total size: %llu",
+				SDEBUG_LOG("pooled vector of type %s: insert %llu elems, fill factor: %f, total size: %llu\n",
 				           std::type_index(typeid(T)).name(), resizeCount,
 				           getFillFactor(), m_vector.size());
 				m_vector.insert(destIter, eastl::make_move_iterator(srcIter), eastl::make_move_iterator(end));
 				m_topIdx += static_cast<int>(resizeCount);
 			}
+		}
+
+		void merge(PooledVector<T>& other)
+		{
+			auto begin = other.begin();
+			auto end = other.end();
+			addElements(begin, end);
 		}
 
 		// use bulk insertion instead if possible
@@ -231,59 +247,43 @@ namespace spite
 			--m_topIdx;
 		}
 
-		class iterator
-		{
-			typename VectorType::iterator m_current;
-			typename VectorType::iterator m_end;
-
-		public:
-			using iterator_category = std::forward_iterator_tag;
-			using value_type = T;
-			using difference_type = std::ptrdiff_t;
-			using pointer = T*;
-			using reference = T&;
-
-			iterator(typename VectorType::iterator current, typename VectorType::iterator end) : m_current(current),
-				m_end(end)
-			{
-			}
-
-			iterator& operator++()
-			{
-				++m_current;
-				return *this;
-			}
-
-			reference operator*() const
-			{
-				return *m_current;
-			}
-
-			bool operator!=(const iterator& other) const
-			{
-				return m_current != other.m_current;
-			}
-		};
-
+		//eastl vector should assert its bounds
 		T& operator[](sizet n)
 		{
 			return m_vector[n];
 		}
 
-		iterator begin()
+		typename VectorType::iterator begin()
 		{
-			return iterator(m_vector.begin(), m_vector.end());
+			return m_vector.begin();
 		}
 
-		iterator end()
+		typename VectorType::iterator end()
 		{
-			return iterator(m_vector.end(), m_vector.end());
+			return m_vector.end();
+		}
+
+		typename VectorType::const_iterator cbegin() const
+		{
+			return m_vector.cbegin();
+		}
+
+		typename VectorType::const_iterator cend() const
+		{
+			return m_vector.cend();
 		}
 	};
 
-	template <t_component TComponent>
-	class ComponentTable final : public PooledVector<TComponent>, public IComponentProvider
+	//all vector operations are wrappers around PooledVector methods 
+	template <t_plain_component TComponent>
+	class ComponentTable final : public IComponentProvider
 	{
+		//true - component enabled, false - disabled
+		PooledVector<bool> m_componentsStatuses;
+		PooledVector<Entity> m_componentsOwners;
+
+		PooledVector<TComponent> m_components;
+
 	public:
 		explicit ComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize = 10);
 
@@ -292,27 +292,343 @@ namespace spite
 		ComponentTable& operator=(ComponentTable&& other) = delete;
 		ComponentTable& operator=(const ComponentTable& other) = delete;
 
-		void removeComponent(sizet idx) override
+		void rewind()
 		{
-			this->removeElement(idx);
+			m_componentsStatuses.rewind();
+			m_componentsOwners.rewind();
+			m_components.rewind();
 		}
 
-		void removeComponents(sizet* array, const sizet n) override
+		void reserve(sizet n)
 		{
-			this->removeElements(array, n);
+			m_componentsStatuses.reserve(n);
+			m_componentsOwners.reserve(n);
+			m_components.reserve(n);
+		}
+
+		void setCapacity(sizet n)
+		{
+			m_componentsStatuses.setCapacity(n);
+			m_componentsOwners.setCapacity(n);
+			m_components.setCapacity(n);
+		}
+
+		int getTopIndex()
+		{
+			return m_components.getTopIndex();
+		}
+
+		sizet getCapacity()
+		{
+			return m_components.getCapacity();
+		}
+
+		sizet getOccupiedSize()
+		{
+			return m_components.getOccupiedSize();
+		}
+
+		sizet getTotalSize()
+		{
+			return m_components.getTotalSize();
+		}
+
+		float getFillFactor()
+		{
+			return m_components.getFillFactor();
+		}
+
+		//sets component's active status
+		void setActive(const sizet idx, const bool value)
+		{
+			m_componentsStatuses[idx] = value;
+		}
+
+		void addComponent(TComponent component, const Entity owner, bool isActive = true)
+		{
+			m_componentsStatuses.addElement(isActive);
+			m_componentsOwners.addElement(owner);
+			m_components.addElement(component);
+		}
+
+		//WARNING: avoid duplications manually
+		void addComponents(ComponentTable<TComponent>& other)
+		{
+			m_componentsStatuses.merge(other.m_componentsStatuses);
+			m_componentsOwners.merge(other.m_componentsOwners);
+			m_components.merge(other.m_components);
+		}
+
+		void removeComponent(sizet idx)
+		{
+			m_componentsStatuses.removeElement(idx);
+			m_componentsOwners.removeElement(idx);
+			m_components.removeElement(idx);
+		}
+
+		bool removeComponent(const Entity owner, sizet idx) override
+		{
+			removeComponent(idx);
+			return true;
+		}
+
+		void removeComponents(sizet* array, const sizet n)
+		{
+			m_componentsStatuses.removeElements(array, n);
+			m_componentsOwners.removeElements(array, n);
+			m_components.removeElements(array, n);
 		}
 
 		bool isEmpty() override
 		{
-			return this->getOccupiedSize() == 0;
+			return m_components.getOccupiedSize() == 0;
 		}
 
-		Entity getTopEntity() override
+		Entity* getTopEntities(sizet& n) override
 		{
-			return this->operator[](this->getTopIndex()).owner;
+			n = 1;
+			return &m_componentsOwners[m_components.getTopIndex()];
+		}
+
+		Entity owner(sizet idx)
+		{
+			return m_componentsOwners[idx];
+		}
+
+		bool isActive(sizet idx)
+		{
+			return m_componentsStatuses[idx];
+		}
+
+		TComponent& operator[](sizet n)
+		{
+			return m_components[n];
 		}
 
 		~ComponentTable() override = default;
+	};
+
+	//intentionally does not inherit from ComponentTable, but replicates some functionality
+	template <t_shared_component T>
+	class SharedComponentTable : public IComponentProvider
+	{
+		PooledVector<bool> m_componentsStatuses;
+		PooledVector<std::vector<Entity>> m_componentsOwners;
+
+		PooledVector<T> m_components;
+
+	public:
+		explicit SharedComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize = 10):
+			m_componentsStatuses(allocator, initialSize), m_componentsOwners(allocator, initialSize),
+			m_components(allocator, initialSize)
+		{
+		}
+
+		SharedComponentTable(const SharedComponentTable& other) = delete;
+		SharedComponentTable(SharedComponentTable&& other) = delete;
+		SharedComponentTable& operator=(SharedComponentTable&& other) = delete;
+		SharedComponentTable& operator=(const SharedComponentTable& other) = delete;
+
+		void rewind()
+		{
+			m_componentsStatuses.rewind();
+			m_componentsOwners.rewind();
+			m_components.rewind();
+		}
+
+		void reserve(sizet n)
+		{
+			m_componentsStatuses.reserve(n);
+			m_componentsOwners.reserve(n);
+			m_components.reserve(n);
+		}
+
+		void setCapacity(sizet n)
+		{
+			m_componentsStatuses.setCapacity(n);
+			m_componentsOwners.setCapacity(n);
+			m_components.setCapacity(n);
+		}
+
+		int getTopIndex()
+		{
+			return m_components.getTopIndex();
+		}
+
+		sizet getCapacity()
+		{
+			return m_components.getCapacity();
+		}
+
+		sizet getOccupiedSize()
+		{
+			return m_components.getOccupiedSize();
+		}
+
+		sizet getTotalSize()
+		{
+			return m_components.getTotalSize();
+		}
+
+		float getFillFactor()
+		{
+			return m_components.getFillFactor();
+		}
+
+		//sets component's active status
+		void setActive(const sizet idx, const bool value)
+		{
+			m_componentsStatuses[idx] = value;
+		}
+
+		bool hasOwner(const Entity entity)
+		{
+			for (auto& owners : m_componentsOwners)
+			{
+				if (eastl::find(owners.begin(), owners.end(), entity) != owners.end())
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		//adds entity to already existing shared component
+		void addComponent(const Entity entity, const sizet idx)
+		{
+			SASSERTM(!hasOwner(entity), "Entity %llu already owns component %s", entity.id(), typeid(T).name());
+			m_componentsOwners[idx].push_back(entity);
+		}
+
+		//creates new SharedComponent instance
+		void addComponent(T component, const Entity owner, bool isActive = true)
+		{
+			m_componentsStatuses.addElement(isActive);
+			m_componentsOwners.addElement({owner});
+			m_components.addElement(component);
+		}
+
+		//removes owner of unspecified component
+		//returns true if it was the last owner - meaning that structural change should be performed
+		//false otherwise
+		bool removeComponent(const Entity entity)
+		{
+			SASSERTM(hasOwner(entity), "Entity %llu doesnt own component %s", entity.id(), typeid(T).name());
+			for (sizet i = 0, size = getOccupiedSize(); i < size; ++i)
+			{
+				auto& owners = m_componentsOwners[i];
+				auto iter = eastl::find(owners.begin(), owners.end(), entity);
+				if (iter != owners.end())
+				{
+					owners.erase(iter);
+					if (owners.size() == 0)
+					{
+						deleteComponent(i);
+						return true;
+					}
+					return false;
+				}
+			}
+			return false;
+		}
+
+		//removes owner of specified component
+		//returns true if it was the last owner - meaning that structural change should be performed
+		//false otherwise
+		bool removeComponent(const Entity entity, const sizet idx) override
+		{
+			auto& owners = m_componentsOwners[idx];
+			auto iter = eastl::find(owners.begin(), owners.end(), entity);
+			SASSERTM(iter != owners.end(), "Entity %llu doesnt own component %s", entity.id(), typeid(T).name());
+			owners.erase(iter);
+
+			if (owners.size() == 0)
+			{
+				deleteComponent(idx);
+				return true;
+			}
+			return false;
+		}
+
+		//deletes component ignoring other entities' ownership 
+		void deleteComponent(sizet idx)
+		{
+			m_componentsStatuses.removeElement(idx);
+			m_componentsOwners.removeElement(idx);
+			m_components.removeElement(idx);
+		}
+
+		//deletes components ignoring other entities' ownership 
+		void deleteComponents(sizet* array, const sizet n)
+		{
+			m_componentsStatuses.removeElements(array, n);
+			m_componentsOwners.removeElements(array, n);
+			m_components.removeElements(array, n);
+		}
+
+		bool isEmpty() override
+		{
+			return m_components.getOccupiedSize() == 0;
+		}
+
+		Entity* getTopEntities(sizet& n) override
+		{
+			auto& entities = owners(getTopIndex());
+			n = entities.size();
+			return entities.data();
+		}
+
+		std::vector<Entity>& owners(sizet idx)
+		{
+			return m_componentsOwners[idx];
+		}
+
+		bool isActive(sizet idx)
+		{
+			return m_componentsStatuses[idx];
+		}
+
+		T& operator[](sizet n)
+		{
+			return m_components[n];
+		}
+
+		~SharedComponentTable() override = default;
+	};
+
+	struct ISingletonTable
+	{
+	};
+
+	//holds only one component of type
+	template <t_singleton_component T>
+	class SingletonComponentTable : ISingletonTable
+	{
+		T m_component;
+
+	public:
+		SingletonComponentTable() = default;
+
+		SingletonComponentTable(T component) : m_component(std::move(component))
+		{
+		}
+
+		SingletonComponentTable(const SingletonComponentTable& other) = delete;
+		SingletonComponentTable(SingletonComponentTable&& other) noexcept = delete;
+		SingletonComponentTable& operator=(const SingletonComponentTable& other) = delete;
+		SingletonComponentTable& operator=(SingletonComponentTable&& other) noexcept = delete;
+
+		void setComponentData(T component)
+		{
+			m_component = std::move(component);
+		}
+
+		T& getComponent()
+		{
+			return m_component;
+		}
+
+		~SingletonComponentTable() = default;
 	};
 
 
@@ -320,6 +636,9 @@ namespace spite
 	{
 		eastl::hash_map<std::type_index, IComponentProvider*, std::hash<std::type_index>, eastl::equal_to<
 			                std::type_index>, ComponentAllocator> m_storage;
+
+		eastl::hash_map<std::type_index, ISingletonTable*, std::hash<std::type_index>, eastl::equal_to<
+			                std::type_index>, ComponentAllocator> m_singletonStorage;
 
 		ComponentAllocator m_componentAllocator;
 
@@ -330,7 +649,7 @@ namespace spite
 		{
 		}
 
-		template <t_component TComponent>
+		template <t_plain_component TComponent>
 		void registerComponent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -340,10 +659,56 @@ namespace spite
 			m_storage.emplace(typeIndex, provider);
 		}
 
+		template <t_shared_component TComponent>
+		void registerComonent()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(!isComponentRegistred(typeIndex), "Component of type %s is already registered", typeIndex.name());
+
+			IComponentProvider* provider = new SharedComponentTable<TComponent>(m_componentAllocator);
+			m_storage.emplace(typeIndex, provider);
+		}
+
+		template <t_singleton_component TComponent>
+		void createSingleton()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(!isSingletonCreated(typeIndex), "Singleton of type %s is already created", typeIndex.name());
+
+			ISingletonTable* table = new SingletonComponentTable<TComponent>();
+			m_storage.emplace(typeIndex, table);
+		}
+
 		bool isComponentRegistred(const std::type_index typeIndex)
 		{
 			auto iterator = m_storage.find(typeIndex);
 			return iterator != m_storage.end();
+		}
+
+		bool isSingletonCreated(const std::type_index typeIndex)
+		{
+			auto iterator = m_singletonStorage.find(typeIndex);
+			return iterator != m_singletonStorage.end();
+		}
+
+		template <t_component TComponent>
+		void unregisterComponent()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(isComponentRegistred(typeIndex), "Component %s was not present in storage to unregister it",
+			         typeIndex.name());
+
+			delete m_storage.at(typeIndex);
+		}
+
+		template <t_singleton_component TComponent>
+		void deleteSingleton()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(isSingletonCreated(typeIndex), "Singleton %s was not present in storage to delete it",
+			         typeIndex.name());
+
+			delete m_singletonStorage.at(typeIndex);
 		}
 
 		IComponentProvider& getRawProviderAsserted(const std::type_index typeIndex)
@@ -362,7 +727,7 @@ namespace spite
 			return m_storage.at(typeIndex);
 		}
 
-		template <t_component TComponent>
+		template <t_plain_component TComponent>
 		ComponentTable<TComponent>& getComponentsAsserted()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -370,6 +735,17 @@ namespace spite
 
 			auto& value = m_storage.at(typeIndex);
 			auto table = reinterpret_cast<ComponentTable<TComponent>*>(value);
+			return *table;
+		}
+
+		template <t_shared_component TComponent>
+		SharedComponentTable<TComponent>& getComponentsAsserted()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name());
+
+			auto& value = m_storage.at(typeIndex);
+			auto table = reinterpret_cast<SharedComponentTable<TComponent>*>(value);
 			return *table;
 		}
 
@@ -386,6 +762,30 @@ namespace spite
 			return *table;
 		}
 
+		template <t_shared_component TComponent>
+		SharedComponentTable<TComponent>& getComponentsSafe()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			if (!isComponentRegistred(typeIndex))
+			{
+				registerComponent<TComponent>();
+			}
+			auto& value = m_storage.at(typeIndex);
+			auto table = reinterpret_cast<SharedComponentTable<TComponent>*>(value);
+			return *table;
+		}
+
+		template <t_singleton_component TComponent>
+		SingletonComponentTable<TComponent>& getSingleton()
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(isSingletonCreated(typeIndex), "Singleton of type %s is not present in storage", typeIndex.name());
+
+			auto& value = m_singletonStorage.at(typeIndex);
+			auto table = reinterpret_cast<SingletonComponentTable<TComponent>*>(value);
+			return *table;
+		}
+
 		~ComponentStorage()
 		{
 			for (const auto& pair : m_storage)
@@ -393,6 +793,12 @@ namespace spite
 				delete pair.second;
 			}
 			m_storage.clear(true);
+
+			for (const auto& pair : m_singletonStorage)
+			{
+				delete pair.second;
+			}
+			m_singletonStorage.clear(true);
 		}
 	};
 
@@ -457,31 +863,197 @@ namespace spite
 	public:
 		ComponentManager(std::shared_ptr<ComponentStorage> componentStorage,
 		                 std::shared_ptr<ComponentLookup> componentLookup,
-		                 std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler);
+		                 std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler) :
+			m_storage(std::move(componentStorage)),
+			m_lookup(std::move(componentLookup)),
+			m_structuralChangeHandler(std::move(structuralChangeHandler))
+		{
+		}
 
 		//note: any changes to passed component param won't be saved in storage after this func
-		template <t_component TComponent>
-		void addComponent(Entity entity, TComponent& component);
+		template <t_plain_component TComponent>
+		void addComponent(Entity entity, TComponent& component, bool isActive = true)
+		{
+			auto& components = m_storage->getComponentsSafe<TComponent>();
+			components.addComponent(component, entity, isActive);
+			sizet componentIndex = components.getTopIndex();
 
-		template <t_component TComponent>
-		void addComponent(Entity entity);
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
 
-		template <t_component TComponent>
-		void removeComponent(const Entity entity);
+			m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+		template <t_plain_component TComponent>
+		void addComponent(Entity entity, bool isActive = true)
+		{
+			TComponent component;
+
+			auto& components = m_storage->getComponentsSafe<TComponent>();
+			components.addComponent(component, entity, isActive);
+			sizet componentIndex = components.getTopIndex();
+
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
+
+			m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+		//creates a new SharedComponent instance
+		template <t_shared_component TComponent>
+		void addComponent(const Entity entity, TComponent& component, bool isActive = true)
+		{
+			auto& components = m_storage->getComponentsSafe<TComponent>();
+			components.addComponent(component, entity, isActive);
+			sizet componentIndex = components.getTopIndex();
+
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
+
+			m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+
+		//adds target entity as owner of source's SharedComponent
+		template <t_shared_component TComponent>
+		void addComponent(const Entity source, const Entity target)
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			sizet componentIndex = m_lookup->getComponentIndex(source, typeIndex);
+
+			auto& components = m_storage->getComponentsAsserted<TComponent>();
+			components.addComponent(target, componentIndex);
+
+			m_lookup->addComponentToLookup(target, typeIndex, componentIndex);
+
+			//probably shouldn't invoke structural change
+			//m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+		template <t_plain_component TComponent>
+		void removeComponent(const Entity entity)
+		{
+			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
+
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+
+			sizet index = m_lookup->getComponentIndex(entity, typeIndex);
+			Entity topEntity = componentTable.owner(componentTable.getTopIndex());
+
+			m_lookup->setComponentIndex(topEntity, typeIndex, index);
+
+			m_lookup->removeComponentFromLookup(entity, typeIndex);
+
+			componentTable.removeComponent(index);
+
+			m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+		template <t_shared_component TComponent>
+		void removeComponent(const Entity entity)
+		{
+			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
+
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+
+			sizet index = m_lookup->getComponentIndex(entity, typeIndex);
+
+			auto& topEntities = componentTable.owners(componentTable.getTopIndex());
+			for (auto topEntity : topEntities)
+			{
+				m_lookup->setComponentIndex(topEntity, typeIndex, index);
+			}
+
+			m_lookup->removeComponentFromLookup(entity, typeIndex);
+
+			bool isStructuralChange = componentTable.removeComponent(entity, index);
+
+			if (isStructuralChange)
+			{
+				m_structuralChangeHandler->handleStructuralChange(typeIndex);
+			}
+		}
+
+		template <t_singleton_component TComponent>
+		void createSingleton(TComponent component)
+		{
+			m_storage->createSingleton<TComponent>(std::move(component));
+		}
+
+		template <t_singleton_component TComponent>
+		void deleteSingleton()
+		{
+			m_storage->deleteSingleton<TComponent>();
+		}
+
+		template <t_singleton_component TComponent>
+		TComponent& getSingleton()
+		{
+			return m_storage->getSingleton<TComponent>();
+		}
+
+		template <t_singleton_component TComponent>
+		bool isSingletonExists() const
+		{
+			return m_storage->isSingletonCreated(typeid(TComponent));
+		}
 
 		//asserts that entity has component
-		template <t_component TComponent>
-		TComponent& getComponent(const Entity entity);
+		template <typename TComponent>
+			requires t_plain_component<TComponent> || t_shared_component<TComponent>
+		TComponent& getComponent(const Entity entity)
+		{
+			sizet idx = m_lookup->getComponentIndex(entity, std::type_index(typeid(TComponent)));
+			return m_storage->getComponentsAsserted<TComponent>()[idx];
+		}
 
-		template <t_component TComponent>
-		bool tryGetComponent(const Entity entity, TComponent& outComponent);
+		template <typename TComponent>
+			requires t_plain_component<TComponent> || t_shared_component<TComponent>
+		bool tryGetComponent(const Entity entity, TComponent& outComponent)
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+
+			if (!m_lookup->hasComponent(entity, typeIndex))
+			{
+				return false;
+			}
+
+			outComponent = getComponent<TComponent>(entity);
+			return true;
+		}
 
 		//same as ComponentLookup.hasComponent()
-		bool hasComponent(const Entity& entity, const std::type_index& typeIndex) const;
+		bool hasComponent(const Entity& entity, const std::type_index& typeIndex) const
+		{
+			return m_lookup->hasComponent(entity, typeIndex);
+		}
 
 		//same as ComponentLookup.hasComponent()
 		template <t_component TComponent>
-		bool hasComponent(const Entity& entity) const;
+		bool hasComponent(const Entity& entity) const
+		{
+			return m_lookup->hasComponent(entity, typeid(TComponent));
+		}
+
+		template <t_component TComponent>
+		bool isComponentActive(const Entity& entity) const
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
+			         typeIndex.name());
+			sizet idx = m_lookup->getComponentIndex(entity, typeIndex);
+			return m_storage->getComponentsAsserted<TComponent>().isActive(idx);
+		}
+
+		template <t_component TComponent>
+		void setComponentActive(const Entity& entity, const bool isActive) const
+		{
+			std::type_index typeIndex = std::type_index(typeid(TComponent));
+			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
+			         typeIndex.name());
+			sizet idx = m_lookup->getComponentIndex(entity, typeIndex);
+			m_storage->getComponentsAsserted<TComponent>().setActive(idx, isActive);
+		}
 	};
 
 	class EntityManager
@@ -493,11 +1065,59 @@ namespace spite
 
 		std::shared_ptr<IStructuralChangeHandler> m_structuralChangeHandler;
 
+		//for named entities
+		eastl::hash_map<eastl::string, Entity, eastl::hash<eastl::string>, eastl::equal_to<eastl::string>,
+		                HeapAllocator> m_namedEntities;
+
 	public:
 		EntityManager(std::shared_ptr<ComponentStorage> storage, std::shared_ptr<ComponentLookup> lookup,
-		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler);
+		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler,
+		              const HeapAllocator& allocator) :
+			m_storage(std::move(storage)),
+			m_lookup(std::move(lookup)),
+			m_structuralChangeHandler(std::move(structuralChangeHandler)),
+			m_namedEntities(allocator)
+		{
+		}
+
+		bool isNamePresent(const cstring name)
+		{
+			return m_namedEntities.find(eastl::string(name)) != m_namedEntities.
+				end();
+		}
+
+		bool isEntityNamed(const Entity entity)
+		{
+			for (auto& pair : m_namedEntities)
+			{
+				if (pair.second == entity)
+				{
+					//m_namedEntities.erase()
+					return true;
+				}
+			}
+			return false;
+		}
 
 		Entity createEntity();
+
+		Entity createEntity(const cstring name)
+		{
+			Entity entity = createEntity();
+			m_namedEntities.emplace(eastl::string(name), entity);
+			return entity;
+		}
+
+		void setName(const Entity entity, const cstring name)
+		{
+			m_namedEntities[eastl::string(name)] = entity;
+		}
+
+		Entity getNamedEntity(const cstring name)
+		{
+			SASSERTM(isNamePresent(name), "There is no entity with name %s", eastl::string(name));
+			return m_namedEntities.at(eastl::string(name));
+		}
 
 		//note: delete all components using compile time type resolve first if possible
 		//(should use ComponentManager for this)
@@ -509,7 +1129,8 @@ namespace spite
 		u64 getNextId();
 	};
 
-	template <t_component TComponent>
+	//only works for regular IComponents
+	template <t_plain_component TComponent>
 	class CommandBuffer
 	{
 		std::type_index m_typeIndex = std::type_index(typeid(TComponent));
@@ -517,7 +1138,7 @@ namespace spite
 		ComponentStorage* m_storage;
 		ComponentLookup* m_lookup;
 
-		eastl::vector<TComponent, spite::HeapAllocator> m_componentsToAdd;
+		ComponentTable<TComponent> m_componentsToAdd;
 
 		eastl::vector<Entity, spite::HeapAllocator> m_entitiesToRemove;
 
@@ -525,19 +1146,79 @@ namespace spite
 
 	public:
 		CommandBuffer(ComponentStorage* storage, ComponentLookup* lookup, const spite::HeapAllocator& allocator,
-		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler);
+		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler) :
+			m_storage(storage),
+			m_lookup(lookup), m_componentsToAdd(allocator), m_entitiesToRemove(allocator),
+			m_structuralChangeHandler(std::move(structuralChangeHandler))
+		{
+		}
 
-		void reserveForAddition(sizet capacity);
+		void reserveForAddition(sizet capacity)
+		{
+			m_componentsToAdd.reserve(capacity);
+		}
 
-		void reserveForRemoval(sizet capacity);
+		void reserveForRemoval(sizet capacity)
+		{
+			m_entitiesToRemove.reserve(capacity);
+		}
 
-		void addComponent(const Entity entity, TComponent& component);
+		void addComponent(const Entity entity, TComponent component, bool isActive = true)
+		{
+			m_componentsToAdd.addComponent(component, entity, isActive);
+		}
 
 		//removal is not bulk for now, but the difference with bulk removal might be negligable,
 		//so keep it for now
-		void removeComponent(const Entity entity);
+		void removeComponent(const Entity entity)
+		{
+			m_entitiesToRemove.push_back(entity);
+		}
 
-		void commit();
+		void commit()
+		{
+			sizet componentsSize = m_componentsToAdd.getOccupiedSize();
+			sizet entitesSize = m_entitiesToRemove.size();
+			if (componentsSize != 0)
+			{
+				auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
+
+				sizet topIndex = static_cast<sizet>(componentTable.getTopIndex() + 1);
+				componentTable.addComponents(m_componentsToAdd);
+
+				for (sizet i = 0; i < componentsSize; ++i, ++topIndex)
+				{
+					m_lookup->addComponentToLookup(m_componentsToAdd.owner(i), m_typeIndex, topIndex);
+				}
+			}
+			//removal strongly depends on how PooledVector works
+			if (entitesSize != 0)
+			{
+				auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
+				SASSERTM(componentTable.getOccupiedSize() > 0,
+				         "Component table is already empty on removing using commandbuffer");
+				sizet topIndex = static_cast<sizet>(componentTable.getTopIndex());
+
+				for (sizet i = 0; i < entitesSize; ++i, --topIndex)
+				{
+					//set lookup indices first (top component gets the deleted component's idx) 
+					Entity removedEntity = m_entitiesToRemove[i];
+					sizet index = m_lookup->getComponentIndex(removedEntity, m_typeIndex);
+					m_lookup->removeComponentFromLookup(removedEntity, m_typeIndex);
+					Entity topEntity = componentTable.owner(topIndex);
+
+					if (removedEntity != topEntity)
+					{
+						m_lookup->setComponentIndex(topEntity, m_typeIndex, index);
+					}
+
+					componentTable.removeComponent(index);
+				}
+			}
+			m_componentsToAdd.rewind();
+
+			m_structuralChangeHandler->handleStructuralChange(m_typeIndex);
+		}
 	};
 
 
@@ -565,9 +1246,10 @@ namespace spite
 		return entity.id();
 	}
 
-	template <t_component TComponent>
+	template <t_plain_component TComponent>
 	ComponentTable<TComponent>::ComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize):
-		PooledVector<TComponent>(allocator, initialSize)
+		m_componentsStatuses(allocator, initialSize), m_componentsOwners(allocator, initialSize),
+		m_components(allocator, initialSize)
 	{
 	}
 
@@ -681,108 +1363,6 @@ namespace spite
 		return index;
 	}
 
-	inline ComponentManager::ComponentManager(std::shared_ptr<ComponentStorage> componentStorage,
-	                                          std::shared_ptr<ComponentLookup> componentLookup,
-	                                          std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler):
-		m_storage(std::move(componentStorage)),
-		m_lookup(std::move(componentLookup)),
-		m_structuralChangeHandler(std::move(structuralChangeHandler))
-	{
-	}
-
-	inline bool ComponentManager::hasComponent(const Entity& entity, const std::type_index& typeIndex) const
-	{
-		return m_lookup->hasComponent(entity, typeIndex);
-	}
-
-	template <t_component TComponent>
-	void ComponentManager::addComponent(Entity entity, TComponent& component)
-	{
-		component.owner = entity;
-
-		auto& components = m_storage->getComponentsSafe<TComponent>();
-		components.addElement(component);
-		sizet componentIndex = components.getTopIndex();
-
-		std::type_index typeIndex = std::type_index(typeid(TComponent));
-		m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
-
-		m_structuralChangeHandler->handleStructuralChange(typeIndex);
-	}
-
-	template <t_component TComponent>
-	void ComponentManager::addComponent(Entity entity)
-	{
-		TComponent component;
-		component.owner = entity;
-
-		auto& components = m_storage->getComponentsSafe<TComponent>();
-		components.addElement(component);
-		sizet componentIndex = components.getTopIndex();
-
-		std::type_index typeIndex = std::type_index(typeid(TComponent));
-		m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
-
-		m_structuralChangeHandler->handleStructuralChange(typeIndex);
-	}
-
-	template <t_component TComponent>
-	void ComponentManager::removeComponent(const Entity entity)
-	{
-		auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-		sizet topIndex = componentTable.getTopIndex();
-
-		std::type_index typeIndex = std::type_index(typeid(TComponent));
-
-		sizet index = m_lookup->getComponentIndex(entity, typeIndex);
-		m_lookup->removeComponentFromLookup(entity, typeIndex);
-		Entity topEntity = componentTable[topIndex].owner;
-		if (topEntity != entity)
-		{
-			m_lookup->setComponentIndex(topEntity, typeIndex, index);
-		}
-
-		componentTable.removeElement(index);
-
-		m_structuralChangeHandler->handleStructuralChange(typeIndex);
-	}
-
-	template <t_component TComponent>
-	TComponent& ComponentManager::getComponent(const Entity entity)
-	{
-		sizet idx = m_lookup->getComponentIndex(entity, std::type_index(typeid(TComponent)));
-		return m_storage->getComponentsAsserted<TComponent>()[idx];
-	}
-
-	template <t_component TComponent>
-	bool ComponentManager::tryGetComponent(const Entity entity, TComponent& outComponent)
-	{
-		std::type_index typeIndex = std::type_index(typeid(TComponent));
-
-		if (!m_lookup->hasComponent(entity, typeIndex))
-		{
-			return false;
-		}
-
-		outComponent = getComponent<TComponent>(entity);
-		return true;
-	}
-
-	template <t_component TComponent>
-	bool ComponentManager::hasComponent(const Entity& entity) const
-	{
-		return m_lookup->hasComponent(entity, typeid(TComponent));
-	}
-
-	inline EntityManager::EntityManager(std::shared_ptr<ComponentStorage> storage,
-	                                    std::shared_ptr<ComponentLookup> lookup,
-	                                    std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler):
-		m_storage(std::move(storage)),
-		m_lookup(std::move(lookup)),
-		m_structuralChangeHandler(std::move(structuralChangeHandler))
-	{
-	}
-
 	inline void EntityManager::deleteEntity(const Entity entity)
 	{
 		auto& lookupData = m_lookup->getLookupData(entity);
@@ -792,14 +1372,33 @@ namespace spite
 			sizet index = lookupData[i].index;
 			IComponentProvider& provider =
 				m_storage->getRawProviderAsserted(type);
-			Entity topEntity = provider.getTopEntity();
-			m_lookup->setComponentIndex(topEntity, type, index);
-			provider.removeComponent(index);
 
-			m_structuralChangeHandler->handleStructuralChange(type);
+			sizet n = 0;
+			Entity* topEntities = provider.getTopEntities(n);
+			for (sizet j = 0; j < n; ++j)
+			{
+				m_lookup->setComponentIndex(topEntities[i], type, index);
+			}
+
+			bool isStructuralChange = provider.removeComponent(entity, index);
+
+			if (isStructuralChange)
+			{
+				m_structuralChangeHandler->handleStructuralChange(type);
+			}
 		}
 
 		m_lookup->untrackEntity(entity);
+
+		//delete name record for named entities 
+		for (auto iter = m_namedEntities.begin(), end = m_namedEntities.end(); iter != end; ++iter)
+		{
+			if (iter->second == entity)
+			{
+				m_namedEntities.erase(iter);
+				return;
+			}
+		}
 	}
 
 	inline Entity EntityManager::createEntity()
@@ -812,84 +1411,5 @@ namespace spite
 	inline u64 EntityManager::getNextId()
 	{
 		return m_idGen++;
-	}
-
-	template <t_component TComponent>
-	CommandBuffer<TComponent>::CommandBuffer(ComponentStorage* storage, ComponentLookup* lookup,
-	                                         const spite::HeapAllocator& allocator,
-	                                         std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler):
-		m_storage(storage),
-		m_lookup(lookup), m_componentsToAdd(allocator), m_entitiesToRemove(allocator),
-		m_structuralChangeHandler(std::move(structuralChangeHandler))
-	{
-	}
-
-	template <t_component TComponent>
-	void CommandBuffer<TComponent>::commit()
-	{
-		sizet componentsSize = m_componentsToAdd.size();
-		sizet entitesSize = m_entitiesToRemove.size();
-		if (componentsSize != 0)
-		{
-			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-
-			sizet topIndex = static_cast<sizet>(componentTable.getTopIndex() + 1);
-			componentTable.addElements(m_componentsToAdd.begin(), m_componentsToAdd.end());
-
-			for (sizet i = 0; i < componentsSize; ++i, ++topIndex)
-			{
-				m_lookup->addComponentToLookup(m_componentsToAdd[i].owner, m_typeIndex, topIndex);
-			}
-		}
-		//removal strongly depends on how PooledVector works
-		if (entitesSize != 0)
-		{
-			auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-
-			SASSERTM(componentTable.getOccupiedSize() > 0, "Component table is already empty on removing using commandbuffer");
-			sizet topIndex = static_cast<sizet>(componentTable.getTopIndex());
-
-			for (sizet i = 0; i < entitesSize; ++i, --topIndex)
-			{
-				//set lookup indices first (top component gets the deleted component's idx) 
-				Entity removedEntity = m_entitiesToRemove[i];
-				sizet index = m_lookup->getComponentIndex(removedEntity, m_typeIndex);
-				m_lookup->removeComponentFromLookup(removedEntity, m_typeIndex);
-				Entity topEntity = componentTable[topIndex].owner;
-
-				if (removedEntity != topEntity)
-				{
-					m_lookup->setComponentIndex(topEntity, m_typeIndex, index);
-				}
-
-				componentTable.removeElement(index);
-			}
-		}
-		m_structuralChangeHandler->handleStructuralChange(m_typeIndex);
-	}
-
-	template <t_component TComponent>
-	void CommandBuffer<TComponent>::reserveForAddition(sizet capacity)
-	{
-		m_componentsToAdd.reserve(capacity);
-	}
-
-	template <t_component TComponent>
-	void CommandBuffer<TComponent>::reserveForRemoval(sizet capacity)
-	{
-		m_entitiesToRemove.reserve(capacity);
-	}
-
-	template <t_component TComponent>
-	void CommandBuffer<TComponent>::addComponent(const Entity entity, TComponent& component)
-	{
-		component.owner = entity;
-		m_componentsToAdd.push_back(component);
-	}
-
-	template <t_component TComponent>
-	void CommandBuffer<TComponent>::removeComponent(const Entity entity)
-	{
-		m_entitiesToRemove.push_back(entity);
 	}
 }

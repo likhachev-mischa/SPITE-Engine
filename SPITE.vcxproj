@@ -191,6 +191,7 @@
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\Debug.hpp" />
     <ClInclude Include="source\engine\Modules.hpp" />
+    <ClInclude Include="source\engine\VulkanComponents.hpp" />
     <ClInclude Include="source\engine\RenderingCore.hpp" />
     <ClInclude Include="source\engine\Resources.hpp" />
     <ClInclude Include="source\engine\ResourcesCore.hpp" />

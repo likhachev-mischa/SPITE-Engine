@@ -505,7 +505,7 @@ int main(int argc, char* argv[])
 		};
 
 
-		spite::VertexInputDescriptionsWrapper vertexInputDescriptions(
+		spite::VertexInputDescriptions vertexInputDescriptions(
 			{vk::VertexInputBindingDescription(0, sizeof(spite::Vertex), vk::VertexInputRate::eVertex)},
 			attributes);
 

@@ -17,7 +17,7 @@ namespace spite
 	};
 
 
-	template <t_component T>
+	template <t_plain_component T>
 	class Query1 final : public IQuery
 	{
 		using IndicesVector = eastl::vector<sizet, spite::HeapAllocator>;
@@ -57,6 +57,16 @@ namespace spite
 			return m_table->operator[](m_indices[n]);
 		}
 
+		bool& componentState(const sizet n)
+		{
+			return m_table->isActive(m_indices[n]);
+		}
+
+		Entity componentOwner(const sizet n)
+		{
+			return m_table->owner(m_indices[n]);
+		}
+		
 		void recreate(ComponentLookup* lookup, ComponentStorage* storage, const TypesVector& hasComponents,
 		              const TypesVector& hasNoComponents) override
 		{
@@ -65,7 +75,7 @@ namespace spite
 
 			for (sizet i = 0, size = m_table->getOccupiedSize(); i < size; ++i)
 			{
-				Entity entity = m_table->operator[](i).owner;
+				Entity entity = m_table->owner(i);
 
 				bool matchesCondition = true;
 				for (const auto& componentType : hasComponents)
@@ -139,7 +149,7 @@ namespace spite
 				: m_table(table), m_current(current), m_end(end)
 			{
 				// Skip inactive elements 
-				while (m_current != m_end && !m_table->operator[](*m_current).isActive)
+				while (m_current != m_end && !m_table->isActive(*m_current))
 				{
 					++m_current;
 				}
@@ -150,7 +160,7 @@ namespace spite
 				++m_current;
 
 				// Skip inactive elements
-				while (m_current != m_end && !m_table->operator[](*m_current).isActive)
+				while (m_current != m_end && !m_table->isActive(*m_current))
 				{
 					++m_current;
 				}
@@ -221,7 +231,7 @@ namespace spite
 		~Query1() override = default;
 	};
 
-	template <t_component T1, t_component T2>
+	template <t_plain_component T1, t_plain_component T2>
 	class Query2 final : public IQuery
 	{
 		using IndicesVector = eastl::vector<eastl::tuple<sizet, sizet>, spite::HeapAllocator>;
@@ -349,7 +359,7 @@ namespace spite
 			}
 		};
 
-		class exclude_inactive_iterator
+	/*	class exclude_inactive_iterator
 		{
 			iterator m_current;
 			iterator m_end;
@@ -397,7 +407,7 @@ namespace spite
 			{
 				return m_current != other.m_current;
 			}
-		};
+		};*/
 
 		iterator begin()
 		{
@@ -409,7 +419,7 @@ namespace spite
 			return iterator(m_indices.end(), m_indices.end(), m_table1, m_table2);
 		}
 
-		exclude_inactive_iterator exclude_inactive_begin()
+	/*	exclude_inactive_iterator exclude_inactive_begin()
 		{
 			return exclude_inactive_iterator(begin());
 		}
@@ -430,13 +440,13 @@ namespace spite
 		ExcludeInactiveView excludeInactive()
 		{
 			return ExcludeInactiveView{*this};
-		}
+		}*/
 
 
 		~Query2() override = default;
 	};
 
-	template <t_component T1, t_component T2, t_component T3>
+	template <t_plain_component T1, t_plain_component T2, t_plain_component T3>
 	class Query3 final : public IQuery
 	{
 		eastl::vector<sizet, spite::HeapAllocator> m_indices1;
@@ -541,6 +551,220 @@ namespace spite
 
 
 		~Query3() override = default;
+	};
+
+	template<t_shared_component T>
+	class SharedQuery1 final : public IQuery
+	{
+		using IndicesVector = eastl::vector<sizet, spite::HeapAllocator>;
+		IndicesVector m_indices;
+
+		SharedComponentTable<T>* m_table;
+
+		using TypesVector = eastl::vector<std::type_index, spite::HeapAllocator>;
+
+	public:
+		SharedQuery1(ComponentLookup* lookup, ComponentStorage* storage,
+		       const spite::HeapAllocator& allocator, const TypesVector& hasComponents,
+		       const TypesVector& hasNoComponents) : m_indices(allocator)
+		{
+			//if the table is not registered upon query creation
+			m_table = &storage->getComponentsSafe<T>();
+			recreate(lookup, storage, hasComponents, hasNoComponents);
+		}
+
+		SharedQuery1(const SharedQuery1& other) = delete;
+		SharedQuery1(SharedQuery1&& other) = delete;
+		SharedQuery1& operator=(const SharedQuery1& other) = delete;
+		SharedQuery1& operator=(SharedQuery1&& other) = delete;
+
+		sizet getSize() const
+		{
+			return m_indices.size();
+		}
+
+		sizet getComponentIndex(const sizet filterIndex)
+		{
+			return m_indices[filterIndex];
+		}
+
+		T& operator[](const sizet n)
+		{
+			return m_table->operator[](m_indices[n]);
+		}
+
+		bool& componentState(const sizet n)
+		{
+			return m_table->isActive(m_indices[n]);
+		}
+
+		std::vector<Entity>& componentOwners(const sizet n)
+		{
+			return m_table->owners(m_indices[n]);
+		}
+		
+		void recreate(ComponentLookup* lookup, ComponentStorage* storage, const TypesVector& hasComponents,
+		              const TypesVector& hasNoComponents) override
+		{
+			m_indices.clear();
+			m_table = &storage->getComponentsAsserted<T>();
+
+			for (sizet i = 0, size = m_table->getOccupiedSize(); i < size; ++i)
+			{
+				Entity entity = m_table->owner(i);
+
+				bool matchesCondition = true;
+				for (const auto& componentType : hasComponents)
+				{
+					matchesCondition &= lookup->hasComponent(entity, componentType);
+				}
+				for (const auto& componentType : hasNoComponents)
+				{
+					matchesCondition &= !lookup->hasComponent(entity, componentType);
+				}
+
+				if (matchesCondition)
+				{
+					m_indices.push_back(i);
+				}
+			}
+		}
+
+		class iterator
+		{
+			SharedComponentTable<T>* m_table;
+
+			IndicesVector::iterator m_current;
+			IndicesVector::iterator m_end;
+
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using value_type = T;
+			using difference_type = std::ptrdiff_t;
+			using pointer = T*;
+			using reference = T&;
+
+			iterator(const IndicesVector::iterator current, const IndicesVector::iterator end, ComponentTable<T>* table)
+				: m_table(table), m_current(current), m_end(end)
+			{
+			}
+
+			iterator& operator++()
+			{
+				++m_current;
+				return *this;
+			}
+
+			reference operator*() const
+			{
+				return m_table->operator[](*m_current);
+			}
+
+			bool operator!=(const iterator& other) const
+			{
+				return m_current != other.m_current;
+			}
+		};
+
+		class exclude_inactive_iterator
+		{
+			ComponentTable<T>* m_table;
+			IndicesVector::iterator m_current;
+			IndicesVector::iterator m_end;
+
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using value_type = T;
+			using difference_type = std::ptrdiff_t;
+			using pointer = T*;
+			using reference = T&;
+
+			exclude_inactive_iterator(const IndicesVector::iterator current,
+			                          const IndicesVector::iterator end,
+			                          ComponentTable<T>* table)
+				: m_table(table), m_current(current), m_end(end)
+			{
+				// Skip inactive elements 
+				while (m_current != m_end && !m_table->isActive(*m_current))
+				{
+					++m_current;
+				}
+			}
+
+			exclude_inactive_iterator& operator++()
+			{
+				++m_current;
+
+				// Skip inactive elements
+				while (m_current != m_end && !m_table->isActive(*m_current))
+				{
+					++m_current;
+				}
+				return *this;
+			}
+
+			exclude_inactive_iterator operator++(int)
+			{
+				exclude_inactive_iterator tmp = *this;
+				++(*this);
+				return tmp;
+			}
+
+			reference operator*() const
+			{
+				return m_table->operator[](*m_current);
+			}
+
+			pointer operator->() const
+			{
+				return &(m_table->operator[](*m_current));
+			}
+
+			bool operator==(const exclude_inactive_iterator& other) const
+			{
+				return m_current == other.m_current;
+			}
+
+			bool operator!=(const exclude_inactive_iterator& other) const
+			{
+				return !(*this == other);
+			}
+		};
+
+		iterator begin()
+		{
+			return iterator(m_indices.begin(), m_indices.end(), m_table);
+		}
+
+		iterator end()
+		{
+			return iterator(m_indices.end(), m_indices.end(), m_table);
+		}
+
+		exclude_inactive_iterator exclude_inactive_begin()
+		{
+			return exclude_inactive_iterator(m_indices.begin(), m_indices.end(), m_table);
+		}
+
+		exclude_inactive_iterator exclude_inactive_end()
+		{
+			return exclude_inactive_iterator(m_indices.end(), m_indices.end(), m_table);
+		}
+
+		struct ExcludeInactiveView
+		{
+			SharedQuery1& query;
+
+			auto begin() { return query.exclude_inactive_begin(); }
+			auto end() { return query.exclude_inactive_end(); }
+		};
+
+		ExcludeInactiveView excludeInactive()
+		{
+			return ExcludeInactiveView{*this};
+		}
+
+		~SharedQuery1() override = default;
 	};
 
 
@@ -679,7 +903,7 @@ namespace spite
 			return QueryBuildInfo(m_allocator);
 		}
 
-		template <t_component T>
+		template <t_plain_component T>
 		Query1<T>* buildQuery(QueryBuildInfo& buildInfo)
 		{
 			buildInfo.m_targetComponents.push_back(std::type_index(typeid(T)));
@@ -698,7 +922,7 @@ namespace spite
 			return static_cast<Query1<T>*>(query);
 		}
 
-		template <t_component T1, t_component T2>
+		template <t_plain_component T1, t_plain_component T2>
 		Query2<T1, T2>* buildQuery(QueryBuildInfo& buildInfo)
 		{
 			buildInfo.m_targetComponents.push_back(std::type_index(typeid(T1)));
@@ -722,7 +946,7 @@ namespace spite
 			return static_cast<Query2<T1, T2>*>(query);
 		}
 
-		template <t_component T1, t_component T2, t_component T3>
+		template <t_plain_component T1, t_plain_component T2, t_plain_component T3 >
 		Query3<T1, T2, T3>* buildQuery(QueryBuildInfo& buildInfo)
 		{
 			buildInfo.m_targetComponents.push_back(std::type_index(typeid(T1)));
@@ -746,6 +970,25 @@ namespace spite
 			                                       buildInfo.m_hasNoComponents);
 			m_queries.emplace(buildInfo, query);
 			return static_cast<Query3<T1, T2, T3>*>(query);
+		}
+
+		template <t_shared_component T>
+		SharedQuery1<T>* buildQuery(QueryBuildInfo& buildInfo)
+		{
+			buildInfo.m_targetComponents.push_back(std::type_index(typeid(T)));
+
+			if (contains(buildInfo))
+			{
+				STEST_LOG_UNPRINTED(TESTLOG_ECS_QUERY_LOADED_FROM_CACHE(typeid(T).name()))
+				IQuery* query = m_queries.at(buildInfo);
+				return static_cast<SharedQuery1<T>*>(query);
+			}
+
+			STEST_LOG_UNPRINTED(TESTLOG_ECS_NEW_QUERY_CREATED(typeid(T).name()))
+			IQuery* query = new SharedQuery1<T>(m_lookup.get(), m_storage.get(), m_allocator, buildInfo.m_hasComponents,
+			                              buildInfo.m_hasNoComponents);
+			m_queries.emplace(buildInfo, query);
+			return static_cast<SharedQuery1<T>*>(query);
 		}
 
 		void recreateDependentQueries(const std::type_index type)

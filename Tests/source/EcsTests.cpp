@@ -540,8 +540,7 @@ TEST_F(EcsTest, QueryIgnoreDisabled)
 	{
 		auto entity = m_world->service()->entityManager()->createEntity();
 		PositionComponent position;
-		position.isActive = false;
-		m_world->service()->componentManager()->addComponent(entity, position);
+		m_world->service()->componentManager()->addComponent(entity, position,false);
 	}
 
 	auto queryInfo = m_world->service()->queryBuilder()->getQueryBuildInfo();
