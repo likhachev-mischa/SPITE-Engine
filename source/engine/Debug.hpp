@@ -29,7 +29,7 @@ namespace spite
 
 	vk::DebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo();
 
-	bool checkValidationLayerSupport(const spite::HeapAllocator& allocator);
+	bool checkValidationLayerSupport();
 
 
 	//TODO: implement allocator

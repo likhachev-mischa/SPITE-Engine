@@ -19,10 +19,10 @@ namespace spite
 		return createInfo;
 	}
 
-	bool checkValidationLayerSupport(const spite::HeapAllocator& allocator)
+	bool checkValidationLayerSupport()
 	{
 		auto [result, availableLayers] = vk::enumerateInstanceLayerProperties();
-		SASSERT_VULKAN(result);
+		SASSERT_VULKAN(result)
 
 		for (const char* layerName : VALIDATION_LAYERS)
 		{

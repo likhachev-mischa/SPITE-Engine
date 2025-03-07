@@ -10,13 +10,13 @@
 
 namespace spite
 {
-	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(const spite::HeapAllocator& allocator,
-	                                                                       char const* const* windowExtensions,
-	                                                                       const u32 windowExtensionCount)
+	std::vector<const char*> getRequiredExtensions(
+		char const* const* windowExtensions,
+		const u32 windowExtensionCount)
 	{
-		eastl::vector<const char*, spite::HeapAllocator> extensions(windowExtensions,
-		                                                            windowExtensions +
-		                                                            windowExtensionCount, allocator);
+		std::vector<const char*> extensions(windowExtensions,
+		                                    windowExtensions +
+		                                    windowExtensionCount);
 
 		if (ENABLE_VALIDATION_LAYERS)
 		{
@@ -26,13 +26,12 @@ namespace spite
 		return extensions;
 	}
 
-	vk::Instance createInstance(const spite::HeapAllocator& allocator,
-	                            const vk::AllocationCallbacks& allocationCallbacks, const
-	                            eastl::vector<const char*, spite::HeapAllocator>& extensions)
+	vk::Instance createInstance(const vk::AllocationCallbacks& allocationCallbacks, const
+	                            std::vector<const char*>& extensions)
 	{
 		if constexpr (ENABLE_VALIDATION_LAYERS)
 		{
-			SASSERTM(checkValidationLayerSupport(allocator), "Validation layers requested, but not available!")
+			SASSERTM(checkValidationLayerSupport(), "Validation layers requested, but not available!")
 		}
 
 		vk::ApplicationInfo appInfo(APPLICATION_NAME,
@@ -87,14 +86,14 @@ namespace spite
 	}
 
 	vk::Device createDevice(const QueueFamilyIndices& indices, const vk::PhysicalDevice& physicalDevice,
-	                        const spite::HeapAllocator& allocator, const vk::AllocationCallbacks* pAllocationCallbacks)
+	                        const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		std::set<u32> uniqueQueueFamilies = {
 			indices.graphicsFamily.value(), indices.presentFamily.value(),
 			indices.transferFamily.value()
 		};
 
-		eastl::vector<vk::DeviceQueueCreateInfo, spite::HeapAllocator> queueCreateInfos(allocator);
+		std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 		queueCreateInfos.reserve(uniqueQueueFamilies.size());
 
 		float queuePriority = 1.0f;
@@ -151,8 +150,7 @@ namespace spite
 		return allocator;
 	}
 
-	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, const vk::PhysicalDevice& physicalDevice,
-	                                     const spite::HeapAllocator& allocator)
+	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, const vk::PhysicalDevice& physicalDevice)
 	{
 		QueueFamilyIndices indices;
 
@@ -246,17 +244,17 @@ namespace spite
 
 	vk::SwapchainKHR createSwapchain(const vk::Device& device,
 	                                 const QueueFamilyIndices& indices, const vk::SurfaceKHR& surface,
-	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Extent2D& extent,
+	                                 const vk::SurfaceCapabilitiesKHR& capabilities, const vk::Extent2D& extent,
 	                                 const vk::SurfaceFormatKHR& surfaceFormat,
 	                                 const vk::PresentModeKHR& presentMode,
 	                                 const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
-		u32 imageCount = swapchainSupport.capabilities.minImageCount + 1;
+		u32 imageCount = capabilities.minImageCount + 1;
 
-		if (swapchainSupport.capabilities.maxImageCount > 0 && imageCount >
-			swapchainSupport.capabilities.maxImageCount)
+		if (capabilities.maxImageCount > 0 && imageCount >
+			capabilities.maxImageCount)
 		{
-			imageCount = swapchainSupport.capabilities.maxImageCount;
+			imageCount = capabilities.maxImageCount;
 		}
 
 		vk::SwapchainCreateInfoKHR createInfo({},
@@ -270,7 +268,7 @@ namespace spite
 		                                      {},
 		                                      {},
 		                                      {},
-		                                      swapchainSupport.capabilities.currentTransform,
+		                                      capabilities.currentTransform,
 		                                      vk::CompositeAlphaFlagBitsKHR::eOpaque,
 		                                      presentMode,
 		                                      vk::True);
@@ -305,14 +303,13 @@ namespace spite
 		return swapchainImages;
 	}
 
-	eastl::vector<vk::ImageView, spite::HeapAllocator> createImageViews(const vk::Device& device,
-	                                                                    const std::vector<vk::Image>& swapchainImages,
-	                                                                    const vk::Format& imageFormat,
-	                                                                    const spite::HeapAllocator& allocator,
-	                                                                    const vk::AllocationCallbacks*
-	                                                                    pAllocationCallbacks)
+	std::vector<vk::ImageView> createImageViews(const vk::Device& device,
+	                                            const std::vector<vk::Image>& swapchainImages,
+	                                            const vk::Format& imageFormat,
+	                                            const vk::AllocationCallbacks*
+	                                            pAllocationCallbacks)
 	{
-		eastl::vector<vk::ImageView, spite::HeapAllocator> imageViews(allocator);
+		std::vector<vk::ImageView> imageViews;
 		imageViews.reserve(swapchainImages.size());
 		for (const auto& image : swapchainImages)
 		{
@@ -397,7 +394,7 @@ namespace spite
 		return descriptorSetLayout;
 	}
 
-	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
+	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		vk::ShaderModuleCreateInfo createInfo(
@@ -412,7 +409,7 @@ namespace spite
 
 	//uses createShaderModule
 	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device,
-	                                                        const eastl::vector<char, spite::HeapAllocator>& code,
+	                                                        const std::vector<char>& code,
 	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
@@ -535,17 +532,14 @@ namespace spite
 		return graphicsPipeline;
 	}
 
-	eastl::vector<vk::Framebuffer, spite::HeapAllocator> createFramebuffers(const vk::Device& device,
-	                                                                        const spite::HeapAllocator& allocator,
-	                                                                        const eastl::vector<
-		                                                                        vk::ImageView, spite::HeapAllocator>&
-	                                                                        imageViews,
-	                                                                        const vk::Extent2D& swapchainExtent,
-	                                                                        const vk::RenderPass& renderPass,
-	                                                                        const vk::AllocationCallbacks*
-	                                                                        pAllocationCallbacks)
+	std::vector<vk::Framebuffer> createFramebuffers(const vk::Device& device,
+	                                                const std::vector<vk::ImageView>& imageViews,
+	                                                const vk::Extent2D& swapchainExtent,
+	                                                const vk::RenderPass& renderPass,
+	                                                const vk::AllocationCallbacks*
+	                                                pAllocationCallbacks)
 	{
-		eastl::vector<vk::Framebuffer, spite::HeapAllocator> swapchainFramebuffers(allocator);
+		std::vector<vk::Framebuffer> swapchainFramebuffers;
 		swapchainFramebuffers.resize(imageViews.size());
 
 		for (size_t i = 0; i < imageViews.size(); ++i)

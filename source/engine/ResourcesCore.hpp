@@ -18,21 +18,18 @@ namespace spite
 		vk::KHRSwapchainExtensionName
 	};
 
-	eastl::vector<const char*, spite::HeapAllocator> getRequiredExtensions(const spite::HeapAllocator& allocator,
-	                                                                       char const* const* windowExtensions,
-	                                                                       const u32 windowExtensionCount);
+	std::vector<const char*> getRequiredExtensions(char const* const* windowExtensions,
+	                                               const u32 windowExtensionCount);
 
-	vk::Instance createInstance(const spite::HeapAllocator& allocator,
-	                            const vk::AllocationCallbacks& allocationCallbacks,
-	                            const eastl::vector<const char*, spite::HeapAllocator>& extensions);
+	vk::Instance createInstance(const vk::AllocationCallbacks& allocationCallbacks,
+	                            const std::vector<const char*>& extensions);
 
 	vk::PhysicalDevice getPhysicalDevice(const vk::Instance& instance);
 
-	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, const vk::PhysicalDevice& physicalDevice,
-	                                     const spite::HeapAllocator& allocator);
+	QueueFamilyIndices findQueueFamilies(const vk::SurfaceKHR& surface, const vk::PhysicalDevice& physicalDevice);
 
 	vk::Device createDevice(const QueueFamilyIndices& indices, const vk::PhysicalDevice& physicalDevice,
-	                        const spite::HeapAllocator& allocator, const vk::AllocationCallbacks* pAllocationCallbacks);
+	                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	//TODO: add vma callbacks
 	vma::Allocator createVmAllocator(const vk::PhysicalDevice& physicalDevice, const vk::Device& device,
@@ -51,19 +48,18 @@ namespace spite
 
 	vk::SwapchainKHR createSwapchain(const vk::Device& device,
 	                                 const QueueFamilyIndices& indices, const vk::SurfaceKHR& surface,
-	                                 const SwapchainSupportDetails& swapchainSupport, const vk::Extent2D& extent,
+	                                 const vk::SurfaceCapabilitiesKHR& capabilities, const vk::Extent2D& extent,
 	                                 const vk::SurfaceFormatKHR& surfaceFormat,
 	                                 const vk::PresentModeKHR& presentMode,
 	                                 const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	std::vector<vk::Image> getSwapchainImages(const vk::Device& device, const vk::SwapchainKHR& swapchain);
 
-	eastl::vector<vk::ImageView, spite::HeapAllocator> createImageViews(const vk::Device& device,
-	                                                                    const std::vector<vk::Image>& swapchainImages,
-	                                                                    const vk::Format& imageFormat,
-	                                                                    const spite::HeapAllocator& allocator,
-	                                                                    const vk::AllocationCallbacks*
-	                                                                    pAllocationCallbacks);
+	std::vector<vk::ImageView> createImageViews(const vk::Device& device,
+	                                            const std::vector<vk::Image>& swapchainImages,
+	                                            const vk::Format& imageFormat,
+	                                            const vk::AllocationCallbacks*
+	                                            pAllocationCallbacks);
 
 	vk::RenderPass createRenderPass(const vk::Device& device, const vk::Format& imageFormat,
 	                                const vk::AllocationCallbacks* pAllocationCallbacks);
@@ -73,11 +69,11 @@ namespace spite
 	                                                  const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::ShaderModule createShaderModule(const vk::Device& device, const eastl::vector<char, spite::HeapAllocator>& code,
+	vk::ShaderModule createShaderModule(const vk::Device& device, const std::vector<char>& code,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::PipelineShaderStageCreateInfo createShaderStageInfo(const vk::Device& device,
-	                                                        const eastl::vector<char, spite::HeapAllocator>& code,
+	                                                        const std::vector<char>& code,
 	                                                        const vk::ShaderStageFlagBits& stage, const char* name,
 	                                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
@@ -91,15 +87,12 @@ namespace spite
 	                                    shaderStages, const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	eastl::vector<vk::Framebuffer, spite::HeapAllocator> createFramebuffers(const vk::Device& device,
-	                                                                        const spite::HeapAllocator& allocator,
-	                                                                        const eastl::vector<
-		                                                                        vk::ImageView, spite::HeapAllocator>&
-	                                                                        imageViews,
-	                                                                        const vk::Extent2D& swapchainExtent,
-	                                                                        const vk::RenderPass& renderPass,
-	                                                                        const vk::AllocationCallbacks*
-	                                                                        pAllocationCallbacks);
+	std::vector<vk::Framebuffer> createFramebuffers(const vk::Device& device,
+	                                                const std::vector<vk::ImageView>& imageViews,
+	                                                const vk::Extent2D& swapchainExtent,
+	                                                const vk::RenderPass& renderPass,
+	                                                const vk::AllocationCallbacks*
+	                                                pAllocationCallbacks);
 
 	vk::CommandPool createCommandPool(const vk::Device& device,
 	                                  const vk::AllocationCallbacks* pAllocationCallbacks,
@@ -127,13 +120,14 @@ namespace spite
 
 	std::vector<vk::DescriptorSet> createDescriptorSets(const vk::Device& device,
 	                                                    const vk::DescriptorSetLayout& descriptorSetLayout,
-	                                                    const vk::DescriptorPool& descriptorPool, 
+	                                                    const vk::DescriptorPool& descriptorPool,
 	                                                    const spite::HeapAllocator& allocator,
 	                                                    const vk::AllocationCallbacks* pAllocationCallbacks,
 	                                                    const u32 count = MAX_FRAMES_IN_FLIGHT);
 
 	void updateDescriptorSets(const vk::Device& device, const vk::DescriptorSet& descriptorSet,
-	                          const vk::Buffer& buffer, const vk::DescriptorType& type,const u32 bindingIndex, const sizet bufferElementSize);
+	                          const vk::Buffer& buffer, const vk::DescriptorType& type, const u32 bindingIndex,
+	                          const sizet bufferElementSize);
 
 	std::vector<vk::CommandBuffer> createGraphicsCommandBuffers(const vk::Device& device,
 	                                                            const vk::CommandPool& graphicsCommandPool,

@@ -52,6 +52,10 @@ namespace spite
 	{
 	};
 
+	struct IEventComponent : IComponent
+	{
+	};
+
 	//components in general
 	template <typename TComponent>
 	concept t_component = std::is_base_of_v<IComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
@@ -78,6 +82,15 @@ namespace spite
 	template <typename TComponent>
 	concept t_singleton_component = std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
 			ISharedComponent, TComponent> && std::is_default_constructible_v<
+			TComponent> &&
+		std::is_copy_constructible_v<TComponent> &&
+		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+
+	//specificly IEventComponent
+	template <typename TComponent>
+	concept t_event_component = std::is_base_of_v<IEventComponent, TComponent> && !std::is_base_of_v<
+			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
+		std::is_default_constructible_v<
 			TComponent> &&
 		std::is_copy_constructible_v<TComponent> &&
 		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
@@ -631,11 +644,59 @@ namespace spite
 		~SingletonComponentTable() = default;
 	};
 
+	struct IEventTable
+	{
+		virtual bool isEmpty() = 0;
+		virtual void rewind() = 0;
+		virtual ~IEventTable() = default;
+	};
+
+	template <t_event_component T>
+	class EventComponentTable : IEventTable
+	{
+		PooledVector<T> m_events;
+
+	public:
+		EventComponentTable(const HeapAllocator& allocator, const sizet initialCount = 10): m_events(
+			allocator, initialCount)
+		{
+		}
+
+		sizet getSize()
+		{
+			return m_events.getOccupiedSize();
+		}
+
+		bool isEmpty() override
+		{
+			return m_events.getOccupiedSize() == 0;
+		}
+
+		void rewind()
+		{
+			m_events.rewind();
+		}
+
+		void addEvent(T event)
+		{
+			m_events.addElement(std::move(event));
+		}
+
+		T& operator[](sizet n)
+		{
+			return m_events[n];
+		}
+
+		~EventComponentTable() override = default;
+	};
 
 	class ComponentStorage
 	{
 		eastl::hash_map<std::type_index, IComponentProvider*, std::hash<std::type_index>, eastl::equal_to<
 			                std::type_index>, ComponentAllocator> m_storage;
+
+		eastl::hash_map<std::type_index, IEventTable*, std::hash<std::type_index>, eastl::equal_to<
+			                std::type_index>, ComponentAllocator> m_eventStorage;
 
 		eastl::hash_map<std::type_index, ISingletonTable*, std::hash<std::type_index>, eastl::equal_to<
 			                std::type_index>, ComponentAllocator> m_singletonStorage;
@@ -669,6 +730,16 @@ namespace spite
 			m_storage.emplace(typeIndex, provider);
 		}
 
+		template <t_event_component T>
+		void registerEvent()
+		{
+			std::type_index typeIndex = std::type_index(typeid(T));
+			SASSERTM(!isComponentRegistred(typeIndex), "Event of type %s is already registered", typeIndex.name());
+
+			IEventTable* table = new EventComponentTable<T>(m_componentAllocator);
+			m_eventStorage.emplace(typeIndex, table);
+		}
+
 		template <t_singleton_component TComponent>
 		void createSingleton()
 		{
@@ -691,6 +762,12 @@ namespace spite
 			return iterator != m_singletonStorage.end();
 		}
 
+		bool isEventRegistred(const std::type_index typeIndex)
+		{
+			auto iterator = m_eventStorage.find(typeIndex);
+			return iterator != m_eventStorage.end();
+		}
+
 		template <t_component TComponent>
 		void unregisterComponent()
 		{
@@ -711,6 +788,38 @@ namespace spite
 			delete m_singletonStorage.at(typeIndex);
 		}
 
+		template <t_event_component T>
+		void unregisterEvent()
+		{
+			std::type_index typeIndex = std::type_index(typeid(T));
+			SASSERTM(isEventRegistred(typeIndex), "Event %s was not present in storage to delete it",
+			         typeIndex.name());
+
+			delete m_eventStorage.at(typeIndex);
+		}
+
+		//returns true if at least one component of type is present
+		bool hasAnyComponents(const std::type_index typeIndex)
+		{
+			bool result;
+			IComponentProvider* provider = getRawProviderNullable(typeIndex);
+			if (provider == nullptr || provider->isEmpty())
+			{
+				result = false;
+			}
+			else
+			{
+				return true;
+			}
+			if (isEventRegistred(typeIndex) && !getRawEventTable(typeIndex).isEmpty())
+			{
+				return true;
+			}
+
+			result |= isSingletonCreated(typeIndex);
+			return result;
+		}
+
 		IComponentProvider& getRawProviderAsserted(const std::type_index typeIndex)
 		{
 			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name())
@@ -725,6 +834,12 @@ namespace spite
 			}
 
 			return m_storage.at(typeIndex);
+		}
+
+		IEventTable& getRawEventTable(const std::type_index typeIndex)
+		{
+			SASSERTM(isEventRegistred(typeIndex), "Event %s is not registred", typeIndex.name());
+			return *m_eventStorage.at(typeIndex);
 		}
 
 		template <t_plain_component TComponent>
@@ -746,6 +861,17 @@ namespace spite
 
 			auto& value = m_storage.at(typeIndex);
 			auto table = reinterpret_cast<SharedComponentTable<TComponent>*>(value);
+			return *table;
+		}
+
+		template <t_event_component T>
+		EventComponentTable<T>& getEventsAsserted()
+		{
+			std::type_index typeIndex = std::type_index(typeid(T));
+			SASSERTM(isEventRegistred(typeIndex), "No event of type %s exist in storage", typeIndex.name());
+
+			auto& value = m_eventStorage.at(typeIndex);
+			auto table = reinterpret_cast<EventComponentTable<T>*>(value);
 			return *table;
 		}
 
@@ -775,6 +901,20 @@ namespace spite
 			return *table;
 		}
 
+		template <t_event_component T>
+		EventComponentTable<T>& getEventsSafe()
+		{
+			std::type_index typeIndex = std::type_index(typeid(T));
+			if (!isEventRegistred(typeIndex))
+			{
+				registerEvent<T>();
+			}
+
+			auto& value = m_eventStorage.at(typeIndex);
+			auto table = reinterpret_cast<EventComponentTable<T>*>(value);
+			return *table;
+		}
+
 		template <t_singleton_component TComponent>
 		SingletonComponentTable<TComponent>& getSingleton()
 		{
@@ -799,6 +939,11 @@ namespace spite
 				delete pair.second;
 			}
 			m_singletonStorage.clear(true);
+			for (const auto& pair : m_eventStorage)
+			{
+				delete pair.second;
+			}
+			m_eventStorage.clear(true);
 		}
 	};
 
@@ -1053,6 +1198,40 @@ namespace spite
 			         typeIndex.name());
 			sizet idx = m_lookup->getComponentIndex(entity, typeIndex);
 			m_storage->getComponentsAsserted<TComponent>().setActive(idx, isActive);
+		}
+	};
+
+	class EntityEventManager
+	{
+		std::shared_ptr<ComponentStorage> m_storage;
+		std::shared_ptr<IStructuralChangeHandler> m_structuralChangeHandler;
+
+	public:
+		EntityEventManager(std::shared_ptr<ComponentStorage> storage,
+		                   std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler)
+			: m_storage(std::move(storage)),
+			  m_structuralChangeHandler(std::move(structuralChangeHandler))
+		{
+		}
+
+		template<t_event_component T>
+		void registerEvent() const
+		{
+			m_storage->registerEvent<T>();
+		}
+
+		template<t_event_component T>
+		void createEvent(T event) const
+		{
+			auto& eventTable = m_storage->getEventsAsserted<T>();
+			eventTable.addEvent(std::move(event));
+			m_structuralChangeHandler->handleStructuralChange(typeid(T));
+		}
+
+		void rewindEvents(const std::type_index& typeIndex) const
+		{
+			m_storage->getRawEventTable(typeIndex).rewind();
+			m_structuralChangeHandler->handleStructuralChange(typeIndex);
 		}
 	};
 

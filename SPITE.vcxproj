@@ -196,6 +196,7 @@
     <ClInclude Include="source\engine\Resources.hpp" />
     <ClInclude Include="source\engine\ResourcesCore.hpp" />
     <ClInclude Include="source\engine\VulkanAllocator.hpp" />
+    <ClInclude Include="source\engine\VulkanSystems.hpp" />
     <ClInclude Include="source\external\StackWalker.h" />
     <ClInclude Include="source\external\tlsf.h" />
   </ItemGroup>

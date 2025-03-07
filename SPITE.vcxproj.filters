@@ -138,6 +138,9 @@
     <ClInclude Include="source\engine\VulkanComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\engine\VulkanSystems.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\application\EventManager.cpp">

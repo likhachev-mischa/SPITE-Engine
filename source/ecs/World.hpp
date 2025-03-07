@@ -32,7 +32,7 @@ namespace spite
 
 		void recordChange(const std::type_index typeIndex)
 		{
-			bool isComponentPresent = !m_storage->getRawProviderAsserted(typeIndex).isEmpty();
+			bool isComponentPresent = m_storage->hasAnyComponents(typeIndex);
 
 			if (isComponentPresent)
 			{
@@ -90,6 +90,7 @@ namespace spite
 
 		std::shared_ptr<EntityManager> m_entityManager;
 		std::shared_ptr<ComponentManager> m_componentManager;
+		std::shared_ptr<EntityEventManager> m_eventManager;
 
 		const spite::HeapAllocator m_allocator;
 
@@ -110,6 +111,8 @@ namespace spite
 			                                                        m_structuralChangeHandler);
 			m_entityManager = std::make_shared<EntityManager>(m_componentStorage, m_componentLookup,
 			                                                  m_structuralChangeHandler, m_allocator);
+
+			m_eventManager = std::make_shared<EntityEventManager>(m_componentStorage, m_structuralChangeHandler);
 		}
 
 		template <t_plain_component TComponent>
@@ -314,8 +317,7 @@ namespace spite
 				for (SystemBase* system : m_allSystems)
 				{
 					//need inactive and dependent systems
-					if (system->isActive() || !system->isDependentOn(
-						nonEmptyTables.data(), nonEmptyTablesCount))
+					if (system->isActive() || !system->isDependentOn(nonEmptyTables.data(), nonEmptyTablesCount))
 					{
 						continue;
 					}
@@ -324,7 +326,7 @@ namespace spite
 					bool canBeActivated = true;
 					for (const std::type_index& dependency : dependencies)
 					{
-						canBeActivated &= !storage->getRawProviderAsserted(dependency).isEmpty();
+						canBeActivated &= storage->hasAnyComponents(dependency);
 					}
 
 					//enable system
@@ -427,8 +429,7 @@ namespace spite
 			auto storage = m_entityService->componentStorage();
 			for (const std::type_index dependency : dependencies)
 			{
-				IComponentProvider* provider = storage->getRawProviderNullable(dependency);
-				if (provider == nullptr || provider->isEmpty())
+				if (!storage->hasAnyComponents(dependency))
 				{
 					system->m_isActive = false;
 					return false;
