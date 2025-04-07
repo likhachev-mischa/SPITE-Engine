@@ -19,7 +19,7 @@ namespace spite
 		eastl::vector_set<std::type_index, std::less<std::type_index>, HeapAllocator> m_nonEmptyTables;
 
 	public:
-		StructuralChangeTracker(std::shared_ptr<ComponentStorage> storage, const HeapAllocator& allocator):
+		StructuralChangeTracker(std::shared_ptr<ComponentStorage> storage, const HeapAllocator& allocator) :
 			m_storage(std::move(storage)), m_emptyTables(allocator), m_nonEmptyTables(allocator)
 		{
 		}
@@ -64,7 +64,7 @@ namespace spite
 
 	public:
 		StructuralChangeHandler(std::shared_ptr<QueryBuilder> queryBuilder,
-		                        std::shared_ptr<StructuralChangeTracker> tracker)
+			std::shared_ptr<StructuralChangeTracker> tracker)
 			: m_queryBuilder(std::move(queryBuilder)), m_tracker(std::move(tracker))
 		{
 		}
@@ -92,11 +92,11 @@ namespace spite
 		std::shared_ptr<ComponentManager> m_componentManager;
 		std::shared_ptr<EntityEventManager> m_eventManager;
 
-		const spite::HeapAllocator m_allocator;
+		spite::HeapAllocator m_allocator;
 
 	public:
 		EntityService(const ComponentAllocator& componentAllocator,
-		              const spite::HeapAllocator& heapAllocator) : m_allocator(heapAllocator)
+			const spite::HeapAllocator& heapAllocator) : m_allocator(heapAllocator)
 		{
 			m_componentStorage = std::make_shared<ComponentStorage>(componentAllocator);
 			m_componentLookup = std::make_shared<ComponentLookup>(m_allocator);
@@ -108,9 +108,9 @@ namespace spite
 				m_queryBuilder, m_structuralChangeTracker);
 
 			m_componentManager = std::make_shared<ComponentManager>(m_componentStorage, m_componentLookup,
-			                                                        m_structuralChangeHandler);
+				m_structuralChangeHandler);
 			m_entityManager = std::make_shared<EntityManager>(m_componentStorage, m_componentLookup,
-			                                                  m_structuralChangeHandler, m_allocator);
+				m_structuralChangeHandler, m_allocator);
 
 			m_eventManager = std::make_shared<EntityEventManager>(m_componentStorage, m_structuralChangeHandler);
 		}
@@ -119,7 +119,7 @@ namespace spite
 		CommandBuffer<TComponent> getCommandBuffer()
 		{
 			return CommandBuffer<TComponent>(m_componentStorage.get(), m_componentLookup.get(), m_allocator,
-			                                 m_structuralChangeHandler);
+				m_structuralChangeHandler);
 		}
 
 		[[nodiscard]] std::shared_ptr<EntityManager> entityManager() const
@@ -152,10 +152,22 @@ namespace spite
 			return m_structuralChangeTracker;
 		}
 
+		[[nodiscard]] std::shared_ptr<EntityEventManager> entityEventManager()const
+		{
+			return m_eventManager;
+		}
+
+
 		[[nodiscard]] HeapAllocator allocator() const
 		{
 			return m_allocator;
 		}
+
+		[[nodiscard]] HeapAllocator* allocatorPtr() 
+		{
+			return &m_allocator;
+		}
+
 	};
 
 	class SystemBase
@@ -229,11 +241,11 @@ namespace spite
 
 	public:
 		EntityWorld(const ComponentAllocator& componentAllocator,
-		            const spite::HeapAllocator& heapAllocator) : m_allSystems(heapAllocator),
-		                                                         m_activeSystems(heapAllocator),
-		                                                         m_entityService(new EntityService(
-			                                                         componentAllocator, heapAllocator)),
-		                                                         m_allocator(heapAllocator)
+			const spite::HeapAllocator& heapAllocator) : m_allSystems(heapAllocator),
+			m_activeSystems(heapAllocator),
+			m_entityService(new EntityService(
+				componentAllocator, heapAllocator)),
+			m_allocator(heapAllocator)
 		{
 		}
 
@@ -358,10 +370,10 @@ namespace spite
 				}
 			}
 			SASSERTM(iter == newActiveSystemsCount,
-			         "Something went wrong upon system state restructure, expected %i, actual %i",
-			         newActiveSystemsCount, iter)
+				"Something went wrong upon system state restructure, expected %i, actual %i",
+				newActiveSystemsCount, iter)
 
-			tracker->reset();
+				tracker->reset();
 		}
 
 
@@ -380,7 +392,7 @@ namespace spite
 		void addSystem(SystemBase* system)
 		{
 			SASSERTM(system->m_world == nullptr, "System is already owned by another world")
-			system->setWorld(this);
+				system->setWorld(this);
 			m_allSystems.push_back(system);
 			system->onInitialize();
 

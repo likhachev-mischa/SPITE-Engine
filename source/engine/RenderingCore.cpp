@@ -7,39 +7,45 @@
 
 namespace spite
 {
-	void beginSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::RenderPass& renderPass,
+	void beginSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	                                 const vk::RenderPass& renderPass,
 	                                 const vk::Framebuffer& framebuffer)
 	{
 		vk::Result result = commandBuffer.reset();
 		SASSERT_VULKAN(result)
 
 		vk::CommandBufferInheritanceInfo inheritanceInfo(renderPass, 0, framebuffer);
-		vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eRenderPassContinue, &inheritanceInfo);
+		vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eRenderPassContinue,
+		                                     &inheritanceInfo);
 
 		result = commandBuffer.begin(beginInfo);
 		SASSERT_VULKAN(result)
 	}
 
-	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Pipeline& graphicsPipeline,
+	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	                                  const vk::Pipeline& graphicsPipeline,
 	                                  const vk::PipelineLayout& pipelineLayout,
 	                                  const std::vector<vk::DescriptorSet>& descriptorSets,
 	                                  const vk::Extent2D& swapchainExtent,
-	                                  const vk::Buffer& buffer, const u32* dynamicOffsets,
+	                                  const vk::Buffer& indexBuffer,
+	                                  const vk::Buffer& vertexBuffer,
+	                                  const u32* dynamicOffsets,
 	                                  const vk::DeviceSize& indicesOffset,
 	                                  const u32 indicesCount)
 
 	{
 		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
 		vk::DeviceSize offset = 0;
-		commandBuffer.bindVertexBuffers(0, 1, &buffer, &offset);
-		commandBuffer.bindIndexBuffer(buffer, indicesOffset, vk::IndexType::eUint32);
+
+		commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
+		commandBuffer.bindIndexBuffer(indexBuffer, indicesOffset, vk::IndexType::eUint32);
 
 		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 		                                 pipelineLayout,
 		                                 0,
 		                                 descriptorSets.size(),
 		                                 descriptorSets.data(),
-		                                 descriptorSets.size(),
+		                                 0,
 		                                 dynamicOffsets);
 
 
@@ -64,9 +70,12 @@ namespace spite
 		SASSERT_VULKAN(result)
 	}
 
-	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Extent2D& swapchainExtent,
-	                                const vk::RenderPass& renderPass, const vk::Framebuffer& framebuffer,
-	                                const std::vector<vk::CommandBuffer>& secondaryCommandBuffer)
+	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	                                const vk::Extent2D& swapchainExtent,
+	                                const vk::RenderPass& renderPass,
+	                                const vk::Framebuffer& framebuffer,
+	                                const std::vector<vk::CommandBuffer>& secondaryCommandBuffer,
+	                                const vk::Image image)
 	{
 		vk::Result result = commandBuffer.reset();
 		SASSERT_VULKAN(result)
@@ -76,24 +85,49 @@ namespace spite
 		SASSERT_VULKAN(result)
 
 		vk::Rect2D renderArea({}, swapchainExtent);
-		vk::ClearValue clearColor({0.2f, 0.2f, 0.2f, 1.0f});
-		vk::RenderPassBeginInfo renderPassInfo(renderPass,
-		                                       framebuffer,
-		                                       renderArea,
-		                                       1,
-		                                       &clearColor);
+		vk::ClearValue clearColor({0.1f, 0.1f, 0.1f, 1.0f});
+		vk::RenderPassBeginInfo renderPassInfo(renderPass, framebuffer, renderArea, 1, &clearColor);
 
-		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+
+		commandBuffer.beginRenderPass(renderPassInfo,
+		                              vk::SubpassContents::eSecondaryCommandBuffers);
 
 		commandBuffer.executeCommands(secondaryCommandBuffer);
 
 		commandBuffer.endRenderPass();
 
+		vk::ImageMemoryBarrier imageMemoryBarrier(vk::AccessFlagBits::eColorAttachmentWrite,
+		                                          vk::AccessFlagBits::eMemoryRead,
+		                                          vk::ImageLayout::eUndefined,
+		                                          vk::ImageLayout::ePresentSrcKHR,
+		                                          vk::QueueFamilyIgnored,
+		                                          vk::QueueFamilyIgnored,
+		                                          image,
+		                                          vk::ImageSubresourceRange(
+			                                          vk::ImageAspectFlagBits::eColor,
+			                                          0,
+			                                          1,
+			                                          0,
+			                                          1));
+
+		commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		                              vk::PipelineStageFlagBits::eBottomOfPipe,
+		                              vk::DependencyFlags(),
+		                              0,
+		                              nullptr,
+		                              0,
+		                              nullptr,
+		                              1,
+		                              &imageMemoryBarrier);
+
+
 		result = commandBuffer.end();
 		SASSERT_VULKAN(result)
 	}
 
-	vk::Result waitForFrame(const vk::Device& device, const vk::SwapchainKHR swapchain, const vk::Fence& inFlightFence,
+	vk::Result waitForFrame(const vk::Device& device,
+	                        const vk::SwapchainKHR swapchain,
+	                        const vk::Fence& inFlightFence,
 	                        const vk::Semaphore& imageAvaliableSemaphore,
 	                        u32& imageIndex)
 	{
@@ -106,21 +140,24 @@ namespace spite
 		result = device.acquireNextImageKHR(swapchain,
 		                                    UINT64_MAX,
 		                                    imageAvaliableSemaphore,
-		                                    {}, &imageIndex);
+		                                    {},
+		                                    &imageIndex);
 		return result;
 	}
 
 	//command buffer has to be recorded before
-	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer, const vk::Fence& inFlightFence,
-	                     const vk::Semaphore& imageAvaliableSemaphore, const vk::Semaphore& renderFinishedSemaphore,
-	                     const vk::Queue& graphicsQueue, const vk::Queue& presentQueue,
-	                     const vk::SwapchainKHR swapchain, const u32& imageIndex)
+	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer,
+	                     const vk::Fence& inFlightFence,
+	                     const vk::Semaphore& imageAvaliableSemaphore,
+	                     const vk::Semaphore& renderFinishedSemaphore,
+	                     const vk::Queue& graphicsQueue,
+	                     const vk::Queue& presentQueue,
+	                     const vk::SwapchainKHR swapchain,
+	                     const u32& imageIndex)
 	{
 		vk::Semaphore waitSemaphores[] = {imageAvaliableSemaphore};
 		vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
-		vk::Semaphore signalSemaphores[] = {
-			renderFinishedSemaphore
-		};
+		vk::Semaphore signalSemaphores[] = {renderFinishedSemaphore};
 
 
 		vk::SubmitInfo submitInfo(1,
@@ -134,6 +171,9 @@ namespace spite
 
 		vk::Result result = graphicsQueue.submit({submitInfo}, inFlightFence);
 		SASSERT_VULKAN(result)
+
+		//	result = graphicsQueue.waitIdle();
+		//SASSERT_VULKAN(result)
 
 		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &swapchain, &imageIndex, &result);
 		result = presentQueue.presentKHR(presentInfo);

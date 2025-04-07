@@ -5,7 +5,7 @@
 #include "Platform.hpp"
 
 //defines a global HeapAllocator instance that is used for non-specified allocations
-#define GLOBAL_ALLOCATOR 
+//#define GLOBAL_ALLOCATOR 
 
 namespace spite
 {

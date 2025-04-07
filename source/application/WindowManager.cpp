@@ -42,8 +42,8 @@ namespace spite
 			{
 			case SDL_EVENT_KEY_UP:
 				{
-					Events buttonEvent = m_inputManager->tryGetEvent(event.key.key);
-					if (buttonEvent != Events::NONE)
+					InputEvents buttonEvent = m_inputManager->tryGetEvent(event.key.key);
+					if (buttonEvent != InputEvents::NONE)
 					{
 						m_eventManager->triggerEvent(buttonEvent);
 						m_eventManager->triggerPollEvent(buttonEvent);

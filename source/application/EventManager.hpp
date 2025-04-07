@@ -5,7 +5,7 @@
 #include <tuple>
 #include <vector>
 
-#include "Events.hpp"
+#include "InputEvents.hpp"
 #include "Base/Platform.hpp"
 
 namespace spite
@@ -20,15 +20,15 @@ namespace spite
 
 		EventManager() = default;
 
-		void triggerPollEvent(const Events& eventId);
+		void triggerPollEvent(const InputEvents& eventId);
 
-		bool isPollEventTriggered(const Events& eventId);
+		bool isPollEventTriggered(const InputEvents& eventId);
 
 		void discardPollEvents();
 
-		void subscribeToEvent(const Events& eventId, const std::function<void()>& callback);
+		void subscribeToEvent(const InputEvents& eventId, const std::function<void()>& callback);
 
-		void triggerEvent(const Events& eventId);
+		void triggerEvent(const InputEvents& eventId);
 
 		void processEvents();
 
@@ -36,7 +36,7 @@ namespace spite
 
 	private:
 		u64 m_pollEventsMask = 0;
-		std::vector<std::tuple<Events, std::function<void()>>> m_subscirbers;
+		std::vector<std::tuple<InputEvents, std::function<void()>>> m_subscirbers;
 		std::queue<std::function<void()>> m_executionQueue;
 	};
 }

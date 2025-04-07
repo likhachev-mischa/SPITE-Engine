@@ -2,12 +2,12 @@
 
 namespace spite
 {
-	void EventManager::triggerPollEvent(const Events& eventId)
+	void EventManager::triggerPollEvent(const InputEvents& eventId)
 	{
 		m_pollEventsMask |= eventId;
 	}
 
-	bool EventManager::isPollEventTriggered(const Events& eventId)
+	bool EventManager::isPollEventTriggered(const InputEvents& eventId)
 	{
 		return (m_pollEventsMask & eventId) == eventId;
 	}
@@ -17,15 +17,15 @@ namespace spite
 		m_pollEventsMask = 0;
 	}
 
-	void EventManager::subscribeToEvent(const Events& eventId, const std::function<void()>& callback)
+	void EventManager::subscribeToEvent(const InputEvents& eventId, const std::function<void()>& callback)
 	{
 		std::tuple tuple(eventId, callback);
 		m_subscirbers.push_back(std::move(tuple));
 	}
 
-	void EventManager::triggerEvent(const Events& eventId)
+	void EventManager::triggerEvent(const InputEvents& eventId)
 	{
-		for (const std::tuple<Events, std::function<void()>>& eventTuple : m_subscirbers)
+		for (const std::tuple<InputEvents, std::function<void()>>& eventTuple : m_subscirbers)
 		{
 			if (std::get<0>(eventTuple) == eventId)
 			{

@@ -26,6 +26,11 @@ namespace
 		PositionComponent(float x, float y, float z): IComponent(), x(x), y(y), z(z)
 		{
 		}
+
+		PositionComponent(const PositionComponent& other) = default;
+		PositionComponent(PositionComponent&& other) noexcept = default;
+		PositionComponent& operator=(const PositionComponent& other) = default;
+		PositionComponent& operator=(PositionComponent&& other) noexcept = default;
 	};
 
 	struct VelocityComponent : spite::IComponent

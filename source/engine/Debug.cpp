@@ -9,13 +9,13 @@ namespace spite
 	vk::DebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo()
 	{
 		vk::DebugUtilsMessengerCreateInfoEXT createInfo({},
-		                                                vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-		                                                vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
-		                                                | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-		                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-		                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-		                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-		                                                debugCallback);
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+			| vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+			debugCallback);
 		return createInfo;
 	}
 
@@ -24,31 +24,39 @@ namespace spite
 		auto [result, availableLayers] = vk::enumerateInstanceLayerProperties();
 		SASSERT_VULKAN(result)
 
-		for (const char* layerName : VALIDATION_LAYERS)
-		{
-			bool layerFound = false;
-
-			for (const auto& layerProperties : availableLayers)
+			for (const char* layerName : VALIDATION_LAYERS)
 			{
-				if (strcmp(layerName, layerProperties.layerName) == 0)
+				bool layerFound = false;
+
+				for (const auto& layerProperties : availableLayers)
 				{
-					layerFound = true;
-					break;
+					if (strcmp(layerName, layerProperties.layerName) == 0)
+					{
+						layerFound = true;
+						break;
+					}
+				}
+
+				if (!layerFound)
+				{
+					return false;
 				}
 			}
-
-			if (!layerFound)
-			{
-				return false;
-			}
-		}
 
 		return true;
 	}
 
+	//vk::DebugUtilsMessengerEXT createDebugUtilsMessenger(vk::Instance instance, const vk::AllocationCallbacks* allocationCallbacks)
+	//{
+	//	auto [result, messenger] = instance.createDebugUtilsMessengerEXT(createDebugMessengerCreateInfo(), allocationCallbacks);
+
+	//	SASSERT_VULKAN(result);
+	//	return messenger;
+	//}
+
 	VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	                                      const VkAllocationCallbacks* pAllocator,
-	                                      VkDebugUtilsMessengerEXT* pDebugMessenger)
+		const VkAllocationCallbacks* pAllocator,
+		VkDebugUtilsMessengerEXT* pDebugMessenger)
 	{
 		auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
 			instance,
@@ -64,7 +72,7 @@ namespace spite
 	}
 
 	VkDebugUtilsMessengerEXT createDebugUtilsMessenger(const vk::Instance& instance,
-	                                                   const vk::AllocationCallbacks* pAllocationCallbacks)
+		const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		VkDebugUtilsMessengerCreateInfoEXT createInfo =
 			createDebugMessengerCreateInfo();
@@ -72,15 +80,15 @@ namespace spite
 		VkDebugUtilsMessengerEXT debugMessenger;
 
 		auto result = createDebugUtilsMessengerExt(instance,
-		                                           &createInfo,
-		                                           nullptr,
-		                                           &debugMessenger);
+			&createInfo,
+			nullptr,
+			&debugMessenger);
 		SASSERTM(result == VK_SUCCESS, "Failed to create debug messenger!")
-		return debugMessenger;
+			return debugMessenger;
 	}
 
 	void destroyDebugUtilsMessenger(const vk::Instance& instance, VkDebugUtilsMessengerEXT& debugMessenger,
-	                                const VkAllocationCallbacks* pAllocator)
+		const VkAllocationCallbacks* pAllocator)
 	{
 		auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
 			instance,

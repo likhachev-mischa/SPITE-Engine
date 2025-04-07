@@ -51,7 +51,7 @@
     <ClInclude Include="source\application\EventManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="source\application\Events.hpp">
+    <ClInclude Include="source\application\InputEvents.hpp">
       <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="source\application\InputManager.hpp">
@@ -114,9 +114,6 @@
     <ClInclude Include="source\external\tlsf.h">
       <Filter>External</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\ComponentsCore.hpp">
-      <Filter>ecs</Filter>
-    </ClInclude>
     <ClInclude Include="source\ecs\Systems.hpp">
       <Filter>ecs</Filter>
     </ClInclude>
@@ -139,6 +136,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\VulkanSystems.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\CoreComponents.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Math.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\InputEventComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

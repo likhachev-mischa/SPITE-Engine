@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <EASTL/vector.h>
 
 #include "Base/Platform.hpp"
@@ -9,8 +11,7 @@ namespace spite
 	struct Vertex;
 	class HeapAllocator;
 
-	eastl::vector<char, spite::HeapAllocator> readBinaryFile(cstring filename,
-	                                                         const spite::HeapAllocator& allocator);
+	std::vector<char> readBinaryFile(cstring filename);
 
 	void readModelInfoFile(
 		cstring filename,

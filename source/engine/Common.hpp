@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 
+#include "Base/Assert.hpp"
 #include "Base/Platform.hpp"
 #include "Base/VulkanUsage.hpp"
 
@@ -27,4 +28,5 @@ namespace spite
 		std::vector<vk::SurfaceFormatKHR> formats{};
 		std::vector<vk::PresentModeKHR> presentModes{};
 	};
+
 }

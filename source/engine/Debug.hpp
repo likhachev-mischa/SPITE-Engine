@@ -38,8 +38,7 @@ namespace spite
 	                                      const VkAllocationCallbacks* pAllocator,
 	                                      VkDebugUtilsMessengerEXT* pDebugMessenger);
 
-
-	//allocator is unused for now
+	//vk::DebugUtilsMessengerEXT createDebugUtilsMessenger(vk::Instance instance, const vk::AllocationCallbacks* allocationCallbacks);
 	VkDebugUtilsMessengerEXT createDebugUtilsMessenger(const vk::Instance& instance,
 	                                                   const vk::AllocationCallbacks* pAllocationCallbacks);
 

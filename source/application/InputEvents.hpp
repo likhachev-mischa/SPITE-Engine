@@ -2,7 +2,7 @@
 
 namespace spite
 {
-	enum Events
+	enum InputEvents
 	{
 		NONE = 0,
 		FRAMEBUFFER_RESIZE = (1u << 0),

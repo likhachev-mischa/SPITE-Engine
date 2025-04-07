@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 #include <glm/vec3.hpp>
 
@@ -10,17 +11,21 @@
 #include "Base/Logging.hpp"
 #include "Base/Memory.hpp"
 
+#include "assimp/importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
+
 namespace spite
 {
-	eastl::vector<char, spite::HeapAllocator> readBinaryFile(cstring filename,
-	                                                         const spite::HeapAllocator& allocator)
+	std::vector<char> readBinaryFile(cstring filename)
+
 	{
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
 		SASSERT(file.is_open())
 
 		sizet fileSize = (sizet)file.tellg();
 
-		eastl::vector<char, spite::HeapAllocator> buffer(allocator);
+		std::vector<char> buffer;
 		buffer.resize(fileSize);
 
 		file.seekg(0);
@@ -31,11 +36,32 @@ namespace spite
 		return buffer;
 	}
 
-	void readModelInfoFile(
-		cstring filename,
-		eastl::vector<Vertex, spite::HeapAllocator>& vertices,
-		eastl::vector<u32, spite::HeapAllocator>& indices,
-		const spite::HeapAllocator& allocator)
+	//TODO dodelat
+	void importModelAssimp(cstring filename,
+	                       eastl::vector<Vertex, spite::HeapAllocator>& vertices,
+	                       eastl::vector<u32, spite::HeapAllocator>& indices)
+	{
+		Assimp::Importer importer;
+
+		const aiScene* scene = importer.ReadFile(filename,
+		                                         aiProcess_Triangulate | aiProcess_MakeLeftHanded);
+
+		if (!scene)
+		{
+			auto error = importer.GetErrorString();
+
+			SASSERTM(scene != nullptr, "ASSIMP ERROR %s", error)
+		}
+
+		SASSERTM(scene->HasMeshes(), "file %s has no meshes", filename)
+
+
+	}
+
+	void readModelInfoFile(cstring filename,
+	                       eastl::vector<Vertex, spite::HeapAllocator>& vertices,
+	                       eastl::vector<u32, spite::HeapAllocator>& indices,
+	                       const spite::HeapAllocator& allocator)
 	{
 		vertices.clear();
 		indices.clear();
@@ -52,8 +78,7 @@ namespace spite
 
 		while (std::getline(file, line))
 		{
-			if (line.empty() || line[0] == '#')
-				continue;
+			if (line.empty() || line[0] == '#') continue;
 
 			std::istringstream iss(line);
 			std::string prefix;

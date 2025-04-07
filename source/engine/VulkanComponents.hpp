@@ -11,7 +11,7 @@
 
 namespace spite
 {
-	struct VulkanInitRequest : ISingletonComponent
+	struct VulkanInitRequest : IEventComponent
 	{
 	};
 
@@ -29,15 +29,20 @@ namespace spite
 	struct VulkanInstanceComponent : ISingletonComponent
 	{
 		vk::Instance instance;
-		std::vector<const char*> enabledExtensions{};
+		//std::vector<const char*> enabledExtensions{};
+	};
+
+	struct DebugMessengerComponent : ISingletonComponent
+	{
+		VkDebugUtilsMessengerEXT messenger{};
 	};
 
 	struct PhysicalDeviceComponent : ISingletonComponent
 	{
 		vk::PhysicalDevice device;
-		//vk::PhysicalDeviceProperties properties;
-		//vk::PhysicalDeviceFeatures features;
-		//vk::PhysicalDeviceMemoryProperties memoryProperties;
+		vk::PhysicalDeviceProperties properties;
+		vk::PhysicalDeviceFeatures features;
+		vk::PhysicalDeviceMemoryProperties memoryProperties;
 	};
 
 	struct SurfaceComponent : ISingletonComponent
@@ -68,55 +73,61 @@ namespace spite
 		std::vector<vk::Image> images{};
 		std::vector<vk::ImageView> imageViews{};
 	};
-	
-	//struct QueueComponent : ISingletonComponent
-	//{
-	//	vk::Queue graphicsQueue;
-	//	vk::Queue presentQueue;
-	//	vk::Queue transferQueue;
-	//	uint32_t graphicsQueueIndex;
-	//	uint32_t presentQueueIndex;
-	//	uint32_t transferQueueIndex;
-	//};
 
-	struct RenderPassComponent : IComponent
+	struct QueueComponent : ISingletonComponent
+	{
+		vk::Queue graphicsQueue;
+		vk::Queue presentQueue;
+		vk::Queue transferQueue;
+
+		u32 graphicsQueueIndex = 0;
+		u32 presentQueueIndex = 0;
+		u32 transferQueueIndex = 0;
+	};
+
+	struct RenderPassComponent : ISingletonComponent
 	{
 		vk::RenderPass renderPass;
 	};
 
-	struct FramebufferComponent : IComponent
+	struct FramebufferComponent : ISingletonComponent
 	{
-		std::vector<vk::Framebuffer> framebuffers;
+		std::vector<vk::Framebuffer> framebuffers{};
+	};
+
+	struct FrameDataComponent : ISingletonComponent
+	{
+		u32 imageIndex = 0;
+		u32 currentFrame = 0;
 	};
 
 	//Resource components
 
-	struct CommandPoolComponent : IComponent
+	struct CommandPoolComponent : ISingletonComponent
 	{
 		vk::CommandPool graphicsCommandPool;
 		vk::CommandPool transferCommandPool;
 	};
 
-	struct CommandBufferComponent : IComponent
+	struct CommandBufferComponent : ISingletonComponent
 	{
-		std::vector<vk::CommandBuffer> primaryBuffers;
-		std::vector<vk::CommandBuffer> secondaryBuffers;
-		uint32_t currentBufferIndex = 0;
+		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryBuffers{};
+		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> secondaryBuffers{};
+		//	u32 currentBufferIndex = 0;
 	};
 
-	struct SynchronizationComponent : IComponent
+	struct SynchronizationComponent : ISingletonComponent
 	{
-		std::vector<vk::Semaphore> imageAvailableSemaphores;
-		std::vector<vk::Semaphore> renderFinishedSemaphores;
-		std::vector<vk::Fence> inFlightFences;
-		uint32_t maxFramesInFlight = 2;
-		uint32_t currentFrame = 0;
+		std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> imageAvailableSemaphores{};
+		std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> renderFinishedSemaphores{};
+		std::array<vk::Fence, MAX_FRAMES_IN_FLIGHT> inFlightFences{};
+		u32 currentFrame = 0;
 	};
 
 	struct ShaderComponent : IComponent
 	{
 		vk::ShaderModule shaderModule;
-		vk::ShaderStageFlagBits stage;
+		vk::ShaderStageFlagBits stage{};
 		std::string entryPoint = "main";
 		std::string filePath; // For hot reloading
 	};
@@ -124,48 +135,95 @@ namespace spite
 	struct DescriptorSetLayoutComponent : IComponent
 	{
 		vk::DescriptorSetLayout layout;
-		vk::DescriptorType type;
-		uint32_t bindingIndex;
+		vk::DescriptorType type{};
+		u32 bindingIndex = 0;
 		vk::ShaderStageFlags stages;
 	};
 
 	struct DescriptorPoolComponent : IComponent
 	{
-		vk::DescriptorPool pool;
-		uint32_t maxSets;
+		vk::DescriptorPool pool{};
+		u32 maxSets = 0;
 	};
 
 	struct DescriptorSetsComponent : IComponent
 	{
-		std::vector<vk::DescriptorSet> descriptorSets;
-		uint32_t dynamicOffset = 0;
+		std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets{};
+		u32 dynamicOffset = 0;
 	};
+
+	//struct DescriptorUboReference : IComponent {
+	//	std::vector<Entity> uboEntities;
+	//	std::vector<vk::DescriptorType> descriptorTypes;
+	//	std::vector<u32> bindingIndices;
+	//};
 
 	struct PipelineLayoutComponent : IComponent
 	{
 		vk::PipelineLayout layout;
-		std::vector<Entity> descriptorSetLayoutEntities;
-	};
-
-	struct PipelineComponent : IComponent
-	{
-		vk::Pipeline pipeline;
-		Entity pipelineLayoutEntity;
-		VertexInputDescriptions vertexInputDescription;
-
-		PipelineComponent(): vertexInputDescription({}, {})
-		{
-		}
+		std::vector<Entity> descriptorSetLayoutEntities{};
 	};
 
 	struct MeshComponent : IComponent
 	{
 		BufferWrapper vertexBuffer;
 		BufferWrapper indexBuffer;
-		uint32_t vertexCount;
-		uint32_t indexCount;
+		u32 vertexCount = 0;
+		u32 indexCount = 0;
 		vk::DeviceSize vertexBufferOffset = 0;
 		bool isDirty = false; // For dynamic meshes
+	};
+
+	struct VertexInputData
+	{
+		std::vector<vk::VertexInputBindingDescription> bindingDescriptions{};
+		std::vector<vk::VertexInputAttributeDescription> attributeDescriptions{};
+
+		bool operator==(const VertexInputData& obj) const
+		{
+			if (bindingDescriptions.size() != obj.bindingDescriptions.size() ||
+				attributeDescriptions.size() != obj.attributeDescriptions.size())
+			{
+				return false;
+			}
+
+			for (const auto& bindDescr : bindingDescriptions)
+			{
+				if (std::ranges::find(obj.bindingDescriptions,
+				                      bindDescr) == obj.bindingDescriptions.end())
+				{
+					return false;
+				}
+			}
+
+			for (const auto& attrDescr : attributeDescriptions)
+			{
+				if (std::ranges::find(obj.attributeDescriptions,
+				                      attrDescr) == obj.attributeDescriptions.end())
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		bool operator !=(const VertexInputData& obj) const
+		{
+			return !(*this == obj);
+		}
+	};
+
+	//is attached to model entity 
+	struct VertexInputComponent : IComponent
+	{
+		VertexInputData vertexInputData;
+	};
+
+	struct PipelineComponent : IComponent
+	{
+		vk::Pipeline pipeline;
+		Entity pipelineLayoutEntity;
+		VertexInputData vertexInputData;
 	};
 
 	struct MaterialComponent : IComponent
@@ -179,27 +237,46 @@ namespace spite
 		bool isTransparent = false;
 	};
 
-	struct TransformComponent : IComponent
-	{
-		glm::vec3 position = {0.0f, 0.0f, 0.0f};
-		glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-		glm::vec3 scale = {1.0f, 1.0f, 1.0f};
-		Entity parent = Entity(0); // Optional parent for hierarchies
-	};
-
-	struct TransformMatrixComponent : IComponent
-	{
-		glm::mat4 matrix = glm::mat4(1.0f);
-		glm::mat4 normalMatrix = glm::mat4(1.0f);
-		bool isDirty = true;
-	};
-
-	struct UniformBufferComponent : IComponent
+	struct UniformBuffer
 	{
 		BufferWrapper buffer;
-		void* mappedMemory = nullptr;
-		size_t elementSize;
-		size_t elementAlignment;
-		size_t elementCount;
+		void* mappedMemory;
+	};
+
+	struct UniformBufferComponent: IComponent
+	{
+		vk::DescriptorType descriptorType;
+		vk::ShaderStageFlags shaderStage;
+		u32 bindingIndex{};
+
+		std::array<UniformBuffer, MAX_FRAMES_IN_FLIGHT> ubos;
+
+		sizet elementSize{};
+		sizet elementAlignment{};
+		sizet elementCount{};
+	};
+
+	struct UniformBufferSharedComponent: ISharedComponent
+	{
+		vk::DescriptorType descriptorType{};
+		vk::ShaderStageFlags shaderStage{};
+		u32 bindingIndex{};
+
+		std::array<UniformBuffer, MAX_FRAMES_IN_FLIGHT> ubos;
+
+		sizet elementSize{};
+		sizet elementAlignment{};
+		sizet elementCount{};
+	};
+
+	// Request component for loading a model with specified shaders
+	struct ModelLoadRequest : IEventComponent
+	{
+		//already created entity can be specified
+		Entity entity = Entity::undefined();
+		std::string objFilePath;
+		std::string vertShaderPath;
+		std::string fragShaderPath;
+		std::string name; // Optional name for entity
 	};
 }

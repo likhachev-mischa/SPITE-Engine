@@ -41,7 +41,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -169,7 +169,7 @@
   <ItemGroup>
     <ClInclude Include="source\application\AppConifg.hpp" />
     <ClInclude Include="source\application\EventManager.hpp" />
-    <ClInclude Include="source\application\Events.hpp" />
+    <ClInclude Include="source\application\InputEvents.hpp" />
     <ClInclude Include="source\application\InputManager.hpp" />
     <ClInclude Include="source\application\WindowManager.hpp" />
     <ClInclude Include="source\base\Assert.hpp" />
@@ -178,17 +178,19 @@
     <ClInclude Include="source\base\File.hpp" />
     <ClInclude Include="source\base\Logging.hpp" />
     <ClInclude Include="source\base\LoggingTestStrings.hpp" />
+    <ClInclude Include="source\base\Math.hpp" />
     <ClInclude Include="source\base\Memory.hpp" />
     <ClInclude Include="source\base\Platform.hpp" />
     <ClInclude Include="source\base\Service.hpp" />
     <ClInclude Include="source\base\VmaUsage.hpp" />
     <ClInclude Include="source\base\VulkanUsage.hpp" />
-    <ClInclude Include="source\ecs\ComponentsCore.hpp" />
     <ClInclude Include="source\ecs\Core.hpp" />
+    <ClInclude Include="source\engine\InputEventComponents.hpp" />
     <ClInclude Include="source\ecs\Queries.hpp" />
     <ClInclude Include="source\ecs\Systems.hpp" />
     <ClInclude Include="source\ecs\World.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
+    <ClInclude Include="source\engine\CoreComponents.hpp" />
     <ClInclude Include="source\engine\Debug.hpp" />
     <ClInclude Include="source\engine\Modules.hpp" />
     <ClInclude Include="source\engine\VulkanComponents.hpp" />

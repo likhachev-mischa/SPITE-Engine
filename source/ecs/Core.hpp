@@ -5,6 +5,7 @@
 
 #include <EASTL/hash_map.h>
 #include <EASTL/vector.h>
+#include <EASTL/string.h>
 
 #include "base/Assert.hpp"
 #include "base/Event.hpp"
@@ -32,6 +33,11 @@ namespace spite
 		{
 			size_t operator()(const spite::Entity& entity) const;
 		};
+
+		static Entity undefined()
+		{
+			return Entity(0);
+		}
 	};
 
 	struct IComponent
@@ -59,31 +65,27 @@ namespace spite
 	//components in general
 	template <typename TComponent>
 	concept t_component = std::is_base_of_v<IComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
-		std::is_copy_constructible_v<TComponent> &&
 		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
 
 	//specificly only IComponent
 	template <typename TComponent>
 	concept t_plain_component = std::is_base_of_v<IComponent, TComponent> && !std::is_base_of_v<
-			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
-		std::is_default_constructible_v<TComponent> &&
-		std::is_copy_constructible_v<TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+		ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<IEventComponent, TComponent>&&
+		std::is_default_constructible_v<TComponent>&&
+		std::is_move_assignable_v<TComponent>&& std::is_move_constructible_v<TComponent>;
 
 	//specificly ISharedComponent
 	template <typename TComponent>
 	concept t_shared_component = std::is_base_of_v<ISharedComponent, TComponent> && !std::is_base_of_v<
-			ISingletonComponent, TComponent> && std::is_default_constructible_v<
-			TComponent> &&
-		std::is_copy_constructible_v<TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+		ISingletonComponent, TComponent>&& std::is_default_constructible_v<
+		TComponent>&&
+		std::is_move_assignable_v<TComponent>&& std::is_move_constructible_v<TComponent>;
 
 	//specificly ISingletonComponent
 	template <typename TComponent>
 	concept t_singleton_component = std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
 			ISharedComponent, TComponent> && std::is_default_constructible_v<
 			TComponent> &&
-		std::is_copy_constructible_v<TComponent> &&
 		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
 
 	//specificly IEventComponent
@@ -92,7 +94,6 @@ namespace spite
 			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
 		std::is_default_constructible_v<
 			TComponent> &&
-		std::is_copy_constructible_v<TComponent> &&
 		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
 
 	//interface for component vector usage when type is resolved in runtime
@@ -110,15 +111,19 @@ namespace spite
 	};
 
 	template <typename T>
-	concept t_movable = std::is_copy_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<
+	//concept t_movable = std::is_copy_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<
+		//T>;
+	concept t_movable =  std::is_move_assignable_v<T> && std::is_move_constructible_v<
 		T>;
 
 
+	//TODO IMPLEMENT AUTO MEM DEALLOC ON COMPONENT TABLES
 	template <t_movable T>
 	class PooledVector
 	{
-	protected:
+	public:
 		using VectorType = eastl::vector<T, spite::HeapAllocator>;
+	protected:
 		VectorType m_vector;
 
 		//index of occupied top element
@@ -357,11 +362,11 @@ namespace spite
 			m_componentsStatuses[idx] = value;
 		}
 
-		void addComponent(TComponent component, const Entity owner, bool isActive = true)
+		void addComponent(TComponent&& component, const Entity owner, bool isActive = true)
 		{
 			m_componentsStatuses.addElement(isActive);
 			m_componentsOwners.addElement(owner);
-			m_components.addElement(component);
+			m_components.addElement(std::move(component));
 		}
 
 		//WARNING: avoid duplications manually
@@ -518,7 +523,7 @@ namespace spite
 		{
 			m_componentsStatuses.addElement(isActive);
 			m_componentsOwners.addElement({owner});
-			m_components.addElement(component);
+			m_components.addElement(std::move(component));
 		}
 
 		//removes owner of unspecified component
@@ -615,7 +620,7 @@ namespace spite
 
 	//holds only one component of type
 	template <t_singleton_component T>
-	class SingletonComponentTable : ISingletonTable
+	class SingletonComponentTable : public ISingletonTable
 	{
 		T m_component;
 
@@ -652,7 +657,7 @@ namespace spite
 	};
 
 	template <t_event_component T>
-	class EventComponentTable : IEventTable
+	class EventComponentTable : public IEventTable
 	{
 		PooledVector<T> m_events;
 
@@ -687,6 +692,16 @@ namespace spite
 			return m_events[n];
 		}
 
+		typename PooledVector<T>::VectorType::iterator begin()
+		{
+			return m_events.begin();
+		}
+
+		typename PooledVector<T>::VectorType::iterator end()
+		{
+			return m_events.end();
+		}
+
 		~EventComponentTable() override = default;
 	};
 
@@ -705,9 +720,15 @@ namespace spite
 
 	public:
 		explicit ComponentStorage(const ComponentAllocator& componentAllocator) :
-			m_storage(componentAllocator),
+			m_storage(componentAllocator),m_eventStorage(componentAllocator),m_singletonStorage(componentAllocator),
 			m_componentAllocator(componentAllocator)
 		{
+		}
+
+		eastl::hash_map<std::type_index, IEventTable*, std::hash<std::type_index>, eastl::equal_to<
+			                std::type_index>, ComponentAllocator>& getEventStorage()
+		{
+			return m_eventStorage;
 		}
 
 		template <t_plain_component TComponent>
@@ -721,7 +742,7 @@ namespace spite
 		}
 
 		template <t_shared_component TComponent>
-		void registerComonent()
+		void registerComponent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			SASSERTM(!isComponentRegistred(typeIndex), "Component of type %s is already registered", typeIndex.name());
@@ -741,13 +762,13 @@ namespace spite
 		}
 
 		template <t_singleton_component TComponent>
-		void createSingleton()
+		void createSingleton(TComponent component)
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			SASSERTM(!isSingletonCreated(typeIndex), "Singleton of type %s is already created", typeIndex.name());
 
-			ISingletonTable* table = new SingletonComponentTable<TComponent>();
-			m_storage.emplace(typeIndex, table);
+			ISingletonTable* table = new SingletonComponentTable<TComponent>(component);
+			m_singletonStorage.emplace(typeIndex, table);
 		}
 
 		bool isComponentRegistred(const std::type_index typeIndex)
@@ -1015,12 +1036,11 @@ namespace spite
 		{
 		}
 
-		//note: any changes to passed component param won't be saved in storage after this func
 		template <t_plain_component TComponent>
-		void addComponent(Entity entity, TComponent& component, bool isActive = true)
+		void addComponent(Entity entity, TComponent component, bool isActive = true)
 		{
 			auto& components = m_storage->getComponentsSafe<TComponent>();
-			components.addComponent(component, entity, isActive);
+			components.addComponent(std::move(component), entity, isActive);
 			sizet componentIndex = components.getTopIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -1035,7 +1055,7 @@ namespace spite
 			TComponent component;
 
 			auto& components = m_storage->getComponentsSafe<TComponent>();
-			components.addComponent(component, entity, isActive);
+			components.addComponent(std::move(component), entity, isActive);
 			sizet componentIndex = components.getTopIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -1046,10 +1066,10 @@ namespace spite
 
 		//creates a new SharedComponent instance
 		template <t_shared_component TComponent>
-		void addComponent(const Entity entity, TComponent& component, bool isActive = true)
+		void addComponent(const Entity entity, TComponent component, bool isActive = true)
 		{
 			auto& components = m_storage->getComponentsSafe<TComponent>();
-			components.addComponent(component, entity, isActive);
+			components.addComponent(std::move(component), entity, isActive);
 			sizet componentIndex = components.getTopIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -1057,6 +1077,19 @@ namespace spite
 
 			m_structuralChangeHandler->handleStructuralChange(typeIndex);
 		}
+
+		//template <t_shared_component TComponent>
+		//void addComponent(const Entity entity, TComponent&& component, bool isActive = true)
+		//{
+		//	auto& components = m_storage->getComponentsSafe<TComponent>();
+		//	components.addComponent(component, entity, isActive);
+		//	sizet componentIndex = components.getTopIndex();
+
+		//	std::type_index typeIndex = std::type_index(typeid(TComponent));
+		//	m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
+
+		//	m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		//}
 
 
 		//adds target entity as owner of source's SharedComponent
@@ -1134,7 +1167,7 @@ namespace spite
 		template <t_singleton_component TComponent>
 		TComponent& getSingleton()
 		{
-			return m_storage->getSingleton<TComponent>();
+			return m_storage->getSingleton<TComponent>().getComponent();
 		}
 
 		template <t_singleton_component TComponent>
@@ -1214,24 +1247,41 @@ namespace spite
 		{
 		}
 
-		template<t_event_component T>
+		template <t_event_component T>
 		void registerEvent() const
 		{
 			m_storage->registerEvent<T>();
 		}
 
-		template<t_event_component T>
+		template <t_event_component T>
 		void createEvent(T event) const
 		{
-			auto& eventTable = m_storage->getEventsAsserted<T>();
+			//auto& eventTable = m_storage->getEventsAsserted<T>();
+			auto& eventTable = m_storage->getEventsSafe<T>();
 			eventTable.addEvent(std::move(event));
 			m_structuralChangeHandler->handleStructuralChange(typeid(T));
 		}
 
-		void rewindEvents(const std::type_index& typeIndex) const
+		void rewindEvent(const std::type_index& typeIndex) const
 		{
 			m_storage->getRawEventTable(typeIndex).rewind();
 			m_structuralChangeHandler->handleStructuralChange(typeIndex);
+		}
+
+		void rewindAllEvents() const
+		{
+			auto& eventStorage = m_storage->getEventStorage();
+
+			for (auto& pair : eventStorage)
+			{
+				pair.second->rewind();
+				//m_structuralChangeHandler->handleStructuralChange(pair.first);
+			}
+
+			for (auto& pair : eventStorage)
+			{
+				m_structuralChangeHandler->handleStructuralChange(pair.first);
+			}
 		}
 	};
 
@@ -1298,6 +1348,15 @@ namespace spite
 			return m_namedEntities.at(eastl::string(name));
 		}
 
+		Entity tryGetNamedEntity(const cstring name)
+		{
+			if (isNamePresent(name))
+			{
+				return m_namedEntities.at(eastl::string(name));
+			}
+			return Entity::undefined();
+		}
+
 		//note: delete all components using compile time type resolve first if possible
 		//(should use ComponentManager for this)
 		//this func will delete all other components through runtime resolve
@@ -1344,7 +1403,7 @@ namespace spite
 
 		void addComponent(const Entity entity, TComponent component, bool isActive = true)
 		{
-			m_componentsToAdd.addComponent(component, entity, isActive);
+			m_componentsToAdd.addComponent(std::move(component), entity, isActive);
 		}
 
 		//removal is not bulk for now, but the difference with bulk removal might be negligable,

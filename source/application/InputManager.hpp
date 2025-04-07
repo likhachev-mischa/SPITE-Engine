@@ -2,7 +2,7 @@
 #include <EASTL/fixed_map.h>
 #include <SDL3/SDL_keycode.h>
 
-#include "Events.hpp"
+#include "InputEvents.hpp"
 #include "Base/Platform.hpp"
 
 namespace spite
@@ -14,14 +14,15 @@ namespace spite
 		constexpr static sizet MAPPED_KEYS_COUNT = 11;
 
 		InputManager();
-		//return NONE if key is unmapped//invalid
-		Events tryGetEvent(u16 key);
 
-		Events getEvent(u16 key);
+		//return NONE if key is unmapped//invalid
+		InputEvents tryGetEvent(u16 key);
+
+		InputEvents getEvent(u16 key);
 
 		bool isKeyMapped(u16 key);
 
 	private:
-		eastl::fixed_map<u16, Events, MAPPED_KEYS_COUNT, false> m_keymap;
+		eastl::fixed_map<u16, InputEvents, MAPPED_KEYS_COUNT, false> m_keymap;
 	};
 }
