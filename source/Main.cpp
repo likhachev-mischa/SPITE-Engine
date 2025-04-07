@@ -35,15 +35,14 @@ int main(int argc, char* argv[])
 		new WaitForFrameSystem,
 		new DescriptorUpdateSystem,
 		new RenderSystem,
-		new EventCleanupSystem,
-		new CleanupSystem
+		new CleanupSystem,
 	};
 
-	world.addSystems(systems.data(),systems.size());
+	world.addSystems(systems.data(), systems.size());
 
 	Entity entity1 = world.service()->entityManager()->createEntity();
 	TransformComponent transform1;
-	transform1.position = { 0.5,0.5 ,0 };
+	transform1.position = {0.5, 0.5, 0};
 	world.service()->componentManager()->addComponent(entity1, transform1);
 
 	ModelLoadRequest modelLoadRequest;
@@ -59,6 +58,7 @@ int main(int argc, char* argv[])
 	modelLoadRequest2.fragShaderPath = "./shaders/frag.spv";
 	world.service()->entityEventManager()->createEvent(std::move(modelLoadRequest2));
 
+	world.commitSystemsStructuralChange();
 	world.enable();
 
 	while (!windowManager->shouldTerminate())
@@ -70,7 +70,6 @@ int main(int argc, char* argv[])
 
 	CleanupRequest cleanupRequest{};
 	world.service()->entityEventManager()->createEvent(cleanupRequest);
-	world.update(0.1f);
 	world.commitSystemsStructuralChange();
 	world.update(0.1f);
 }

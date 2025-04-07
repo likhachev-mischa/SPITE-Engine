@@ -1264,15 +1264,6 @@ namespace spite
 		}
 	};
 
-	class EventCleanupSystem : public SystemBase
-	{
-	public:
-		void onUpdate(float deltaTime) override
-		{
-			m_entityService->entityEventManager()->rewindAllEvents();
-		}
-	};
-
 	struct CleanupRequest : IEventComponent
 	{
 	};
