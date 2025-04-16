@@ -90,19 +90,13 @@
     <ClInclude Include="source\engine\Common.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\Debug.hpp">
+    <ClInclude Include="source\engine\VulkanDebug.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\Modules.hpp">
+    <ClInclude Include="source\engine\VulkanRendering.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\RenderingCore.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\Resources.hpp">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\ResourcesCore.hpp">
+    <ClInclude Include="source\engine\VulkanResources.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\VulkanAllocator.hpp">
@@ -132,19 +126,22 @@
     <ClInclude Include="source\base\LoggingTestStrings.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\VulkanComponents.hpp">
+    <ClInclude Include="source\engine\components\VulkanComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\VulkanSystems.hpp">
+    <ClInclude Include="source\engine\systems\CoreSystems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\CoreComponents.hpp">
+    <ClInclude Include="source\engine\components\CoreComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\base\Math.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\InputEventComponents.hpp">
+    <ClInclude Include="source\engine\components\InputEventComponents.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine\systems\MovementSystems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -170,19 +167,13 @@
     <ClCompile Include="source\base\VmaUsage.cpp">
       <Filter>Base</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\Debug.cpp">
+    <ClCompile Include="source\engine\VulkanDebug.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\Modules.cpp">
+    <ClCompile Include="source\engine\VulkanRendering.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\RenderingCore.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\Resources.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\ResourcesCore.cpp">
+    <ClCompile Include="source\engine\VulkanResources.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="source\engine\VulkanAllocator.cpp">

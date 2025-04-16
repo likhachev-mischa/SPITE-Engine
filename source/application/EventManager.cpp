@@ -1,7 +1,24 @@
 #include "EventManager.hpp"
 
+#include <EASTL/fixed_set.h>
+
 namespace spite
 {
+	void EventManager::recordEvent(const InputEvents& eventId)
+	{
+		m_recordedEvents.insert(eventId);
+	}
+
+	void EventManager::clearRecordedEvents()
+	{
+		m_recordedEvents.reset_lose_memory();
+	}
+
+	eastl::fixed_set<InputEvents, INPUT_EVENT_COUNT, false>& EventManager::getRecordedEvents()
+	{
+		return m_recordedEvents;
+	}
+
 	void EventManager::triggerPollEvent(const InputEvents& eventId)
 	{
 		m_pollEventsMask |= eventId;

@@ -17,6 +17,5 @@ namespace spite
 
 	struct RightButtonPressEvent : IEventComponent
 	{
-		
 	};
 }

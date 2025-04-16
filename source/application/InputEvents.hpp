@@ -1,7 +1,10 @@
 #pragma once
+#include <base/Platform.hpp>
 
 namespace spite
 {
+	constexpr sizet INPUT_EVENT_COUNT = 12;
+
 	enum InputEvents
 	{
 		NONE = 0,

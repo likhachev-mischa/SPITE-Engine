@@ -1,4 +1,4 @@
-#include "Debug.hpp"
+#include "VulkanDebug.hpp"
 
 #include "Base/Assert.hpp"
 

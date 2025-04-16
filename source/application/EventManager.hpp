@@ -5,7 +5,12 @@
 #include <tuple>
 #include <vector>
 
+#include <EASTL/fixed_set.h>
+#include <EASTL/hash_map.h>
+
 #include "InputEvents.hpp"
+
+#include "base/Memory.hpp"
 #include "Base/Platform.hpp"
 
 namespace spite
@@ -19,6 +24,12 @@ namespace spite
 		EventManager& operator=(EventManager&& other) = delete;
 
 		EventManager() = default;
+
+		void recordEvent(const InputEvents& eventId);
+
+		void clearRecordedEvents();
+
+		eastl::fixed_set<InputEvents, INPUT_EVENT_COUNT, false>& getRecordedEvents();
 
 		void triggerPollEvent(const InputEvents& eventId);
 
@@ -38,5 +49,8 @@ namespace spite
 		u64 m_pollEventsMask = 0;
 		std::vector<std::tuple<InputEvents, std::function<void()>>> m_subscirbers;
 		std::queue<std::function<void()>> m_executionQueue;
+
+		//used for recording events every frame for external processing
+		eastl::fixed_set<InputEvents, INPUT_EVENT_COUNT, false> m_recordedEvents;
 	};
 }

@@ -2,7 +2,6 @@
 
 #include "base/Math.hpp"
 #include "ecs/Core.hpp"
-#include "engine/VulkanComponents.hpp"
 
 namespace spite
 {
@@ -41,6 +40,21 @@ namespace spite
 	{
 		glm::mat4 view;
 		glm::mat4 projection;
+	};
+
+	struct MovementSpeedComponent: IComponent
+	{
+		float speed = 1.0f;
+	};
+
+	struct MovementDirectionComponent : IComponent
+	{
+		glm::vec3 direction;
+	};
+
+	struct ControllableEntitySingleton: ISingletonComponent
+	{
+		Entity entity;
 	};
 
 }

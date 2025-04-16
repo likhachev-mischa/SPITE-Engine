@@ -47,6 +47,7 @@ namespace spite
 					{
 						m_eventManager->triggerEvent(buttonEvent);
 						m_eventManager->triggerPollEvent(buttonEvent);
+						m_eventManager->recordEvent(buttonEvent);
 					}
 					break;
 				}

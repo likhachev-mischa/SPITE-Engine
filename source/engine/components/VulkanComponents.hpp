@@ -2,11 +2,12 @@
 #include <glm/fwd.hpp>
 #include <glm/detail/type_quat.hpp>
 
+#include "Application/AppConifg.hpp"
+
 #include "ecs/Core.hpp"
 
 #include "base/VmaUsage.hpp"
 #include "Engine/Common.hpp"
-#include "Engine/Resources.hpp"
 #include "application/WindowManager.hpp"
 
 namespace spite
@@ -18,6 +19,16 @@ namespace spite
 	struct AllocationCallbacksComponent : ISingletonComponent
 	{
 		vk::AllocationCallbacks allocationCallbacks;
+	};
+
+	struct InputManagerComponent : ISingletonComponent
+	{
+		std::shared_ptr<InputManager> inputManager;
+	};
+
+	struct EventManagerComponent : ISingletonComponent
+	{
+		std::shared_ptr<EventManager> eventManager;
 	};
 
 	struct WindowManagerComponent : ISingletonComponent

@@ -1,8 +1,11 @@
 #include <application/WindowManager.hpp>
-#include <engine/VulkanSystems.hpp>
 
 #include "application/EventManager.hpp"
 #include "application/InputManager.hpp"
+
+#include "engine/components/CoreComponents.hpp"
+#include "engine/components/VulkanComponents.hpp"
+#include "engine/systems/CoreSystems.hpp"
 
 
 int main(int argc, char* argv[])
@@ -19,9 +22,18 @@ int main(int argc, char* argv[])
 
 	EntityWorld world(allocator, allocator);
 
+	InputManagerComponent inputManagerComponent;
+	inputManagerComponent.inputManager = inputManager;
+	world.service()->componentManager()->createSingleton(inputManagerComponent);
+
+	EventManagerComponent eventManagerComponent;
+	eventManagerComponent.eventManager = eventManager;
+	world.service()->componentManager()->createSingleton(eventManagerComponent);
+
 	WindowManagerComponent windowManagerComponent;
 	windowManagerComponent.windowManager = windowManager;
 	world.service()->componentManager()->createSingleton(windowManagerComponent);
+
 
 	std::vector<SystemBase*> systems = {
 		new VulkanInitSystem,
