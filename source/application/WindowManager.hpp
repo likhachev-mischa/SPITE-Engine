@@ -20,7 +20,7 @@ namespace spite
 	//	WindowManager(std::shared_ptr<EventManager> eventManager, std::shared_ptr<InputManager> inputManager);
 		WindowManager();
 
-		void processEvent(const SDL_Event& event);
+		void terminate();
 
 		void waitWindowExpand() const;
 

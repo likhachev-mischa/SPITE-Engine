@@ -193,13 +193,12 @@
     <ClInclude Include="source\ecs\World.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\components\CoreComponents.hpp" />
-    <ClInclude Include="source\engine\systems\MovementSystems.hpp" />
     <ClInclude Include="source\engine\VulkanDebug.hpp" />
     <ClInclude Include="source\engine\components\VulkanComponents.hpp" />
     <ClInclude Include="source\engine\VulkanRendering.hpp" />
     <ClInclude Include="source\engine\VulkanResources.hpp" />
     <ClInclude Include="source\engine\VulkanAllocator.hpp" />
-    <ClInclude Include="source\engine\systems\CoreSystems.hpp" />
+    <ClInclude Include="source\engine\systems\core\CoreSystems.hpp" />
     <ClInclude Include="source\external\StackWalker.h" />
     <ClInclude Include="source\external\tlsf.h" />
   </ItemGroup>
@@ -214,6 +213,18 @@
     <ClCompile Include="source\base\Memory.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
     <ClCompile Include="source\ecs\SystemsCore.cpp" />
+    <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\PipelineCreateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\RenderSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp" />
     <ClCompile Include="source\engine\VulkanDebug.cpp" />
     <ClCompile Include="source\engine\VulkanRendering.cpp" />
     <ClCompile Include="source\engine\VulkanResources.cpp" />

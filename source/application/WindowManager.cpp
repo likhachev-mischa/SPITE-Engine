@@ -23,12 +23,9 @@ namespace spite
 		initWindow();
 	}
 
-	void WindowManager::processEvent(const SDL_Event& event)
+	void WindowManager::terminate()
 	{
-		if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-		{
-			m_shouldTerminate = true;
-		}
+		m_shouldTerminate = true;
 	}
 
 	void WindowManager::initWindow()
@@ -39,8 +36,11 @@ namespace spite
 		result = SDL_SetAppMetadata(APPLICATION_NAME, "0.1", "aboba");
 		SASSERTM(result, "Error on SDL set metadata!");
 
-		m_window = SDL_CreateWindow("SPITE", WIDTH, HEIGHT,SDL_WINDOW_VULKAN |
-		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
+		m_window = SDL_CreateWindow("SPITE",
+		                            WIDTH,
+		                            HEIGHT,
+		                            SDL_WINDOW_VULKAN | SDL_WINDOW_INPUT_FOCUS |
+		                            SDL_WINDOW_MOUSE_FOCUS);
 		SASSERTM(m_window != nullptr, "Error on SDL Vulkan window creation!")
 	}
 
@@ -49,8 +49,7 @@ namespace spite
 		SDL_Event event;
 		while (SDL_WaitEvent(&event))
 		{
-			if (event.type == SDL_EVENT_WINDOW_RESTORED)
-				return;
+			if (event.type == SDL_EVENT_WINDOW_RESTORED) return;
 		}
 	}
 
@@ -78,7 +77,8 @@ namespace spite
 	                                                  vk::AllocationCallbacks* allocationCallbacks)
 	{
 		VkSurfaceKHR surface;
-		bool result = SDL_Vulkan_CreateSurface(m_window, instance,
+		bool result = SDL_Vulkan_CreateSurface(m_window,
+		                                       instance,
 		                                       //   reinterpret_cast<VkAllocationCallbacks*>(allocationCallbacks),
 		                                       nullptr,
 		                                       &surface);

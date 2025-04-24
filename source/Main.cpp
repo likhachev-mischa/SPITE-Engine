@@ -7,7 +7,7 @@
 
 #include "engine/components/CoreComponents.hpp"
 #include "engine/components/VulkanComponents.hpp"
-#include "engine/systems/CoreSystems.hpp"
+#include "engine/systems/core/CoreSystems.hpp"
 
 
 int main(int argc, char* argv[])

@@ -9,6 +9,7 @@
 #include "base/VmaUsage.hpp"
 #include "Engine/Common.hpp"
 #include "application/WindowManager.hpp"
+#include "application/input/InputManager.hpp"
 
 #include "engine/VulkanResources.hpp"
 
@@ -286,5 +287,26 @@ namespace spite
 		std::string vertShaderPath;
 		std::string fragShaderPath;
 		std::string name; // Optional name for entity
+	};
+
+	struct PipelineCreateRequest : IEventComponent
+	{
+		//entity(model) that requires pipeline creation/accuisition
+		//has ShaderReference component 
+		Entity referencedEntity;
+	};
+
+	struct ShaderReference : IComponent
+	{
+		std::vector<Entity> shaders{};
+	};
+
+	struct PipelineReference : IComponent
+	{
+		Entity pipelineEntity;
+	};
+
+	struct CleanupRequest : IEventComponent
+	{
 	};
 }

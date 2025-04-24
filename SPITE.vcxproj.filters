@@ -129,7 +129,7 @@
     <ClInclude Include="source\engine\components\VulkanComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\systems\CoreSystems.hpp">
+    <ClInclude Include="source\engine\systems\core\CoreSystems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\components\CoreComponents.hpp">
@@ -139,9 +139,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\components\InputEventComponents.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\systems\MovementSystems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\application\input\InputActionMap.hpp">
@@ -198,6 +195,42 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\application\Time.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\PipelineCreateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\RenderSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

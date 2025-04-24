@@ -73,7 +73,7 @@ namespace spite
 	//	}
 	//}
 	EventDispatcher::EventDispatcher(std::shared_ptr<InputManager> inputManager,
-	                           std::shared_ptr<WindowManager> windowManager):
+	                                 std::shared_ptr<WindowManager> windowManager):
 		m_inputManager(std::move(inputManager)), m_windowManager(std::move(windowManager))
 	{
 	}
@@ -85,14 +85,16 @@ namespace spite
 		{
 			switch (event.type)
 			{
-			case SDL_EVENT_KEY_DOWN || SDL_EVENT_KEY_UP:
+			case SDL_EVENT_KEY_DOWN:
+			case SDL_EVENT_KEY_UP:
 				{
 					m_inputManager->triggerKeyInteraction(event.key);
 					break;
 				}
-			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+			case SDL_EVENT_QUIT:
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED :
 				{
-					m_windowManager->processEvent(event);
+					m_windowManager->terminate();
 					break;
 				}
 
