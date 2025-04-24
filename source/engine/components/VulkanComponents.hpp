@@ -8,13 +8,14 @@
 
 #include "base/VmaUsage.hpp"
 #include "Engine/Common.hpp"
-#include "application/WindowManager.hpp"
-#include "application/input/InputManager.hpp"
 
 #include "engine/VulkanResources.hpp"
 
 namespace spite
 {
+	class InputManager;
+	class WindowManager;
+
 	struct VulkanInitRequest : IEventComponent
 	{
 	};

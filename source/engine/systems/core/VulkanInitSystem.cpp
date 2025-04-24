@@ -2,6 +2,7 @@
 
 #include "engine/VulkanAllocator.hpp"
 #include "engine/VulkanDebug.hpp"
+#include "application/WindowManager.hpp"
 
 namespace spite
 {

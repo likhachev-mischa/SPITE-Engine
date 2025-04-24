@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <EASTL/fixed_hash_map.h>
+#include <EASTL/fixed_map.h>
 #include <EASTL/hash_map.h>
 #include <eastl/string.h>
 #include <EASTL/vector.h>
@@ -82,15 +82,15 @@ namespace spite
 	};
 
 	//total number of keys to keep track of
-	constexpr sizet MAX_KEYS_FOR_PROCESSING = 63;
+	constexpr sizet MAX_KEYS_FOR_PROCESSING = 255;
 
 	//lookup for state of input keys
 	class InputStateMap
 	{
-		eastl::fixed_hash_map<u32, ButtonState, MAX_KEYS_FOR_PROCESSING, MAX_KEYS_FOR_PROCESSING + 1
-		                      , false> m_stateMap{};
+		eastl::fixed_map<u32, ButtonState, MAX_KEYS_FOR_PROCESSING, false> m_stateMap;
 
 	public:
+		InputStateMap() = default;
 		//if key wasn't interacted with for a frame
 		bool isInactive(const u32 key);
 
@@ -110,7 +110,7 @@ namespace spite
 		void setButtonRelease(const u32 key);
 
 		//should be called every frame before input processing
-		void clear();
+		void reset();
 
 	private:
 		void registerKey(const u32 key);
@@ -170,7 +170,6 @@ namespace spite
 		eastl::vector<InputAction, HeapAllocator> m_activatedActions;
 
 	public:
-	
 		InputActionMap(const cstring inputActionsJsonPath, const HeapAllocator& allocator);
 
 
@@ -184,6 +183,7 @@ namespace spite
 
 		//call this every frame before input processing
 		void reset();
+
 	private:
 	};
 }

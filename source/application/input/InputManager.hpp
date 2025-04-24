@@ -36,6 +36,8 @@ namespace spite
 
 		void triggerKeyInteraction(const SDL_KeyboardEvent& event);
 
+		void reset();
+
 	private:
 		//	eastl::fixed_map<u16, InputEvents, MAPPED_KEYS_COUNT, false> m_keymap;
 	};

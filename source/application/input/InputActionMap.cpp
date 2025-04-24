@@ -67,11 +67,13 @@ namespace spite
 	{
 		if (isInactive(key))
 		{
+			SDEBUG_LOG("%u key pressed\n", key);
 			ButtonState state(BUTTON_STATE::PRESSED);
 			m_stateMap[key] = state;
 			return;
 		}
 
+			SDEBUG_LOG("%u key held\n", key);
 		m_stateMap[key].state = BUTTON_STATE::HELD;
 		m_stateMap[key].holdingTime += deltaTime;
 	}
@@ -81,12 +83,12 @@ namespace spite
 		SASSERTM(!isInactive(key),
 		         "Key %u was inactive, it can't be released without previous state",
 		         key);
-
+			SDEBUG_LOG("%u key released\n", key);
 		m_stateMap[key].state = BUTTON_STATE::RELEASED;
 		m_stateMap[key].holdingTime = 0.f;
 	}
 
-	void InputStateMap::clear()
+	void InputStateMap::reset()
 	{
 		for (auto& state : m_stateMap)
 		{
@@ -101,7 +103,8 @@ namespace spite
 
 	void InputStateMap::registerKey(const u32 key)
 	{
-		m_stateMap[key] = {};
+		ButtonState state;
+		m_stateMap.insert(eastl::make_pair(key, state));
 	}
 
 	InputBindingAction::InputBindingAction(eastl::string action,
@@ -266,6 +269,7 @@ namespace spite
 
 		for (const auto& bindingAction : bindingActions)
 		{
+			SDEBUG_LOG("%s action triggered\n", bindingAction.action);
 			switch (bindingAction.type)
 			{
 			case PRESS: if (isKeyPressed)

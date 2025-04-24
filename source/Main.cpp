@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
 		world.update(Time::deltaTime());
 		world.commitSystemsStructuralChange();
 		time.updateDeltaTime();
+		inputManager->reset();
 	}
 
 	CleanupRequest cleanupRequest{};

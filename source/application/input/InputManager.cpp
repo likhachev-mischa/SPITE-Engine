@@ -84,4 +84,10 @@ namespace spite
 			m_inputActionMap->triggerKeyInteraction(key, isPressed, false, 0.0f);
 		}
 	}
+
+	void InputManager::reset()
+	{
+		m_inputStateMap->reset();
+		m_inputActionMap->reset();
+	}
 }
