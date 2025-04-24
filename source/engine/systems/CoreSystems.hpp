@@ -18,7 +18,6 @@
 //#include <glm/gtc/quaternion.hpp>
 #include "base/Math.hpp"
 
-#include "engine/components/InputEventComponents.hpp"
 
 namespace spite
 {
@@ -244,39 +243,8 @@ namespace spite
 	public:
 		void onUpdate(float deltaTime) override
 		{
-			auto eventManager = m_entityService->componentManager()->getSingleton<
-				EventManagerComponent>().eventManager;
-			auto& recordedEvents = eventManager->getRecordedEvents();
 
-			auto entityEventManager = m_entityService->entityEventManager();
 
-			for (const auto& recordedEvent : recordedEvents)
-			{
-				switch (recordedEvent)
-				{
-				case NONE: break;
-				case FRAMEBUFFER_RESIZE: break;
-				case ROTATION_BUTTON_PRESS: break;
-				case SCALING_BUTTON_PRESS: break;
-				case TRANSLATION_BUTTON_PRESS: break;
-				case NEXT_FIGURE_BUTTON_PRESS: break;
-				case FWD_BUTTON_PRESS: entityEventManager->createEvent(ForwardButtonPressEvent());
-					break;
-				case BCKWD_BUTTON_RESS: entityEventManager->createEvent(BackwardButtonPressEvent());
-					break;
-				case LFT_BUTTON_PRESS: entityEventManager->createEvent(LeftButtonPressEvent());
-					break;
-				case RGHT_BUTTON_PRESS: entityEventManager->createEvent(RightButtonPressEvent());
-					break;
-				case LOOKUP_BUTTON_PRESS: break;
-				case LOOKDWN_BUTTON_PRESS: break;
-				case LOOKRGHT_BUTTON_PRESS: break;
-				case LOOKLFT_BUTTON_PRESS: break;
-				default: ;
-				}
-			}
-
-			eventManager->clearRecordedEvents();
 		}
 	};
 

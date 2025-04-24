@@ -4,20 +4,31 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "Application/AppConifg.hpp"
-#include "Application/EventManager.hpp"
-#include "Application/InputManager.hpp"
 
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
 
 namespace spite
 {
-	WindowManager::WindowManager(std::shared_ptr<EventManager> eventManager,
-	                             std::shared_ptr<InputManager> inputManager) :
-		m_eventManager(std::move(eventManager)),
-		m_inputManager(std::move(inputManager))
+	//WindowManager::WindowManager(std::shared_ptr<EventManager> eventManager,
+	//                             std::shared_ptr<InputManager> inputManager) :
+	//	m_eventManager(std::move(eventManager)),
+	//	m_inputManager(std::move(inputManager))
+	//{
+	//	initWindow();
+	//}
+
+	WindowManager::WindowManager()
 	{
 		initWindow();
+	}
+
+	void WindowManager::processEvent(const SDL_Event& event)
+	{
+		if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+		{
+			m_shouldTerminate = true;
+		}
 	}
 
 	void WindowManager::initWindow()
@@ -31,35 +42,6 @@ namespace spite
 		m_window = SDL_CreateWindow("SPITE", WIDTH, HEIGHT,SDL_WINDOW_VULKAN |
 		                            SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
 		SASSERTM(m_window != nullptr, "Error on SDL Vulkan window creation!")
-	}
-
-	void WindowManager::pollEvents()
-	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			switch (event.type)
-			{
-			case SDL_EVENT_KEY_UP:
-				{
-					InputEvents buttonEvent = m_inputManager->tryGetEvent(event.key.key);
-					if (buttonEvent != InputEvents::NONE)
-					{
-						m_eventManager->triggerEvent(buttonEvent);
-						m_eventManager->triggerPollEvent(buttonEvent);
-						m_eventManager->recordEvent(buttonEvent);
-					}
-					break;
-				}
-			case SDL_EVENT_QUIT:
-				{
-					m_shouldTerminate = true;
-					break;
-				}
-
-			default: break;
-			}
-		}
 	}
 
 	void WindowManager::waitWindowExpand() const

@@ -6,8 +6,8 @@
 
 namespace spite
 {
-	class InputManager;
-	class EventManager;
+	//class InputManager;
+	//class EventManager;
 
 	class WindowManager
 	{
@@ -17,9 +17,10 @@ namespace spite
 		WindowManager& operator=(const WindowManager& other) = delete;
 		WindowManager& operator=(WindowManager&& other) = delete;
 
-		WindowManager(std::shared_ptr<EventManager> eventManager, std::shared_ptr<InputManager> inputManager);
+	//	WindowManager(std::shared_ptr<EventManager> eventManager, std::shared_ptr<InputManager> inputManager);
+		WindowManager();
 
-		void pollEvents();
+		void processEvent(const SDL_Event& event);
 
 		void waitWindowExpand() const;
 
@@ -37,8 +38,8 @@ namespace spite
 
 	private:
 		SDL_Window* m_window{};
-		std::shared_ptr<EventManager> m_eventManager;
-		std::shared_ptr<InputManager> m_inputManager;
+		//std::shared_ptr<EventManager> m_eventManager;
+		//std::shared_ptr<InputManager> m_inputManager;
 
 		bool m_shouldTerminate = false;
 

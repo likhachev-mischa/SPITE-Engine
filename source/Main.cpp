@@ -1,7 +1,9 @@
 #include <application/WindowManager.hpp>
 
-#include "application/EventManager.hpp"
-#include "application/InputManager.hpp"
+#include "application/EventDispatcher.hpp"
+#include "application/Time.hpp"
+#include "application/input/InputActionMap.hpp"
+#include "application/input/InputManager.hpp"
 
 #include "engine/components/CoreComponents.hpp"
 #include "engine/components/VulkanComponents.hpp"
@@ -12,13 +14,17 @@ int main(int argc, char* argv[])
 {
 	using namespace spite;
 
-	std::shared_ptr<EventManager> eventManager = std::make_shared<EventManager>();
-	std::shared_ptr<InputManager> inputManager = std::make_shared<InputManager>();
-	std::shared_ptr<WindowManager> windowManager = std::make_shared<WindowManager>(
-		eventManager,
-		inputManager);
-
 	HeapAllocator allocator("MAIN ALLOCATOR");
+
+	std::shared_ptr<InputActionMap> inputActionMap = std::make_shared<InputActionMap>(
+		"./config/InputActions.json",
+		allocator);
+	std::shared_ptr<InputManager> inputManager = std::make_shared<InputManager>(inputActionMap);
+	std::shared_ptr<WindowManager> windowManager = std::make_shared<WindowManager>();
+	std::shared_ptr<EventDispatcher> eventDispatcher = std::make_shared<EventDispatcher>(
+		inputManager,
+		windowManager);
+
 
 	EntityWorld world(allocator, allocator);
 
@@ -26,28 +32,16 @@ int main(int argc, char* argv[])
 	inputManagerComponent.inputManager = inputManager;
 	world.service()->componentManager()->createSingleton(inputManagerComponent);
 
-	EventManagerComponent eventManagerComponent;
-	eventManagerComponent.eventManager = eventManager;
-	world.service()->componentManager()->createSingleton(eventManagerComponent);
-
 	WindowManagerComponent windowManagerComponent;
 	windowManagerComponent.windowManager = windowManager;
 	world.service()->componentManager()->createSingleton(windowManagerComponent);
 
 
 	std::vector<SystemBase*> systems = {
-		new VulkanInitSystem,
-		new CameraCreateSystem,
-		new ModelLoadSystem,
-		new ShaderCreateSystem,
-		new PipelineCreateSystem,
-		new TransformationMatrixSystem,
-		new CameraMatricesUpdateSystem,
-		new CameraUboUpdateSystem,
-		new WaitForFrameSystem,
-		new DescriptorUpdateSystem,
-		new RenderSystem,
-		new CleanupSystem,
+		new VulkanInitSystem, new CameraCreateSystem, new ModelLoadSystem, new ShaderCreateSystem,
+		new PipelineCreateSystem, new TransformationMatrixSystem, new CameraMatricesUpdateSystem,
+		new CameraUboUpdateSystem, new WaitForFrameSystem, new DescriptorUpdateSystem,
+		new RenderSystem, new CleanupSystem,
 	};
 
 	world.addSystems(systems.data(), systems.size());
@@ -73,11 +67,13 @@ int main(int argc, char* argv[])
 	world.commitSystemsStructuralChange();
 	world.enable();
 
+	Time time;
 	while (!windowManager->shouldTerminate())
 	{
-		windowManager->pollEvents();
-		world.update(0.1f);
+		eventDispatcher->pollEvents();
+		world.update(Time::deltaTime());
 		world.commitSystemsStructuralChange();
+		time.updateDeltaTime();
 	}
 
 	CleanupRequest cleanupRequest{};

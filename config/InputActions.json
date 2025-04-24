@@ -1,0 +1,31 @@
+{
+    "actions": [
+        {
+            "action": "MoveForward",
+            "type": "Axis",
+            "bindings": [
+                {
+                    "device": "Keyboard",
+                    "key": "W",
+                    "scale": 1.0
+                },
+                {
+                    "device": "Keyboard",
+                    "key": "S",
+                    "scale": -1.0
+                }
+            ]
+        },
+        {
+            "action": "Jump",
+            "type": "Release",
+            "bindings": [
+                {
+                    "device": "Keyboard",
+                    "key": "Space",
+                    "scale": 1.0
+                }
+            ]
+        }
+    ]
+}

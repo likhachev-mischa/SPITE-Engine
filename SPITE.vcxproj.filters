@@ -48,13 +48,13 @@
     <ClInclude Include="source\application\AppConifg.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="source\application\EventManager.hpp">
+    <ClInclude Include="source\application\EventDispatcher.hpp">
       <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="source\application\InputEvents.hpp">
       <Filter>Application</Filter>
     </ClInclude>
-    <ClInclude Include="source\application\InputManager.hpp">
+    <ClInclude Include="source\application\input\InputManager.hpp">
       <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="source\application\WindowManager.hpp">
@@ -144,12 +144,18 @@
     <ClInclude Include="source\engine\systems\MovementSystems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\application\input\InputActionMap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\application\Time.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\application\EventManager.cpp">
+    <ClCompile Include="source\application\EventDispatcher.cpp">
       <Filter>Application</Filter>
     </ClCompile>
-    <ClCompile Include="source\application\InputManager.cpp">
+    <ClCompile Include="source\application\input\InputManager.cpp">
       <Filter>Application</Filter>
     </ClCompile>
     <ClCompile Include="source\application\WindowManager.cpp">
@@ -187,6 +193,12 @@
     </ClCompile>
     <ClCompile Include="source\ecs\SystemsCore.cpp">
       <Filter>ecs</Filter>
+    </ClCompile>
+    <ClCompile Include="source\application\input\InputActionMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\application\Time.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

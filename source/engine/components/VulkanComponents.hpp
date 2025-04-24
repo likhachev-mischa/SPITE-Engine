@@ -10,6 +10,8 @@
 #include "Engine/Common.hpp"
 #include "application/WindowManager.hpp"
 
+#include "engine/VulkanResources.hpp"
+
 namespace spite
 {
 	struct VulkanInitRequest : IEventComponent
@@ -24,11 +26,6 @@ namespace spite
 	struct InputManagerComponent : ISingletonComponent
 	{
 		std::shared_ptr<InputManager> inputManager;
-	};
-
-	struct EventManagerComponent : ISingletonComponent
-	{
-		std::shared_ptr<EventManager> eventManager;
 	};
 
 	struct WindowManagerComponent : ISingletonComponent
