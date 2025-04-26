@@ -1,6 +1,7 @@
 #include "InputManager.hpp"
 
 #include "application/Time.hpp"
+#include "InputActionMap.hpp"
 
 
 namespace spite
@@ -54,6 +55,20 @@ namespace spite
 		m_inputStateMap = std::make_shared<InputStateMap>();
 	}
 
+	void InputManager::update(const float deltaTime) 
+	{
+		m_mousePosition.xRel = 0.0f;
+		m_mousePosition.yRel = 0.0f;
+
+		m_inputStateMap->updateActiveKeys(deltaTime);
+		auto& activeKeys = m_inputStateMap->activeKeys();
+
+		for (u32 activeKey : activeKeys)
+		{
+			m_inputActionMap->triggerKeyInteraction(activeKey, true, true, m_inputStateMap->holdingTime(activeKey));
+		}
+	}
+
 	std::shared_ptr<InputStateMap> InputManager::inputStateMap()
 	{
 		return m_inputStateMap;
@@ -64,15 +79,27 @@ namespace spite
 		return m_inputActionMap;
 	}
 
-	void InputManager::triggerKeyInteraction(const SDL_KeyboardEvent& event)
+	void InputManager::setMousePosition(const float x,
+		const float y,
+		const float xRel,
+		const float yRel)
 	{
-		u32 key = event.key;
-		bool isPressed = event.down;
+		m_mousePosition.x = x;
+		m_mousePosition.y = y;
+		m_mousePosition.xRel = xRel;
+		m_mousePosition.yRel = yRel;
+	}
 
-		float deltaTime = Time::deltaTime();
+	const MousePosition& InputManager::mousePosition() const
+	{
+		return m_mousePosition;
+	}
+
+	void InputManager::triggerKeyInteraction(const u32 key,const bool isPressed)
+	{
 		if (isPressed)
 		{
-			m_inputStateMap->setButtonPress(key, deltaTime);
+			m_inputStateMap->setButtonPress(key);
 			m_inputActionMap->triggerKeyInteraction(key,
 			                                        isPressed,
 			                                        m_inputStateMap->isHeld(key),

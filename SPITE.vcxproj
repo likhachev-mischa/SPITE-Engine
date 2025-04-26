@@ -172,6 +172,7 @@
     <ClInclude Include="source\application\InputEvents.hpp" />
     <ClInclude Include="source\application\input\InputManager.hpp" />
     <ClInclude Include="source\application\input\InputActionMap.hpp" />
+    <ClInclude Include="source\application\input\Keycodes.hpp" />
     <ClInclude Include="source\application\Time.hpp" />
     <ClInclude Include="source\application\WindowManager.hpp" />
     <ClInclude Include="source\base\Assert.hpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="source\ecs\World.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\components\CoreComponents.hpp" />
+    <ClInclude Include="source\engine\systems\MovementSystems.hpp" />
     <ClInclude Include="source\engine\VulkanDebug.hpp" />
     <ClInclude Include="source\engine\components\VulkanComponents.hpp" />
     <ClInclude Include="source\engine\VulkanRendering.hpp" />

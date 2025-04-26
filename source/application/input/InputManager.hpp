@@ -1,19 +1,28 @@
 #pragma once
 #include <memory>
 
-#include <SDL3/SDL_events.h>
-
-#include "application/input/InputActionMap.hpp"
+#include "base/Platform.hpp"
 
 namespace spite
 {
 	class InputStateMap;
 	class InputActionMap;
 
+	struct MousePosition
+	{
+		float x;
+		float y;
+
+		float xRel;
+		float yRel;
+	};
+
 	class InputManager
 	{
 		std::shared_ptr<InputStateMap> m_inputStateMap;
 		std::shared_ptr<InputActionMap> m_inputActionMap;
+
+		MousePosition m_mousePosition;
 
 	public:
 		InputManager(std::shared_ptr<InputActionMap> inputActionMap);
@@ -29,12 +38,17 @@ namespace spite
 
 		//bool isKeyMapped(u16 key);
 
+		void update(float deltaTime);
 
 		std::shared_ptr<InputStateMap> inputStateMap();
 
 		std::shared_ptr<InputActionMap> inputActionMap();
 
-		void triggerKeyInteraction(const SDL_KeyboardEvent& event);
+		void setMousePosition(const float x, const float y, const float xRel, const float yRel);
+
+		[[nodiscard]] const MousePosition& mousePosition() const;
+
+		void triggerKeyInteraction(const u32 key,const bool isPressed);
 
 		void reset();
 

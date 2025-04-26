@@ -49,7 +49,7 @@ namespace spite
 
 	struct MovementDirectionComponent : IComponent
 	{
-		glm::vec3 direction;
+		glm::vec3 direction{};
 	};
 
 	struct ControllableEntitySingleton: ISingletonComponent

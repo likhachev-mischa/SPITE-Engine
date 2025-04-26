@@ -84,10 +84,15 @@ namespace spite
 	//total number of keys to keep track of
 	constexpr sizet MAX_KEYS_FOR_PROCESSING = 255;
 
+	constexpr sizet MULTITOUCH_LIMIT = 10;
+
 	//lookup for state of input keys
 	class InputStateMap
 	{
 		eastl::fixed_map<u32, ButtonState, MAX_KEYS_FOR_PROCESSING, false> m_stateMap;
+
+		//held keys
+		eastl::fixed_set<u32, MULTITOUCH_LIMIT, false> m_activeKeys;
 
 	public:
 		InputStateMap() = default;
@@ -104,8 +109,13 @@ namespace spite
 
 		float holdingTime(const u32 key);
 
-		//if button was pressed on previous frame - it becomes held
-		void setButtonPress(const u32 key, const float deltaTime = 0.f);
+		void updateActiveKeys(const float deltaTime);
+
+		const eastl::fixed_set<u32, MULTITOUCH_LIMIT, false>& activeKeys();
+
+		bool isKeyActive(const u32 key);
+
+		void setButtonPress(const u32 key);
 
 		void setButtonRelease(const u32 key);
 
@@ -146,6 +156,10 @@ namespace spite
 	//used in inputActionLookup -> is accessed by action name string, holds CURRENT value for this action  
 	struct InputAction
 	{
+		friend bool operator==(const InputAction& lhs, const InputAction& rhs);
+
+		friend bool operator!=(const InputAction& lhs, const InputAction& rhs);
+
 		//name string duplication
 		eastl::string name;
 		//for binary(press/release) 1.0 - activated, 0.0 - inactive
@@ -154,6 +168,8 @@ namespace spite
 		float value{};
 
 		explicit InputAction(eastl::string name);
+
+
 	};
 
 	class InputActionMap
@@ -172,18 +188,18 @@ namespace spite
 	public:
 		InputActionMap(const cstring inputActionsJsonPath, const HeapAllocator& allocator);
 
-
-		//should be called by input system every frame upon key state change
 		void triggerKeyInteraction(const u32 key,
 		                           const bool isKeyPressed,
 		                           const bool isKeyHeld,
 		                           const float holdingTime);
 
-		eastl::vector<InputAction, HeapAllocator>& activatedActions();
+		const eastl::vector<InputAction, HeapAllocator>& activatedActions();
+
+		bool isActionActive(const cstring name);
+
+		float actionValue (const cstring name);
 
 		//call this every frame before input processing
 		void reset();
-
-	private:
 	};
 }

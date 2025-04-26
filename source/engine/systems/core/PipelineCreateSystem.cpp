@@ -39,7 +39,10 @@ namespace spite
 			}
 			else
 			{
-				pipelineEntity = findCompatiblePipeline(layoutEntity, vertexInputComponent);
+				SDEBUG_LOG("PIPELINE LAYOUT FOUND\n")
+				pipelineEntity = findCompatiblePipeline(layoutEntity,
+				                                        shaderReference,
+				                                        vertexInputComponent);
 				if (pipelineEntity == Entity::undefined())
 				{
 					pipelineEntity = createPipelineEntity(layoutEntity,
@@ -103,8 +106,8 @@ namespace spite
 		std::vector<vk::DescriptorSetLayout> layouts;
 		std::vector<Entity> layoutEntities;
 		auto& shaders = shaderRef.shaders;
-		layouts.reserve(shaders.size());
-		layoutEntities.reserve(shaders.size());
+		//layouts.reserve(shaders.size());
+		//layoutEntities.reserve(shaders.size());
 
 		auto componentManager = m_entityService->componentManager();
 		for (const Entity shader : shaders)
@@ -134,6 +137,7 @@ namespace spite
 	}
 
 	Entity PipelineCreateSystem::findCompatiblePipeline(const Entity layoutEntity,
+	                                                    const ShaderReference& shaderReference,
 	                                                    const VertexInputComponent& vertexInput)
 	{
 		auto& pipelineQuery = *m_pipelineQuery;
@@ -144,7 +148,30 @@ namespace spite
 			if (pipelineComponent.pipelineLayoutEntity == layoutEntity && pipelineComponent.
 				vertexInputData == vertexInput.vertexInputData)
 			{
-				return pipelineQuery.componentOwner(i);
+				const auto& pipelineShaderReference = m_entityService->componentManager()->
+					getComponent<ShaderReference>(pipelineQuery.componentOwner(i));
+
+				if (pipelineShaderReference.shaders.size() != shaderReference.shaders.size())
+				{
+					continue;
+				}
+
+				bool isCompatible = true;
+				for (const auto& shaderEntity : shaderReference.shaders)
+				{
+					if (eastl::find(pipelineShaderReference.shaders.begin(),
+					                pipelineShaderReference.shaders.end(),
+					                shaderEntity) == pipelineShaderReference.shaders.end())
+					{
+						isCompatible = false;
+						break;
+					}
+				}
+				if (isCompatible)
+				{
+					SDEBUG_LOG("COMPATIBLE PIPELINE FOUND\n")
+					return pipelineQuery.componentOwner(i);
+				}
 			}
 		}
 
@@ -206,10 +233,9 @@ namespace spite
 
 		Entity pipelineEntity = m_entityService->entityManager()->createEntity();
 		componentManager->addComponent(pipelineEntity, std::move(pipelineComponent));
+		componentManager->addComponent(pipelineEntity, shaderReference);
 
 		SDEBUG_LOG("PIPELINE CREATED\n")
 		return pipelineEntity;
 	}
-
-	
 }

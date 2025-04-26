@@ -1,7 +1,7 @@
 {
     "actions": [
         {
-            "action": "MoveForward",
+            "action": "YAxis",
             "type": "Axis",
             "bindings": [
                 {
@@ -13,6 +13,33 @@
                     "device": "Keyboard",
                     "key": "S",
                     "scale": -1.0
+                }
+            ]
+        },
+        {
+            "action": "XAxis",
+            "type": "Axis",
+            "bindings": [
+                {
+                    "device": "Keyboard",
+                    "key": "D",
+                    "scale": 1.0
+                },
+                {
+                    "device": "Keyboard",
+                    "key": "A",
+                    "scale": -1.0
+                }
+            ]
+        },
+        {
+            "action": "Test",
+            "type": "Hold",
+            "bindings":[
+                {
+                    "device": "Keyboard",
+                    "key": "E",
+                    "scale": 3.0
                 }
             ]
         },

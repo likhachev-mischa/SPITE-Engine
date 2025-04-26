@@ -63,19 +63,39 @@ namespace spite
 		return m_stateMap[key].holdingTime;
 	}
 
-	void InputStateMap::setButtonPress(const u32 key, const float deltaTime)
+	void InputStateMap::updateActiveKeys(const float deltaTime)
+	{
+		for (u32 activeKey : m_activeKeys)
+		{
+			auto& state = m_stateMap[activeKey];
+			state.state = BUTTON_STATE::HELD;
+			state.holdingTime += deltaTime;
+			//SDEBUG_LOG("key %u is held for %f\n", activeKey, state.holdingTime);
+		}
+	}
+
+	const eastl::fixed_set<u32, MULTITOUCH_LIMIT, false>& InputStateMap::activeKeys()
+	{
+		return m_activeKeys;
+	}
+
+	bool InputStateMap::isKeyActive(const u32 key)
+	{
+		return eastl::find(m_activeKeys.begin(), m_activeKeys.end(), key) != m_activeKeys.end();
+	}
+
+	void InputStateMap::setButtonPress(const u32 key)
 	{
 		if (isInactive(key))
 		{
-			SDEBUG_LOG("%u key pressed\n", key);
+			//SDEBUG_LOG("%u key pressed\n", key);
 			ButtonState state(BUTTON_STATE::PRESSED);
 			m_stateMap[key] = state;
+			m_activeKeys.emplace(key);
 			return;
 		}
-
-			SDEBUG_LOG("%u key held\n", key);
-		m_stateMap[key].state = BUTTON_STATE::HELD;
-		m_stateMap[key].holdingTime += deltaTime;
+		//SDEBUG_LOG("%u key held\n", key);
+		//m_stateMap[key].state = BUTTON_STATE::HELD;
 	}
 
 	void InputStateMap::setButtonRelease(const u32 key)
@@ -83,7 +103,8 @@ namespace spite
 		SASSERTM(!isInactive(key),
 		         "Key %u was inactive, it can't be released without previous state",
 		         key);
-			SDEBUG_LOG("%u key released\n", key);
+		//SDEBUG_LOG("%u key released\n", key);
+		m_activeKeys.erase(key);
 		m_stateMap[key].state = BUTTON_STATE::RELEASED;
 		m_stateMap[key].holdingTime = 0.f;
 	}
@@ -269,10 +290,10 @@ namespace spite
 
 		for (const auto& bindingAction : bindingActions)
 		{
-			SDEBUG_LOG("%s action triggered\n", bindingAction.action);
+			//SDEBUG_LOG("%s action triggered\n", bindingAction.action);
 			switch (bindingAction.type)
 			{
-			case PRESS: if (isKeyPressed)
+			case PRESS: if (isKeyPressed && !isKeyHeld)
 				{
 					//m_inputActionsMap[bindingAction.action].value = 1.f;
 					m_inputActionsMap.at(bindingAction.action).value = 1.f;
@@ -311,22 +332,46 @@ namespace spite
 					//m_inputActionsMap[bindingAction.action].value = bindingAction.scale;
 					m_inputActionsMap.at(bindingAction.action).value = bindingAction.scale;
 				}
+				else
+				{
+					m_inputActionsMap.at(bindingAction.action).value = 0.f;
+				}
 				break;
 			default: break;
 			}
-
 
 			m_activatedActions.push_back(m_inputActionsMap.at(bindingAction.action));
 		}
 	}
 
-	eastl::vector<InputAction, HeapAllocator>& InputActionMap::activatedActions()
+	const eastl::vector<InputAction, HeapAllocator>& InputActionMap::activatedActions()
 	{
 		return m_activatedActions;
+	}
+
+	bool InputActionMap::isActionActive(const cstring name)
+	{
+		return eastl::find(m_activatedActions.begin(), m_activatedActions.end(), InputAction(name)) != m_activatedActions.end();
+	}
+
+	float InputActionMap::actionValue(const cstring name)
+	{
+		SASSERTM(m_inputActionsMap.find(name) != m_inputActionsMap.end(), "Input action %s is not registered! \n", name);
+		return m_inputActionsMap.at(name).value;
 	}
 
 	void InputActionMap::reset()
 	{
 		m_activatedActions.clear();
+	}
+
+	bool operator==(const InputAction& lhs, const InputAction& rhs)
+	{
+		return lhs.name == rhs.name;
+	}
+
+	bool operator!=(const InputAction& lhs, const InputAction& rhs)
+	{
+		return !(lhs == rhs);
 	}
 }

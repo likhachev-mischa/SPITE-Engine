@@ -6,6 +6,7 @@
 
 namespace spite
 {
+	//TODO type index caching
 	class IQuery
 	{
 		using TypesVector = eastl::vector<std::type_index, spite::HeapAllocator>;
@@ -531,7 +532,7 @@ namespace spite
 			return m_table2->operator[](m_indices2[n]);
 		}
 
-		T2& getComponentT3(const sizet n)
+		T3& getComponentT3(const sizet n)
 		{
 			return m_table3->operator[](m_indices3[n]);
 		}
@@ -550,7 +551,7 @@ namespace spite
 
 			for (sizet i = 0, size = m_table1->getOccupiedSize(); i < size; ++i)
 			{
-				Entity entity = m_table1->operator[](i).owner;
+				Entity entity = m_table1->owner(i);
 
 				bool matchesCondition = true;
 				for (const auto& componentType : hasComponents)
@@ -998,6 +999,13 @@ namespace spite
 			                                   buildInfo.m_hasNoComponents);
 			m_queries.emplace(buildInfo, query);
 			return static_cast<Query2<T1, T2>*>(query);
+		}
+
+		template <t_plain_component T1, t_plain_component T2, t_plain_component T3>
+		Query3<T1, T2, T3>* buildQuery()
+		{
+			QueryBuildInfo buildInfo = getQueryBuildInfo();
+			return buildQuery<T1, T2, T3>(buildInfo);
 		}
 
 		template <t_plain_component T1, t_plain_component T2, t_plain_component T3>

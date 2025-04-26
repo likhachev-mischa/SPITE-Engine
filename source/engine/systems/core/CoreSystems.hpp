@@ -17,15 +17,6 @@ namespace spite
 		void onInitialize() override;
 	};
 
-	class InputProcessingSystem : public SystemBase
-	{
-	public:
-		void onUpdate(float deltaTime) override
-		{
-
-		}
-	};
-
 	class CameraCreateSystem : public SystemBase
 	{
 	public:
@@ -88,6 +79,7 @@ namespace spite
 		Entity createPipelineLayoutEntity(const ShaderReference& shaderRef);
 
 		Entity findCompatiblePipeline(const Entity layoutEntity,
+		                              const ShaderReference& shaderReference,
 		                              const VertexInputComponent& vertexInput);
 
 		Entity createPipelineEntity(const Entity layoutEntity,

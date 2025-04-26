@@ -1019,6 +1019,7 @@ namespace spite
 		virtual ~IStructuralChangeHandler() = default;
 	};
 
+	//TODO add funcs with type_id as param 
 	class ComponentManager
 	{
 		std::shared_ptr<ComponentStorage> m_storage;

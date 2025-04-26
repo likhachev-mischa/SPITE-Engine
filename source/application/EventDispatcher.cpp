@@ -5,6 +5,8 @@
 #include "application/WindowManager.hpp"
 #include "application/input/InputManager.hpp"
 
+#include "application/input/Keycodes.hpp"
+
 namespace spite
 {
 	//void EventManager::recordEvent(const InputEvents& eventId)
@@ -85,14 +87,21 @@ namespace spite
 		{
 			switch (event.type)
 			{
+			case SDL_EVENT_MOUSE_MOTION:
+				{
+					auto motion = event.motion;
+					m_inputManager->setMousePosition(motion.x, motion.y, motion.xrel, motion.yrel);
+					break;
+				}
+
 			case SDL_EVENT_KEY_DOWN:
 			case SDL_EVENT_KEY_UP:
 				{
-					m_inputManager->triggerKeyInteraction(event.key);
+					m_inputManager->triggerKeyInteraction(event.key.key, event.key.down);
 					break;
 				}
 			case SDL_EVENT_QUIT:
-			case SDL_EVENT_WINDOW_CLOSE_REQUESTED :
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 				{
 					m_windowManager->terminate();
 					break;

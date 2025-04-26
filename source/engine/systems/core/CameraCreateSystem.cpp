@@ -13,6 +13,9 @@ namespace spite
 		componentManager->addComponent<CameraDataComponent>(camera);
 		componentManager->addComponent<CameraMatricesComponent>(camera);
 
+		componentManager->addComponent<MovementSpeedComponent>(camera);
+		componentManager->addComponent<MovementDirectionComponent>(camera);
+
 		CameraSingleton cameraSingleton;
 		cameraSingleton.camera = camera;
 		componentManager->createSingleton(cameraSingleton);

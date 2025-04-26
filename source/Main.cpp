@@ -8,6 +8,7 @@
 #include "engine/components/CoreComponents.hpp"
 #include "engine/components/VulkanComponents.hpp"
 #include "engine/systems/core/CoreSystems.hpp"
+#include "engine/systems/MovementSystems.hpp"
 
 
 int main(int argc, char* argv[])
@@ -38,10 +39,23 @@ int main(int argc, char* argv[])
 
 
 	std::vector<SystemBase*> systems = {
-		new VulkanInitSystem, new CameraCreateSystem, new ModelLoadSystem, new ShaderCreateSystem,
-		new PipelineCreateSystem, new TransformationMatrixSystem, new CameraMatricesUpdateSystem,
-		new CameraUboUpdateSystem, new WaitForFrameSystem, new DescriptorUpdateSystem,
-		new RenderSystem, new CleanupSystem,
+		new VulkanInitSystem,
+		new CameraCreateSystem,
+		new ModelLoadSystem,
+		new ShaderCreateSystem,
+		new PipelineCreateSystem,
+
+		new MovementControlSystem,
+		new RotationControlSystem,
+		new MovementSystem,
+
+		new TransformationMatrixSystem,
+		new CameraMatricesUpdateSystem,
+		new CameraUboUpdateSystem,
+		new WaitForFrameSystem,
+		new DescriptorUpdateSystem,
+		new RenderSystem,
+		new CleanupSystem,
 	};
 
 	world.addSystems(systems.data(), systems.size());
@@ -61,7 +75,7 @@ int main(int argc, char* argv[])
 	ModelLoadRequest modelLoadRequest2;
 	modelLoadRequest2.objFilePath = "./models/cube.obj";
 	modelLoadRequest2.vertShaderPath = "./shaders/vert.spv";
-	modelLoadRequest2.fragShaderPath = "./shaders/frag.spv";
+	modelLoadRequest2.fragShaderPath = "./shaders/frag2.spv";
 	world.service()->entityEventManager()->createEvent(std::move(modelLoadRequest2));
 
 	world.commitSystemsStructuralChange();
@@ -70,10 +84,12 @@ int main(int argc, char* argv[])
 	Time time;
 	while (!windowManager->shouldTerminate())
 	{
+		inputManager->update(Time::deltaTime());
 		eventDispatcher->pollEvents();
 		world.update(Time::deltaTime());
 		world.commitSystemsStructuralChange();
 		time.updateDeltaTime();
+		//TODO: HOLDING TIME SHOULD UPDATE IN LOOP, INSTEAD OF RELYING ON EXTERNAL EVENTS
 		inputManager->reset();
 	}
 
