@@ -84,13 +84,25 @@ namespace spite
 		result = commandBuffer.begin(beginInfo);
 		SASSERT_VULKAN(result)
 
-		vk::Rect2D renderArea({}, swapchainExtent);
-		vk::ClearValue clearColor({0.1f, 0.1f, 0.1f, 1.0f});
-		vk::RenderPassBeginInfo renderPassInfo(renderPass, framebuffer, renderArea, 1, &clearColor);
+		//vk::Rect2D renderArea({}, swapchainExtent);
+		//vk::ClearValue clearColor({0.1f, 0.1f, 0.1f, 1.0f});
+		//vk::RenderPassBeginInfo renderPassInfo(renderPass, framebuffer, renderArea, 1, &clearColor);
 
 
-		commandBuffer.beginRenderPass(renderPassInfo,
-		                              vk::SubpassContents::eSecondaryCommandBuffers);
+		//commandBuffer.beginRenderPass(renderPassInfo,
+		//                              vk::SubpassContents::eSecondaryCommandBuffers);
+		std::array<vk::ClearValue, 2> clearValues;
+		clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
+		clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
+		// Depth clear value (1.0f is max depth)
+
+		vk::RenderPassBeginInfo renderPassInfo(renderPass,
+		                                       framebuffer,
+		                                       vk::Rect2D({}, swapchainExtent),
+		                                       clearValues.size(),
+		                                       clearValues.data());
+
+		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
 
 		commandBuffer.executeCommands(secondaryCommandBuffer);
 

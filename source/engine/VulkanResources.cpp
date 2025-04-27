@@ -13,22 +13,24 @@ namespace spite
 	BufferWrapper::BufferWrapper() = default;
 
 	BufferWrapper::BufferWrapper(const u64 size,
-		const vk::BufferUsageFlags& usage,
-		const vk::MemoryPropertyFlags memoryProperty,
-		const vma::AllocationCreateFlags& allocationFlag,
-		const QueueFamilyIndices& indices,
-		const vma::Allocator& allocator): allocator(allocator),
-		                                  size(size)
+	                             const vk::BufferUsageFlags& usage,
+	                             const vk::MemoryPropertyFlags memoryProperty,
+	                             const vma::AllocationCreateFlags& allocationFlag,
+	                             const QueueFamilyIndices& indices,
+	                             const vma::Allocator& allocator): allocator(allocator), size(size)
 	{
-		spite::createBuffer(size, usage, memoryProperty, allocationFlag, indices, allocator, buffer,
+		spite::createBuffer(size,
+		                    usage,
+		                    memoryProperty,
+		                    allocationFlag,
+		                    indices,
+		                    allocator,
+		                    buffer,
 		                    allocation);
 	}
 
-	BufferWrapper::BufferWrapper(BufferWrapper&& other) noexcept:
-		buffer(other.buffer),
-		allocation(other.allocation),
-		allocator(other.allocator),
-		size(other.size)
+	BufferWrapper::BufferWrapper(BufferWrapper&& other) noexcept: buffer(other.buffer),
+		allocation(other.allocation), allocator(other.allocator), size(other.size)
 	{
 		other.allocator = nullptr;
 		other.buffer = nullptr;
@@ -55,21 +57,30 @@ namespace spite
 	}
 
 	void BufferWrapper::copyBuffer(const BufferWrapper& other,
-		const vk::Device& device,
-		const vk::CommandPool& transferCommandPool,
-		const vk::Queue transferQueue,
-		const vk::AllocationCallbacks* allocationCallbacks) const
+	                               const vk::Device& device,
+	                               const vk::CommandPool& transferCommandPool,
+	                               const vk::Queue transferQueue,
+	                               const vk::AllocationCallbacks* allocationCallbacks) const
 	{
 		SASSERTM(size == other.size, "Buffer sizes are not equal")
-		spite::copyBuffer(other.buffer, buffer, size, transferCommandPool, device, transferQueue,
+		spite::copyBuffer(other.buffer,
+		                  buffer,
+		                  size,
+		                  transferCommandPool,
+		                  device,
+		                  transferQueue,
 		                  allocationCallbacks);
 	}
 
 	void BufferWrapper::copyMemory(const void* data,
-		const vk::DeviceSize& memorySize,
-		const vk::DeviceSize& localOffset) const
+	                               const vk::DeviceSize& memorySize,
+	                               const vk::DeviceSize& localOffset) const
 	{
-		vk::Result result = allocator.copyMemoryToAllocation(data, allocation, localOffset, memorySize);
+		vk::Result result = allocator.copyMemoryToAllocation(
+			data,
+			allocation,
+			localOffset,
+			memorySize);
 		SASSERT_VULKAN(result)
 	}
 
@@ -93,8 +104,7 @@ namespace spite
 
 	BufferWrapper::~BufferWrapper()
 	{
-		if (allocator)
-			allocator.destroyBuffer(buffer, allocation);
+		if (allocator) allocator.destroyBuffer(buffer, allocation);
 	}
 
 	std::vector<const char*> getRequiredExtensions(char const* const* windowExtensions,
@@ -444,60 +454,61 @@ namespace spite
 		//vk::ImageLayout::ePresentSrcKHR,
 		//vk::ImageLayout::eColorAttachmentOptimal);
 
+		vk::AttachmentDescription depthAttachment({},
+		                                          vk::Format::eD32Sfloat,
+		                                          vk::SampleCountFlagBits::e1,
+		                                          vk::AttachmentLoadOp::eClear,
+		                                          vk::AttachmentStoreOp::eDontCare,
+		                                          vk::AttachmentLoadOp::eDontCare,
+		                                          vk::AttachmentStoreOp::eDontCare,
+		                                          vk::ImageLayout::eUndefined,
+		                                          vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
 		vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+		vk::AttachmentReference depthAttachmentRef(1,
+		                                           vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-		vk::SubpassDescription supbpass({},
-		                                vk::PipelineBindPoint::eGraphics,
-		                                {},
-		                                {},
-		                                1,
-		                                &colorAttachmentRef);
+		vk::SubpassDescription subpass({},
+		                               vk::PipelineBindPoint::eGraphics,
+		                               {},
+		                               {},
+		                               1,
+		                               &colorAttachmentRef,
+		                               nullptr,
+		                               &depthAttachmentRef);
 
-		//std::array<vk::SubpassDependency, 2> dependencies;
+		//vk::RenderPassCreateInfo renderPassInfo({}, 1, &colorAttachment, 1, &subpass);
 
-		//dependencies[0] = vk::SubpassDependency(vk::SubpassExternal,
-		//                                        0,
-		//                                        vk::PipelineStageFlagBits::eBottomOfPipe,
-		//                                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
-		//                                        vk::AccessFlagBits::eMemoryRead,
-		//                                        vk::AccessFlagBits::eColorAttachmentWrite,
-		//                                        vk::DependencyFlagBits::eByRegion);
+		//vk::SubpassDependency dependency(vk::SubpassExternal,
+		//                                 0,
+		//                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		//                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		//                                 {},
+		//                                 vk::AccessFlagBits::eColorAttachmentWrite);
 
-		//dependencies[1] = vk::SubpassDependency(0,
-		//                                        vk::SubpassExternal,
-		//                                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
-		//                                        vk::PipelineStageFlagBits::eBottomOfPipe,
-		//                                        vk::AccessFlagBits::eColorAttachmentWrite,
-		//                                        vk::AccessFlagBits::eMemoryRead,
-		//                                        vk::DependencyFlagBits::eByRegion);
 
-		// vk::RenderPassCreateInfo renderPassInfo({},
-		//                                         1,
-		//                                         &colorAttachment,
-		//                                         1,
-		//                                         &supbpass,
-		//                                         dependencies.size(),
-		//                                         dependencies.data());
-		vk::RenderPassCreateInfo renderPassInfo({}, 1, &colorAttachment, 1, &supbpass);
-
+		//renderPassInfo.dependencyCount = 1;
+		//renderPassInfo.pDependencies = &dependency;
 
 		vk::SubpassDependency dependency(vk::SubpassExternal,
 		                                 0,
-		                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-		                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		                                 vk::PipelineStageFlagBits::eColorAttachmentOutput |
+		                                 vk::PipelineStageFlagBits::eEarlyFragmentTests,
+		                                 vk::PipelineStageFlagBits::eColorAttachmentOutput |
+		                                 vk::PipelineStageFlagBits::eEarlyFragmentTests,
 		                                 {},
-		                                 vk::AccessFlagBits::eColorAttachmentWrite);
+		                                 vk::AccessFlagBits::eColorAttachmentWrite |
+		                                 vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 
-		//vk::SubpassDependency dependency(0,
-		//                                 vk::SubpassExternal,
-		//                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-		//                                 vk::PipelineStageFlagBits::eBottomOfPipe,
-		//                                 vk::AccessFlagBits::eColorAttachmentWrite,
-		//                                 vk::AccessFlagBits::eMemoryRead,
-		//                                 vk::DependencyFlagBits::eByRegion);
+		std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+		vk::RenderPassCreateInfo renderPassInfo({},
+		                                        static_cast<uint32_t>(attachments.size()),
+		                                        attachments.data(),
+		                                        1,
+		                                        &subpass,
+		                                        1,
+		                                        &dependency);
 
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
 
 		auto [result, renderPass] = device.createRenderPass(renderPassInfo, pAllocationCallbacks);
 		SASSERT_VULKAN(result)
@@ -559,7 +570,9 @@ namespace spite
 
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({},
 		                                                descriptorSetLayouts.size(),
-		                                                descriptorSetLayouts.data(),1,&pushConstant);
+		                                                descriptorSetLayouts.data(),
+		                                                1,
+		                                                &pushConstant);
 
 		auto [result, pipelineLayout] = device.createPipelineLayout(
 			pipelineLayoutInfo,
@@ -634,21 +647,47 @@ namespace spite
 			1,
 			&colorBlendAttachment);
 
+		//vk::GraphicsPipelineCreateInfo pipelineInfo({},
+		//                                            static_cast<u32>(shaderStages.size()),
+		//                                            shaderStages.data(),
+		//                                            &vertexInputInfo,
+		//                                            &inputAssembly,
+		//                                            {},
+		//                                            &viewportState,
+		//                                            &rasterizer,
+		//                                            &multisampling,
+		//                                            {},
+		//                                            &colorBlending,
+		//                                            &dynamicState,
+		//                                            pipelineLayout,
+		//                                            renderPass,
+		//                                            0);
+		vk::PipelineDepthStencilStateCreateInfo depthStencil({},
+			vk::True,                // Enable depth testing
+			vk::True,                // Enable depth writes
+			vk::CompareOp::eLess,    // Use LESS for depth test (standard)
+			vk::False,               // No depth bounds test
+			vk::False,               // No stencil test
+			{},                      // Stencil front (unused)
+			{},                      // Stencil back (unused)
+			0.0f,                    // Min depth bounds
+			1.0f);                   // Max depth bounds
+
 		vk::GraphicsPipelineCreateInfo pipelineInfo({},
-		                                            static_cast<u32>(shaderStages.size()),
-		                                            shaderStages.data(),
-		                                            &vertexInputInfo,
-		                                            &inputAssembly,
-		                                            {},
-		                                            &viewportState,
-		                                            &rasterizer,
-		                                            &multisampling,
-		                                            {},
-		                                            &colorBlending,
-		                                            &dynamicState,
-		                                            pipelineLayout,
-		                                            renderPass,
-		                                            0);
+			static_cast<u32>(shaderStages.size()),
+			shaderStages.data(),
+			&vertexInputInfo,
+			&inputAssembly,
+			{},
+			&viewportState,
+			&rasterizer,
+			&multisampling,
+			&depthStencil,             
+			&colorBlending,
+			&dynamicState,
+			pipelineLayout,
+			renderPass,
+			0);
 
 		auto [result, graphicsPipeline] = device.createGraphicsPipeline(
 			{},
@@ -661,6 +700,7 @@ namespace spite
 
 	std::vector<vk::Framebuffer> createFramebuffers(const vk::Device& device,
 	                                                const std::vector<vk::ImageView>& imageViews,
+	                                                const vk::ImageView depthImageView,
 	                                                const vk::Extent2D& swapchainExtent,
 	                                                const vk::RenderPass& renderPass,
 	                                                const vk::AllocationCallbacks*
@@ -671,11 +711,11 @@ namespace spite
 
 		for (size_t i = 0; i < imageViews.size(); ++i)
 		{
-			vk::ImageView attachments[] = {imageViews[i]};
+			vk::ImageView attachments[] = {imageViews[i], depthImageView};
 
 			vk::FramebufferCreateInfo framebufferInfo({},
 			                                          renderPass,
-			                                          1,
+			                                          2,
 			                                          attachments,
 			                                          swapchainExtent.width,
 			                                          swapchainExtent.height,

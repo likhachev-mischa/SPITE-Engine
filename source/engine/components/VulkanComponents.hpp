@@ -290,6 +290,13 @@ namespace spite
 		std::string name; // Optional name for entity
 	};
 
+	struct DepthImageComponent : ISingletonComponent
+	{
+		vk::Image image;
+		vma::Allocation allocation;
+		vk::ImageView imageView;
+	};
+
 	struct PipelineCreateRequest : IEventComponent
 	{
 		//entity(model) that requires pipeline creation/accuisition

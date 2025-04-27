@@ -153,6 +153,9 @@
     <ClInclude Include="source\application\input\Keycodes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\engine\VulkanImages.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\application\EventDispatcher.cpp">

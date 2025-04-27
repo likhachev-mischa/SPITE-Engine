@@ -4,6 +4,8 @@
 #include "engine/VulkanDebug.hpp"
 #include "application/WindowManager.hpp"
 
+#include "engine/VulkanImages.hpp"
+
 namespace spite
 {
 	void VulkanInitSystem::onInitialize()
@@ -154,6 +156,17 @@ namespace spite
 		componentManager->createSingleton(std::move(cbComponent));
 
 
+		//DEPTH IMAGE
+		Image depthImage = createDepthImage(queueFamilyIndices, swapExtent, gpuAllocator);
+		vk::ImageView depthImageView = createDepthImageView(device, depthImage.image, allocationCallbacks);
+
+		DepthImageComponent depthImageComponent;
+		depthImageComponent.image = depthImage.image;
+		depthImageComponent.allocation = depthImage.allocation;
+		depthImageComponent.imageView = depthImageView;
+
+		componentManager->createSingleton(depthImageComponent);
+
 		//TODO: smart pipeline creation
 		RenderPassComponent renderPassComponent;
 		renderPassComponent.renderPass = createRenderPass(device,
@@ -165,6 +178,7 @@ namespace spite
 		framebufferComponent.framebuffers = createFramebuffers(
 			device,
 			swapchainComponent.imageViews,
+			depthImageView,
 			swapExtent,
 			renderPassComponent.renderPass,
 			&allocationCallbacks);
@@ -204,5 +218,4 @@ namespace spite
 		SDEBUG_LOG("VULKAN INITIALIZED\n")
 		//	requireComponent(typeid(VulkanInitRequest));
 	}
-
 }
