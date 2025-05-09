@@ -188,6 +188,7 @@
     <ClInclude Include="source\base\VmaUsage.hpp" />
     <ClInclude Include="source\base\VulkanUsage.hpp" />
     <ClInclude Include="source\ecs\Core.hpp" />
+    <ClInclude Include="source\engine\components\FrameGraphComponents.hpp" />
     <ClInclude Include="source\engine\components\InputEventComponents.hpp" />
     <ClInclude Include="source\ecs\Queries.hpp" />
     <ClInclude Include="source\ecs\Systems.hpp" />
