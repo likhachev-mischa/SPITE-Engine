@@ -53,10 +53,12 @@ namespace spite
 	                                   const vk::Image image,
 	                                   const vk::AllocationCallbacks& allocationCallbacks)
 	{
+        vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
+
 		auto [result, imageView] = device.createImageView({
 			                                                  {}, image, vk::ImageViewType::e2D,
 			                                                  vk::Format::eD32Sfloat, {},
-			                                                  {vk::ImageAspectFlagBits::eDepth}
+			                                                 subresourceRange
 		                                                  },
 		                                                  allocationCallbacks);
 		SASSERT_VULKAN(result)

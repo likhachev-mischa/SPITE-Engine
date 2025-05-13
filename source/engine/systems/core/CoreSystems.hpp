@@ -144,6 +144,16 @@ namespace spite
 		void onUpdate(float deltaTime) override;
 	};
 
+	class DepthPassSystem : public SystemBase
+	{
+		Query1<MeshComponent>* m_modelQuery;
+
+	public:
+		void onInitialize() override;
+
+		void onUpdate(float deltaTime) override;
+	};
+
 	class RenderSystem : public SystemBase
 	{
 	private:

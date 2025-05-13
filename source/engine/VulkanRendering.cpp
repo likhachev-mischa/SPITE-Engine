@@ -23,7 +23,7 @@ namespace spite
 	}
 
 	void recordSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
-	                                  const vk::Pipeline& graphicsPipeline,
+	                                  const vk::Pipeline& pipeline,
 	                                  const vk::PipelineLayout& pipelineLayout,
 	                                  const std::vector<vk::DescriptorSet>& descriptorSets,
 	                                  const vk::Extent2D& swapchainExtent,
@@ -34,7 +34,7 @@ namespace spite
 	                                  const u32 indicesCount)
 
 	{
-		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 		vk::DeviceSize offset = 0;
 
 		commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
@@ -70,12 +70,72 @@ namespace spite
 		SASSERT_VULKAN(result)
 	}
 
-	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
-	                                const vk::Extent2D& swapchainExtent,
-	                                const vk::RenderPass& renderPass,
-	                                const vk::Framebuffer& framebuffer,
-	                                const std::vector<vk::CommandBuffer>& secondaryCommandBuffer,
-	                                const vk::Image image)
+	void recordPrimaryDepthCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	                                     const vk::Extent2D& swapchainExtent,
+	                                     const vk::RenderPass& depthRenderPass,
+	                                     const vk::Framebuffer& depthFramebuffer,
+	                                     const std::vector<vk::CommandBuffer>& depthCommandBuffer,
+	                                     const vk::Image image)
+	{
+		vk::Result result = commandBuffer.reset();
+		SASSERT_VULKAN(result)
+
+		vk::CommandBufferBeginInfo beginInfo;
+		result = commandBuffer.begin(beginInfo);
+		SASSERT_VULKAN(result)
+
+		vk::ClearValue depthClearValue;
+		depthClearValue.depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
+		vk::RenderPassBeginInfo depthPassInfo(depthRenderPass,
+		                                      depthFramebuffer,
+		                                      vk::Rect2D({}, swapchainExtent),
+		                                      1,
+		                                      &depthClearValue);
+
+		commandBuffer.beginRenderPass(depthPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+		commandBuffer.executeCommands(depthCommandBuffer);
+		commandBuffer.endRenderPass();
+
+		vk::ImageMemoryBarrier imageMemoryBarrier(vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+		                                          vk::AccessFlagBits::eDepthStencilAttachmentRead,
+		                                          vk::ImageLayout::eDepthAttachmentOptimal,
+		                                          vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+		                                          vk::QueueFamilyIgnored,
+		                                          vk::QueueFamilyIgnored,
+		                                          image,
+		                                          vk::ImageSubresourceRange(
+			                                          vk::ImageAspectFlagBits::eDepth,
+			                                          0,
+			                                          1,
+			                                          0,
+			                                          1));
+
+		commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eLateFragmentTests,
+		                              vk::PipelineStageFlagBits::eEarlyFragmentTests,
+		                              vk::DependencyFlags(),
+		                              0,
+		                              nullptr,
+		                              0,
+		                              nullptr,
+		                              1,
+		                              &imageMemoryBarrier);
+
+
+		result = commandBuffer.end();
+		SASSERT_VULKAN(result)
+	}
+
+	void recordPrimaryColorCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	                                     const vk::Extent2D& swapchainExtent,
+	                                     const vk::RenderPass& geometryRenderPass,
+	                                     const vk::Framebuffer& geometryFramebuffer,
+	                                     const vk::RenderPass& depthRenderPass,
+	                                     const vk::Framebuffer& depthFramebuffer,
+	                                     const std::vector<vk::CommandBuffer>&
+	                                     secondaryCommandBuffer,
+	                                     const std::vector<vk::CommandBuffer>& depthCommandBuffer,
+	                                     const vk::Image image,
+		const vk::Image depthImage)
 	{
 		vk::Result result = commandBuffer.reset();
 		SASSERT_VULKAN(result)
@@ -91,18 +151,66 @@ namespace spite
 
 		//commandBuffer.beginRenderPass(renderPassInfo,
 		//                              vk::SubpassContents::eSecondaryCommandBuffers);
-		std::array<vk::ClearValue, 2> clearValues;
-		clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
-		clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
+		//std::array<vk::ClearValue, 2> clearValues;
+		//clearValues[0].color = 
+		//clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
 		// Depth clear value (1.0f is max depth)
 
-		vk::RenderPassBeginInfo renderPassInfo(renderPass,
-		                                       framebuffer,
-		                                       vk::Rect2D({}, swapchainExtent),
-		                                       clearValues.size(),
-		                                       clearValues.data());
+		//vk::RenderPassBeginInfo renderPassInfo(geometryRenderPass,
+		//                                       geometryFramebuffer,
+		//                                       vk::Rect2D({}, swapchainExtent),
+		//                                       clearValues.size(),
+		//                                       clearValues.data());
 
-		commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+		//commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+
+		//commandBuffer.executeCommands(secondaryCommandBuffer);
+
+		//commandBuffer.endRenderPass();
+		//DEPTH
+		vk::ClearValue depthClearValue;
+		depthClearValue.depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
+		vk::RenderPassBeginInfo depthPassInfo(depthRenderPass,
+		                                      depthFramebuffer,
+		                                      vk::Rect2D({}, swapchainExtent),
+		                                      1,
+		                                      &depthClearValue);
+
+		commandBuffer.beginRenderPass(depthPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+		commandBuffer.executeCommands(depthCommandBuffer);
+		commandBuffer.endRenderPass();
+
+		vk::ImageMemoryBarrier depthImageMemoryBarrier(
+			vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+			vk::AccessFlagBits::eDepthStencilAttachmentRead,
+			vk::ImageLayout::eDepthStencilAttachmentOptimal,
+			vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal,
+			vk::QueueFamilyIgnored,
+			vk::QueueFamilyIgnored,
+			depthImage,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
+
+		commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eLateFragmentTests,
+		                              vk::PipelineStageFlagBits::eEarlyFragmentTests,
+		                              vk::DependencyFlagBits::eByRegion,
+		                              0,
+		                              nullptr,
+		                              0,
+		                              nullptr,
+		                              1,
+		                              &depthImageMemoryBarrier);
+
+		vk::ClearValue colorClearValue;
+		colorClearValue.color = vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
+
+		vk::RenderPassBeginInfo colorPassBeginInfo(geometryRenderPass,
+		                                           geometryFramebuffer,
+		                                           vk::Rect2D({}, swapchainExtent),
+		                                           1,
+		                                           &colorClearValue);
+
+		commandBuffer.beginRenderPass(colorPassBeginInfo,
+		                              vk::SubpassContents::eSecondaryCommandBuffers);
 
 		commandBuffer.executeCommands(secondaryCommandBuffer);
 
@@ -158,7 +266,7 @@ namespace spite
 	}
 
 	//command buffer has to be recorded before
-	vk::Result drawFrame(const vk::CommandBuffer& commandBuffer,
+	vk::Result drawFrame(const std::vector<vk::CommandBuffer>& commandBuffers,
 	                     const vk::Fence& inFlightFence,
 	                     const vk::Semaphore& imageAvaliableSemaphore,
 	                     const vk::Semaphore& renderFinishedSemaphore,
@@ -175,8 +283,8 @@ namespace spite
 		vk::SubmitInfo submitInfo(1,
 		                          waitSemaphores,
 		                          waitStages,
-		                          1,
-		                          &commandBuffer,
+		                          commandBuffers.size(),
+		                          commandBuffers.data(),
 		                          1,
 		                          signalSemaphores);
 

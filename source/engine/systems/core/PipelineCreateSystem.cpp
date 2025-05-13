@@ -90,7 +90,7 @@ namespace spite
 				}
 				if (isLayoutFound)
 				{
-					return layoutQuery.componentOwner(i);
+					return layoutQuery.owner(i);
 				}
 			}
 		}
@@ -149,7 +149,7 @@ namespace spite
 				vertexInputData == vertexInput.vertexInputData)
 			{
 				const auto& pipelineShaderReference = m_entityService->componentManager()->
-					getComponent<ShaderReference>(pipelineQuery.componentOwner(i));
+					getComponent<ShaderReference>(pipelineQuery.owner(i));
 
 				if (pipelineShaderReference.shaders.size() != shaderReference.shaders.size())
 				{
@@ -170,7 +170,7 @@ namespace spite
 				if (isCompatible)
 				{
 					SDEBUG_LOG("COMPATIBLE PIPELINE FOUND\n")
-					return pipelineQuery.componentOwner(i);
+					return pipelineQuery.owner(i);
 				}
 			}
 		}
@@ -212,7 +212,7 @@ namespace spite
 		vk::PipelineLayout layout = componentManager->getComponent<PipelineLayoutComponent>(
 			layoutEntity).layout;
 		vk::Extent2D extent = componentManager->getSingleton<SwapchainComponent>().extent;
-		vk::RenderPass renderPass = componentManager->getSingleton<RenderPassComponent>().
+		vk::RenderPass renderPass = componentManager->getSingleton<MainRenderPassComponent>().
 		                                              renderPass;
 		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->getSingleton<
 			AllocationCallbacksComponent>();

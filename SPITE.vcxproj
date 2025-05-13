@@ -221,6 +221,7 @@
     <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\PipelineCreateSystem.cpp" />

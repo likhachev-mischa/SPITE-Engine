@@ -245,5 +245,8 @@
     <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

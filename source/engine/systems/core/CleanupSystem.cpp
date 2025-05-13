@@ -29,10 +29,10 @@ namespace spite
 		SwapchainComponent swapchainComponent = componentManager->getSingleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
-		vk::RenderPass renderPass = componentManager->getSingleton<RenderPassComponent>().
+		vk::RenderPass renderPass = componentManager->getSingleton<MainRenderPassComponent>().
 		                                              renderPass;
-		FramebufferComponent& framebufferComponent = componentManager->getSingleton<
-			FramebufferComponent>();
+		MainFramebufferComponent& framebufferComponent = componentManager->getSingleton<
+			MainFramebufferComponent>();
 		CommandPoolComponent& commandPoolComponent = componentManager->getSingleton<
 			CommandPoolComponent>();
 		SynchronizationComponent& synchronizationComponent = componentManager->getSingleton<
@@ -123,6 +123,15 @@ namespace spite
 
 		device.destroyCommandPool(commandPoolComponent.graphicsCommandPool, allocationCallbacks);
 		device.destroyCommandPool(commandPoolComponent.transferCommandPool, allocationCallbacks);
+
+		auto& depthFbComponent = componentManager->getSingleton<DepthFramebufferComponent>();
+		auto& depthRpComponent = componentManager->getSingleton<DepthRenderPassComponent>();
+
+		for (auto& framebuffer : depthFbComponent.framebuffers)
+		{
+			device.destroyFramebuffer(framebuffer, allocationCallbacks);
+		}
+		device.destroyRenderPass(depthRpComponent.renderPass, allocationCallbacks);
 
 		for (auto& framebuffer : framebufferComponent.framebuffers)
 		{

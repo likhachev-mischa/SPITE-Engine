@@ -30,10 +30,15 @@ namespace spite
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
-		FramebufferComponent& fbComponent = m_entityService->componentManager()->getSingleton<
-			FramebufferComponent>();
-		vk::RenderPass renderPass = m_entityService->componentManager()->getSingleton<
-			RenderPassComponent>().renderPass;
+		MainFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
+			getSingleton<MainFramebufferComponent>();
+		vk::RenderPass mainRenderPass = m_entityService->componentManager()->getSingleton<
+			MainRenderPassComponent>().renderPass;
+
+		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
+			getSingleton<DepthFramebufferComponent>();
+		vk::RenderPass depthRenderPass = m_entityService->componentManager()->getSingleton<
+			DepthRenderPassComponent>().renderPass;
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
 			getSingleton<SynchronizationComponent>();
@@ -41,12 +46,14 @@ namespace spite
 		CommandBufferComponent& cbComponent = m_entityService->componentManager()->getSingleton<
 			CommandBufferComponent>();
 
+		DepthImageComponent& depthImageComponent = m_entityService->componentManager()->getSingleton<DepthImageComponent>();
+
 		auto& pipelineQuery = *m_pipelineQuery;
 		auto& modelQuery = *m_modelQuery;
 
 		beginSecondaryCommandBuffer(cbComponent.secondaryBuffers[currentFrame],
-		                            renderPass,
-		                            fbComponent.framebuffers[imageIndex]);
+		                            mainRenderPass,
+		                            mainFbComponent.framebuffers[imageIndex]);
 		for (sizet i = 0, size = pipelineQuery.size(); i < size; ++i)
 		{
 			auto& pipeline = pipelineQuery[i];
@@ -59,7 +66,7 @@ namespace spite
 				getComponent<DescriptorSetsComponent>(
 					layoutComponent.descriptorSetLayoutEntities[0]);
 
-			Entity pipelineEntity = pipelineQuery.componentOwner(i);
+			Entity pipelineEntity = pipelineQuery.owner(i);
 
 			for (sizet j = 0, size2 = modelQuery.size(); j < size2; ++j)
 			{
@@ -96,17 +103,20 @@ namespace spite
 		}
 		endSecondaryCommandBuffer(cbComponent.secondaryBuffers[currentFrame]);
 
-		recordPrimaryCommandBuffer(cbComponent.primaryBuffers[currentFrame],
+		recordPrimaryColorCommandBuffer(cbComponent.primaryBuffers[currentFrame],
 		                           extent,
-		                           renderPass,
-		                           fbComponent.framebuffers[imageIndex],
+		                           mainRenderPass,
+		                           mainFbComponent.framebuffers[imageIndex],
+		                           depthRenderPass,
+		                           depthFbComponent.framebuffers[imageIndex],
 		                           {cbComponent.secondaryBuffers[currentFrame]},
-		                           swapchainComponent.images[imageIndex]);
+		                           {cbComponent.depthBuffers[currentFrame]},
+		                           swapchainComponent.images[imageIndex],depthImageComponent.image);
 
 		QueueComponent& queueComponent = m_entityService->componentManager()->getSingleton<
 			QueueComponent>();
 
-		drawFrame(cbComponent.primaryBuffers[currentFrame],
+		drawFrame({ cbComponent.primaryBuffers[currentFrame] },
 		          synchronizationComponent.inFlightFences[currentFrame],
 		          synchronizationComponent.imageAvailableSemaphores[currentFrame],
 		          synchronizationComponent.renderFinishedSemaphores[currentFrame],
@@ -121,5 +131,4 @@ namespace spite
 		frameData.imageIndex = imageIndex;
 		frameData.currentFrame = currentFrame;
 	}
-
 }

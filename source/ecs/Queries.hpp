@@ -67,7 +67,7 @@ namespace spite
 			return m_table->isActive(m_indices[n]);
 		}
 
-		Entity componentOwner(const sizet n)
+		Entity owner(const sizet n)
 		{
 			return m_table->owner(m_indices[n]);
 		}

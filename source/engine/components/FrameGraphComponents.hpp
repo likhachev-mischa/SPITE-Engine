@@ -36,7 +36,7 @@ namespace spite
         std::optional<std::array<int, 2>> resolution;  
         std::optional<std::string> op;  
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(FrameGraphResourceDeserialized, type, name, format, resolution, op)  
+   //     NLOHMANN_DEFINE_TYPE_INTRUSIVE(FrameGraphResourceDeserialized, type, name, format, resolution, op)  
     };  
 
     struct FrameGraphResourceComponent : IComponent  

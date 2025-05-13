@@ -95,12 +95,22 @@ namespace spite
 		u32 transferQueueIndex = 0;
 	};
 
-	struct RenderPassComponent : ISingletonComponent
+	struct MainRenderPassComponent : ISingletonComponent
 	{
 		vk::RenderPass renderPass;
 	};
 
-	struct FramebufferComponent : ISingletonComponent
+	struct MainFramebufferComponent : ISingletonComponent
+	{
+		std::vector<vk::Framebuffer> framebuffers{};
+	};
+
+	struct DepthRenderPassComponent : ISingletonComponent
+	{
+		vk::RenderPass renderPass;
+	};
+
+	struct DepthFramebufferComponent : ISingletonComponent
 	{
 		std::vector<vk::Framebuffer> framebuffers{};
 	};
@@ -123,6 +133,7 @@ namespace spite
 	{
 		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryBuffers{};
 		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> secondaryBuffers{};
+		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> depthBuffers{};
 		//	u32 currentBufferIndex = 0;
 	};
 
@@ -234,6 +245,10 @@ namespace spite
 		vk::Pipeline pipeline;
 		Entity pipelineLayoutEntity;
 		VertexInputData vertexInputData;
+	};
+
+	struct DepthPipelineTag : IComponent
+	{
 	};
 
 	struct MaterialComponent : IComponent

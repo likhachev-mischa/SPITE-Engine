@@ -54,6 +54,8 @@ int main(int argc, char* argv[])
 		new CameraUboUpdateSystem,
 		new WaitForFrameSystem,
 		new DescriptorUpdateSystem,
+		
+		new DepthPassSystem,
 		new RenderSystem,
 		new CleanupSystem,
 	};
