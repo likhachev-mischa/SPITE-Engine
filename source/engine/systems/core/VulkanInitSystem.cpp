@@ -31,7 +31,7 @@ namespace spite
 
 		componentManager->createSingleton(allocationCallbacksComponent);
 
-		auto windowManager = componentManager->getSingleton<WindowManagerComponent>().windowManager;
+		auto windowManager = componentManager->singleton<WindowManagerComponent>().windowManager;
 
 		u32 windowExtensionsCount = 0;
 		char const* const* windowExtensions = windowManager->getExtensions(windowExtensionsCount);

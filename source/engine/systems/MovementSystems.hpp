@@ -10,7 +10,7 @@
 
 namespace spite
 {
-	class MovementControlSystem : public SystemBase
+	class MovementDirectionControlSystem : public SystemBase
 	{
 		const cstring m_yAxis = "YAxis";
 		const cstring m_xAxis = "XAxis";
@@ -18,7 +18,7 @@ namespace spite
 	public:
 		void onUpdate(float deltaTime) override
 		{
-			auto actionMap = m_entityService->componentManager()->getSingleton<
+			auto actionMap = m_entityService->componentManager()->singleton<
 				InputManagerComponent>().inputManager->inputActionMap();
 
 			if (!actionMap->isActionActive(m_yAxis) && !actionMap->isActionActive(m_xAxis))
@@ -26,7 +26,7 @@ namespace spite
 				return;
 			}
 
-			auto targetEntity = m_entityService->componentManager()->getSingleton<
+			auto targetEntity = m_entityService->componentManager()->singleton<
 				ControllableEntitySingleton>().entity;
 			auto& moveDirection = m_entityService->componentManager()->getComponent<
 				MovementDirectionComponent>(targetEntity);
@@ -35,8 +35,8 @@ namespace spite
 			float y = actionMap->actionValue(m_yAxis);
 
 			moveDirection.direction[0] = x;
-			moveDirection.direction[1] = y;
-			moveDirection.direction[2] = 0;
+			moveDirection.direction[1] = 0;
+			moveDirection.direction[2] = -y;
 			if (x != 0.0f && y != 0.0f)
 				moveDirection.direction = glm::normalize(moveDirection.direction);
 			//SDEBUG_LOG("MOVED ON %f x %f y\n", moveDirection.direction[0], moveDirection.direction[1]);
@@ -50,10 +50,10 @@ namespace spite
 	public:
 		void onUpdate(float deltaTime) override
 		{
-			auto inputManager = m_entityService->componentManager()->getSingleton<
+			auto inputManager = m_entityService->componentManager()->singleton<
 				InputManagerComponent>().inputManager;
 
-			auto targetEntity = m_entityService->componentManager()->getSingleton<
+			auto targetEntity = m_entityService->componentManager()->singleton<
 				ControllableEntitySingleton>().entity;
 			auto& transform = m_entityService->componentManager()->getComponent<TransformComponent>(
 				targetEntity);
@@ -73,6 +73,29 @@ namespace spite
 		}
 	};
 
+	class MovementDirectionRotationSynchSystem: public SystemBase
+	{
+		Query2<MovementDirectionComponent, TransformComponent>* m_query;
+	public:
+		void onInitialize() override
+		{
+			m_query = m_entityService->queryBuilder()->buildQuery<MovementDirectionComponent, TransformComponent>();
+		}
+
+		void onUpdate(float deltaTime) override
+		{
+			auto& query = *m_query;
+			for (sizet i = 0, size = query.size(); i < size; ++i)
+			{
+				auto& movement = query.componentT1(i);
+				auto& transform = query.componentT2(i);
+
+				glm::vec3 inputDirection = movement.direction;
+				movement.direction = transform.rotation * inputDirection;
+			}
+		}
+	};
+
 	class MovementSystem : public SystemBase
 	{
 		Query3<MovementDirectionComponent, MovementSpeedComponent, TransformComponent>* m_query;
@@ -87,11 +110,11 @@ namespace spite
 		void onUpdate(float deltaTime) override
 		{
 			auto& query = *m_query;
-			for (sizet i = 0, size = query.getSize(); i < size; ++i)
+			for (sizet i = 0, size = query.size(); i < size; ++i)
 			{
-				auto& transform = query.getComponentT3(i);
-				float speed = query.getComponentT2(i).speed;
-				glm::vec3 direction = query.getComponentT1(i).direction;
+				auto& transform = query.componentT3(i);
+				float speed = query.componentT2(i).speed;
+				glm::vec3 direction = query.componentT1(i).direction;
 				transform.position += direction * speed * deltaTime;
 				//SDEBUG_LOG("DIRECTION %f x %f y %f z\n", direction[0], direction[1], direction[2]);
 				//SDEBUG_LOG("POSITION %f x %f y %f z\n",

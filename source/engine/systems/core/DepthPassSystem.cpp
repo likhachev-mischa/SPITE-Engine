@@ -12,26 +12,26 @@ namespace spite
 
 	void DepthPassSystem::onUpdate(float deltaTime)
 	{
-		FrameDataComponent& frameData = m_entityService->componentManager()->getSingleton<
+		FrameDataComponent& frameData = m_entityService->componentManager()->singleton<
 			FrameDataComponent>();
 
 		u32 imageIndex = frameData.imageIndex;
 		u32 currentFrame = frameData.currentFrame;
 
-		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->getSingleton<
+		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->singleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
-		CommandBufferComponent& cbComponent = m_entityService->componentManager()->getSingleton<
+		CommandBufferComponent& cbComponent = m_entityService->componentManager()->singleton<
 			CommandBufferComponent>();
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
-			getSingleton<SynchronizationComponent>();
+			singleton<SynchronizationComponent>();
 
 		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
-			getSingleton<DepthFramebufferComponent>();
-		vk::RenderPass depthRenderPass = m_entityService->componentManager()->getSingleton<
+			singleton<DepthFramebufferComponent>();
+		vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
 			DepthRenderPassComponent>().renderPass;
 
 		Entity depthPipelineEntity = m_entityService->entityManager()->getNamedEntity(

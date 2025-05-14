@@ -18,10 +18,10 @@ namespace spite
 
 	void DescriptorUpdateSystem::onUpdate(float deltaTime)
 	{
-		u32 currentFrame = m_entityService->componentManager()->getSingleton<FrameDataComponent>().
+		u32 currentFrame = m_entityService->componentManager()->singleton<FrameDataComponent>().
 		                                    currentFrame;
 
-		auto device = m_entityService->componentManager()->getSingleton<DeviceComponent>().device;
+		auto device = m_entityService->componentManager()->singleton<DeviceComponent>().device;
 
 		auto& descriptorQuery = *m_descriptorQuery;
 		auto& uboSharedQuery = *m_uboSharedQuery;
@@ -29,12 +29,12 @@ namespace spite
 
 		for (sizet i = 0, size = descriptorQuery.size(); i < size; ++i)
 		{
-			auto& descriptorLayoutComponent = descriptorQuery.getComponentT1(i);
+			auto& descriptorLayoutComponent = descriptorQuery.componentT1(i);
 
 			auto descriptorType = descriptorLayoutComponent.type;
 			auto descriptorStage = descriptorLayoutComponent.stages;
 
-			auto descriptor = descriptorQuery.getComponentT2(i);
+			auto descriptor = descriptorQuery.componentT2(i);
 			for (sizet j = 0, sizej = uboSharedQuery.size(); j < sizej; ++j)
 			{
 				auto& ubo = uboSharedQuery[j];

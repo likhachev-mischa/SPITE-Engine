@@ -17,7 +17,7 @@ namespace spite
 
 	void RenderSystem::onUpdate(float deltaTime)
 	{
-		FrameDataComponent& frameData = m_entityService->componentManager()->getSingleton<
+		FrameDataComponent& frameData = m_entityService->componentManager()->singleton<
 			FrameDataComponent>();
 
 		u32 imageIndex = frameData.imageIndex;
@@ -25,28 +25,28 @@ namespace spite
 
 		//SDEBUG_LOG("RENDER SYSTEM UPDATE START\n")
 
-		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->getSingleton<
+		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->singleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
 		GeometryFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
-			getSingleton<GeometryFramebufferComponent>();
-		vk::RenderPass mainRenderPass = m_entityService->componentManager()->getSingleton<
+			singleton<GeometryFramebufferComponent>();
+		vk::RenderPass mainRenderPass = m_entityService->componentManager()->singleton<
 			GeometryRenderPassComponent>().renderPass;
 
 		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
-			getSingleton<DepthFramebufferComponent>();
-		vk::RenderPass depthRenderPass = m_entityService->componentManager()->getSingleton<
+			singleton<DepthFramebufferComponent>();
+		vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
 			DepthRenderPassComponent>().renderPass;
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
-			getSingleton<SynchronizationComponent>();
+			singleton<SynchronizationComponent>();
 
-		CommandBufferComponent& cbComponent = m_entityService->componentManager()->getSingleton<
+		CommandBufferComponent& cbComponent = m_entityService->componentManager()->singleton<
 			CommandBufferComponent>();
 
-		DepthImageComponent& depthImageComponent = m_entityService->componentManager()->getSingleton<DepthImageComponent>();
+		DepthImageComponent& depthImageComponent = m_entityService->componentManager()->singleton<DepthImageComponent>();
 
 		auto& pipelineQuery = *m_pipelineQuery;
 		auto& modelQuery = *m_modelQuery;
@@ -70,7 +70,7 @@ namespace spite
 
 			for (sizet j = 0, size2 = modelQuery.size(); j < size2; ++j)
 			{
-				PipelineReference& pipelineRef = modelQuery.getComponentT2(j);
+				PipelineReference& pipelineRef = modelQuery.componentT2(j);
 				//if model is referenced to this pipeline
 				if (pipelineEntity != pipelineRef.pipelineEntity)
 				{
@@ -78,7 +78,7 @@ namespace spite
 				}
 
 				u32 offsets = 0;
-				MeshComponent& meshComponent = modelQuery.getComponentT1(j);
+				MeshComponent& meshComponent = modelQuery.componentT1(j);
 
 				auto& transformMatrixComponent = m_entityService->componentManager()->getComponent<
 					TransformMatrixComponent>(modelQuery.owner(j));
@@ -113,7 +113,7 @@ namespace spite
 		                           {cbComponent.depthBuffers[currentFrame]},
 		                           swapchainComponent.images[imageIndex],depthImageComponent.image.image);
 
-		QueueComponent& queueComponent = m_entityService->componentManager()->getSingleton<
+		QueueComponent& queueComponent = m_entityService->componentManager()->singleton<
 			QueueComponent>();
 
 		drawFrame({ cbComponent.primaryBuffers[currentFrame] },

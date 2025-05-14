@@ -16,8 +16,8 @@ namespace spite
 
 		for (sizet i = 0, size = query1.size(); i < size; ++i)
 		{
-			TransformComponent& transform = query1.getComponentT1(i);
-			CameraMatricesComponent& matrices = query1.getComponentT2(i);
+			TransformComponent& transform = query1.componentT1(i);
+			CameraMatricesComponent& matrices = query1.componentT2(i);
 
 			matrices.view = createViewMatrix(transform.position, transform.rotation);
 			//matrices.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
@@ -29,19 +29,19 @@ namespace spite
 
 		//TODO: store aspect in swapchain
 
-		auto& swapchainComponent = m_entityService->componentManager()->getSingleton<
+		auto& swapchainComponent = m_entityService->componentManager()->singleton<
 			SwapchainComponent>();
 		float aspect = swapchainComponent.extent.width / static_cast<float>(swapchainComponent.
 			extent.height);
 		for (sizet i = 0, size = query2.size(); i < size; ++i)
 		{
-			CameraDataComponent& data = query2.getComponentT1(i);
+			CameraDataComponent& data = query2.componentT1(i);
 			//update projection matrix only when neccesary
 			if (!data.isDirty)
 			{
 				continue;
 			}
-			CameraMatricesComponent& matrices = query2.getComponentT2(i);
+			CameraMatricesComponent& matrices = query2.componentT2(i);
 			matrices.projection = createProjectionMatrix(data, aspect);
 		}
 	}

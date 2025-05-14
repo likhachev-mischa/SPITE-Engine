@@ -80,7 +80,7 @@ namespace spite
 			m_indices.clear();
 			m_table = &storage->getComponentsAsserted<T>();
 
-			for (sizet i = 0, size = m_table->getOccupiedSize(); i < size; ++i)
+			for (sizet i = 0, size = m_table->occupiedSize(); i < size; ++i)
 			{
 				Entity entity = m_table->owner(i);
 
@@ -288,12 +288,12 @@ namespace spite
 			return m_table1->owner(getComponentIndexT1(n));
 		}
 
-		T1& getComponentT1(const sizet n)
+		T1& componentT1(const sizet n)
 		{
 			return m_table1->operator[](eastl::get<0>(m_indices[n]));
 		}
 
-		T2& getComponentT2(const sizet n)
+		T2& componentT2(const sizet n)
 		{
 			return m_table2->operator[](eastl::get<1>(m_indices[n]));
 		}
@@ -310,7 +310,7 @@ namespace spite
 
 			std::type_index t2Type = std::type_index(typeid(T2));
 
-			for (sizet i = 0, size = m_table1->getOccupiedSize(); i < size; ++i)
+			for (sizet i = 0, size = m_table1->occupiedSize(); i < size; ++i)
 			{
 				Entity entity = m_table1->owner(i);
 
@@ -329,7 +329,7 @@ namespace spite
 				if (matchesCondition)
 				{
 					m_indices.emplace_back(
-						eastl::make_tuple(i, lookup->getComponentIndex(entity, t2Type)));
+						eastl::make_tuple(i, lookup->componentIndex(entity, t2Type)));
 				}
 			}
 		}
@@ -502,7 +502,7 @@ namespace spite
 		Query3& operator=(const Query3& other) = delete;
 		Query3& operator=(Query3&& other) = delete;
 
-		sizet getSize() const
+		sizet size() const
 		{
 			return m_indices1.size();
 		}
@@ -522,17 +522,17 @@ namespace spite
 			return m_indices3[filterIndex];
 		}
 
-		T1& getComponentT1(const sizet n)
+		T1& componentT1(const sizet n)
 		{
 			return m_table1->operator[](m_indices1[n]);
 		}
 
-		T2& getComponentT2(const sizet n)
+		T2& componentT2(const sizet n)
 		{
 			return m_table2->operator[](m_indices2[n]);
 		}
 
-		T3& getComponentT3(const sizet n)
+		T3& componentT3(const sizet n)
 		{
 			return m_table3->operator[](m_indices3[n]);
 		}
@@ -549,7 +549,7 @@ namespace spite
 			std::type_index t2Type = std::type_index(typeid(T2));
 			std::type_index t3Type = std::type_index(typeid(T3));
 
-			for (sizet i = 0, size = m_table1->getOccupiedSize(); i < size; ++i)
+			for (sizet i = 0, size = m_table1->occupiedSize(); i < size; ++i)
 			{
 				Entity entity = m_table1->owner(i);
 
@@ -569,8 +569,8 @@ namespace spite
 				if (matchesCondition)
 				{
 					m_indices1.push_back(i);
-					m_indices2.push_back(lookup->getComponentIndex(entity, t2Type));
-					m_indices3.push_back(lookup->getComponentIndex(entity, t3Type));
+					m_indices2.push_back(lookup->componentIndex(entity, t2Type));
+					m_indices3.push_back(lookup->componentIndex(entity, t3Type));
 				}
 			}
 		}
@@ -639,7 +639,7 @@ namespace spite
 			m_indices.clear();
 			m_table = &storage->getComponentsAsserted<T>();
 
-			for (sizet i = 0, size = m_table->getOccupiedSize(); i < size; ++i)
+			for (sizet i = 0, size = m_table->occupiedSize(); i < size; ++i)
 			{
 				//std::vector<Entity>& owners= m_table->owners(i);
 

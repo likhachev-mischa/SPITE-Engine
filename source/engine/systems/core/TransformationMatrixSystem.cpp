@@ -13,14 +13,14 @@ namespace spite
 		auto& query = *m_query;
 		for (sizet i = 0, size = query.size(); i < size; ++i)
 		{
-			auto& transform = query.getComponentT1(i);
+			auto& transform = query.componentT1(i);
 			//only recalculate dirty matrices 
 			if (!transform.isDirty)
 			{
 				continue;
 			}
 
-			auto& matrix = query.getComponentT2(i);
+			auto& matrix = query.componentT2(i);
 			matrix.matrix = calculateModelMatrix(query.owner(i), transform);
 		}
 	}

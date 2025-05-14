@@ -61,8 +61,8 @@ namespace spite
 		// Create shader module from file
 		std::vector<char> code = readBinaryFile(path);
 
-		auto deviceComponent = m_entityService->componentManager()->getSingleton<DeviceComponent>();
-		auto allocationCallbacksComponent = m_entityService->componentManager()->getSingleton<
+		auto deviceComponent = m_entityService->componentManager()->singleton<DeviceComponent>();
+		auto allocationCallbacksComponent = m_entityService->componentManager()->singleton<
 			AllocationCallbacksComponent>();
 
 		// Create shader module
@@ -94,8 +94,8 @@ namespace spite
 	void ShaderCreateSystem::createDescriptors(const Entity shaderEntity,
 	                                           const vk::ShaderStageFlagBits stage)
 	{
-		auto deviceComponent = m_entityService->componentManager()->getSingleton<DeviceComponent>();
-		auto allocationCallbacksComponent = m_entityService->componentManager()->getSingleton<
+		auto deviceComponent = m_entityService->componentManager()->singleton<DeviceComponent>();
+		auto allocationCallbacksComponent = m_entityService->componentManager()->singleton<
 			AllocationCallbacksComponent>();
 		auto layout = createDescriptorSetLayout(deviceComponent.device,
 		                                        vk::DescriptorType::eUniformBuffer,

@@ -102,8 +102,8 @@ namespace spite
 
 	Entity PipelineCreateSystem::createPipelineLayoutEntity(const ShaderReference& shaderRef)
 	{
-		auto device = m_entityService->componentManager()->getSingleton<DeviceComponent>().device;
-		auto allocationCallbacks = &m_entityService->componentManager()->getSingleton<
+		auto device = m_entityService->componentManager()->singleton<DeviceComponent>().device;
+		auto allocationCallbacks = &m_entityService->componentManager()->singleton<
 			AllocationCallbacksComponent>().allocationCallbacks;
 
 		std::vector<vk::DescriptorSetLayout> layouts;
@@ -211,13 +211,13 @@ namespace spite
 			vertexData.attributeDescriptions.data());
 
 
-		vk::Device device = componentManager->getSingleton<DeviceComponent>().device;
+		vk::Device device = componentManager->singleton<DeviceComponent>().device;
 		vk::PipelineLayout layout = componentManager->getComponent<PipelineLayoutComponent>(
 			layoutEntity).layout;
-		vk::Extent2D extent = componentManager->getSingleton<SwapchainComponent>().extent;
-		vk::RenderPass renderPass = componentManager->getSingleton<GeometryRenderPassComponent>().
+		vk::Extent2D extent = componentManager->singleton<SwapchainComponent>().extent;
+		vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
 		                                              renderPass;
-		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->getSingleton<
+		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->singleton<
 			AllocationCallbacksComponent>();
 
 		vk::Pipeline pipeline = createGeometryPipeline(device,

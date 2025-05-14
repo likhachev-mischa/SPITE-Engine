@@ -45,8 +45,9 @@ int main(int argc, char* argv[])
 		new ShaderCreateSystem,
 		new PipelineCreateSystem,
 
-		new MovementControlSystem,
+		new MovementDirectionControlSystem,
 		new RotationControlSystem,
+		new MovementDirectionRotationSynchSystem,
 		new MovementSystem,
 
 		new TransformationMatrixSystem,

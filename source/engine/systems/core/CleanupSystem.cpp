@@ -13,29 +13,29 @@ namespace spite
 	{
 		auto componentManager = m_entityService->componentManager();
 
-		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->getSingleton<
+		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->singleton<
 			AllocationCallbacksComponent>();
 		vk::AllocationCallbacks* allocationCallbacks = &allocationCallbacksComponent.
 			allocationCallbacks;
 
-		GpuAllocatorComponent& gpuAllocatorComponent = componentManager->getSingleton<
+		GpuAllocatorComponent& gpuAllocatorComponent = componentManager->singleton<
 			GpuAllocatorComponent>();
 
-		vk::Instance instance = componentManager->getSingleton<VulkanInstanceComponent>().instance;
+		vk::Instance instance = componentManager->singleton<VulkanInstanceComponent>().instance;
 		//vk::PhysicalDevice physicalDevice = componentManager->getSingleton<PhysicalDeviceComponent>().device;
-		vk::Device device = componentManager->getSingleton<DeviceComponent>().device;
-		vk::SurfaceKHR surface = componentManager->getSingleton<SurfaceComponent>().surface;
+		vk::Device device = componentManager->singleton<DeviceComponent>().device;
+		vk::SurfaceKHR surface = componentManager->singleton<SurfaceComponent>().surface;
 
-		SwapchainComponent swapchainComponent = componentManager->getSingleton<
+		SwapchainComponent swapchainComponent = componentManager->singleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
-		vk::RenderPass renderPass = componentManager->getSingleton<GeometryRenderPassComponent>().
+		vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
 		                                              renderPass;
-		GeometryFramebufferComponent& framebufferComponent = componentManager->getSingleton<
+		GeometryFramebufferComponent& framebufferComponent = componentManager->singleton<
 			GeometryFramebufferComponent>();
-		CommandPoolComponent& commandPoolComponent = componentManager->getSingleton<
+		CommandPoolComponent& commandPoolComponent = componentManager->singleton<
 			CommandPoolComponent>();
-		SynchronizationComponent& synchronizationComponent = componentManager->getSingleton<
+		SynchronizationComponent& synchronizationComponent = componentManager->singleton<
 			SynchronizationComponent>();
 
 		auto queryBuilder = m_entityService->queryBuilder();
@@ -124,8 +124,8 @@ namespace spite
 		device.destroyCommandPool(commandPoolComponent.graphicsCommandPool, allocationCallbacks);
 		device.destroyCommandPool(commandPoolComponent.transferCommandPool, allocationCallbacks);
 
-		auto& depthFbComponent = componentManager->getSingleton<DepthFramebufferComponent>();
-		auto& depthRpComponent = componentManager->getSingleton<DepthRenderPassComponent>();
+		auto& depthFbComponent = componentManager->singleton<DepthFramebufferComponent>();
+		auto& depthRpComponent = componentManager->singleton<DepthRenderPassComponent>();
 
 		for (auto& framebuffer : depthFbComponent.framebuffers)
 		{
@@ -147,7 +147,7 @@ namespace spite
 			device.destroyImageView(imageView, allocationCallbacks);
 		}
 
-		auto& depthImageComponent = componentManager->getSingleton<DepthImageComponent>();
+		auto& depthImageComponent = componentManager->singleton<DepthImageComponent>();
 		device.destroyImageView(depthImageComponent.imageView,allocationCallbacks);
 		gpuAllocatorComponent.allocator.destroyImage(depthImageComponent.image.image, depthImageComponent.image.allocation);
 
@@ -155,7 +155,7 @@ namespace spite
 		device.destroy(allocationCallbacks);
 
 		destroyDebugUtilsMessenger(instance,
-		                           componentManager->getSingleton<DebugMessengerComponent>().
+		                           componentManager->singleton<DebugMessengerComponent>().
 		                                             messenger,
 		                           nullptr);
 		//instance.destroySurfaceKHR(surface,allocationCallbacks);

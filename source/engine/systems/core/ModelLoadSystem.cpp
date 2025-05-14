@@ -89,15 +89,15 @@ namespace spite
 	{
 		mesh.indexCount = indices.size();
 
-		auto deviceComponent = m_entityService->componentManager()->getSingleton<
+		auto deviceComponent = m_entityService->componentManager()->singleton<
 			DeviceComponent>();
-		auto gpuAllocatorComponent = m_entityService->componentManager()->getSingleton<
+		auto gpuAllocatorComponent = m_entityService->componentManager()->singleton<
 			GpuAllocatorComponent>();
-		auto commandPoolComponent = m_entityService->componentManager()->getSingleton<
+		auto commandPoolComponent = m_entityService->componentManager()->singleton<
 			CommandPoolComponent>();
-		auto queueComponent = m_entityService->componentManager()->getSingleton<
+		auto queueComponent = m_entityService->componentManager()->singleton<
 			QueueComponent>();
-		auto& allocationCallbacksComponent = m_entityService->componentManager()->getSingleton<
+		auto& allocationCallbacksComponent = m_entityService->componentManager()->singleton<
 			AllocationCallbacksComponent>();
 
 		sizet vertSize = vertices.size() * sizeof(vertices[0]);

@@ -106,7 +106,7 @@ namespace spite
 
 		virtual bool isEmpty() = 0;
 		//should return an array even if there is no/one entity
-		virtual Entity* getTopEntities(sizet& n) = 0;
+		virtual Entity* topEntites(sizet& n) = 0;
 		virtual ~IComponentProvider() = default;
 	};
 
@@ -154,31 +154,31 @@ namespace spite
 		}
 
 		//returns -1 if vector is empty
-		int getTopIndex() const
+		int topIndex() const
 		{
 			return m_topIdx;
 		}
 
-		sizet getOccupiedSize() const
+		sizet occupiedSize() const
 		{
 			//SASSERTM(m_topIdx >= -1, "Vector is uninitialized")
 			return (m_topIdx + 1);
 		}
 
-		sizet getTotalSize()
+		sizet totalSize()
 		{
 			return m_vector.size();
 		}
 
-		sizet getCapacity()
+		sizet capacity()
 		{
 			return m_vector.capacity();
 		}
 
 		//occupied slots / all slots
-		float getFillFactor()
+		float fillFactor()
 		{
-			return getOccupiedSize() / static_cast<float>(m_vector.capacity());
+			return occupiedSize() / static_cast<float>(m_vector.capacity());
 		}
 
 		void reserve(sizet n)
@@ -213,7 +213,7 @@ namespace spite
 				sizet resizeCount = std::distance(srcIter, end);;
 				SDEBUG_LOG("pooled vector of type %s: insert %llu elems, fill factor: %f, total size: %llu\n",
 				           std::type_index(typeid(T)).name(), resizeCount,
-				           getFillFactor(), m_vector.size());
+				           fillFactor(), m_vector.size());
 				m_vector.insert(destIter, eastl::make_move_iterator(srcIter), eastl::make_move_iterator(end));
 				m_topIdx += static_cast<int>(resizeCount);
 			}
@@ -331,29 +331,29 @@ namespace spite
 			m_components.setCapacity(n);
 		}
 
-		int getTopIndex()
+		int topIndex()
 		{
-			return m_components.getTopIndex();
+			return m_components.topIndex();
 		}
 
-		sizet getCapacity()
+		sizet capacity()
 		{
-			return m_components.getCapacity();
+			return m_components.capacity();
 		}
 
-		sizet getOccupiedSize()
+		sizet occupiedSize()
 		{
-			return m_components.getOccupiedSize();
+			return m_components.occupiedSize();
 		}
 
-		sizet getTotalSize()
+		sizet totalSize()
 		{
-			return m_components.getTotalSize();
+			return m_components.totalSize();
 		}
 
-		float getFillFactor()
+		float fillFactor()
 		{
-			return m_components.getFillFactor();
+			return m_components.fillFactor();
 		}
 
 		//sets component's active status
@@ -399,13 +399,13 @@ namespace spite
 
 		bool isEmpty() override
 		{
-			return m_components.getOccupiedSize() == 0;
+			return m_components.occupiedSize() == 0;
 		}
 
-		Entity* getTopEntities(sizet& n) override
+		Entity* topEntites(sizet& n) override
 		{
 			n = 1;
-			return &m_componentsOwners[m_components.getTopIndex()];
+			return &m_componentsOwners[m_components.topIndex()];
 		}
 
 		Entity owner(sizet idx)
@@ -468,29 +468,29 @@ namespace spite
 			m_components.setCapacity(n);
 		}
 
-		int getTopIndex()
+		int topIndex()
 		{
-			return m_components.getTopIndex();
+			return m_components.topIndex();
 		}
 
-		sizet getCapacity()
+		sizet capacity()
 		{
-			return m_components.getCapacity();
+			return m_components.capacity();
 		}
 
-		sizet getOccupiedSize()
+		sizet occupiedSize()
 		{
-			return m_components.getOccupiedSize();
+			return m_components.occupiedSize();
 		}
 
-		sizet getTotalSize()
+		sizet totalSize()
 		{
-			return m_components.getTotalSize();
+			return m_components.totalSize();
 		}
 
-		float getFillFactor()
+		float fillFactor()
 		{
-			return m_components.getFillFactor();
+			return m_components.fillFactor();
 		}
 
 		//sets component's active status
@@ -532,7 +532,7 @@ namespace spite
 		bool removeComponent(const Entity entity)
 		{
 			SASSERTM(hasOwner(entity), "Entity %llu doesnt own component %s", entity.id(), typeid(T).name());
-			for (sizet i = 0, size = getOccupiedSize(); i < size; ++i)
+			for (sizet i = 0, size = occupiedSize(); i < size; ++i)
 			{
 				auto& owners = m_componentsOwners[i];
 				auto iter = eastl::find(owners.begin(), owners.end(), entity);
@@ -586,12 +586,12 @@ namespace spite
 
 		bool isEmpty() override
 		{
-			return m_components.getOccupiedSize() == 0;
+			return m_components.occupiedSize() == 0;
 		}
 
-		Entity* getTopEntities(sizet& n) override
+		Entity* topEntites(sizet& n) override
 		{
-			auto& entities = owners(getTopIndex());
+			auto& entities = owners(topIndex());
 			n = entities.size();
 			return entities.data();
 		}
@@ -641,7 +641,7 @@ namespace spite
 			m_component = std::move(component);
 		}
 
-		T& getComponent()
+		T& component()
 		{
 			return m_component;
 		}
@@ -667,14 +667,14 @@ namespace spite
 		{
 		}
 
-		sizet getSize()
+		sizet size()
 		{
-			return m_events.getOccupiedSize();
+			return m_events.occupiedSize();
 		}
 
 		bool isEmpty() override
 		{
-			return m_events.getOccupiedSize() == 0;
+			return m_events.occupiedSize() == 0;
 		}
 
 		void rewind()
@@ -726,7 +726,7 @@ namespace spite
 		}
 
 		eastl::hash_map<std::type_index, IEventTable*, std::hash<std::type_index>, eastl::equal_to<
-			                std::type_index>, ComponentAllocator>& getEventStorage()
+			                std::type_index>, ComponentAllocator>& eventStorage()
 		{
 			return m_eventStorage;
 		}
@@ -823,7 +823,7 @@ namespace spite
 		bool hasAnyComponents(const std::type_index typeIndex)
 		{
 			bool result;
-			IComponentProvider* provider = getRawProviderNullable(typeIndex);
+			IComponentProvider* provider = rawProviderNullable(typeIndex);
 			if (provider == nullptr || provider->isEmpty())
 			{
 				result = false;
@@ -832,7 +832,7 @@ namespace spite
 			{
 				return true;
 			}
-			if (isEventRegistred(typeIndex) && !getRawEventTable(typeIndex).isEmpty())
+			if (isEventRegistred(typeIndex) && !rawEventTable(typeIndex).isEmpty())
 			{
 				return true;
 			}
@@ -841,13 +841,13 @@ namespace spite
 			return result;
 		}
 
-		IComponentProvider& getRawProviderAsserted(const std::type_index typeIndex)
+		IComponentProvider& rawProviderAsserted(const std::type_index typeIndex)
 		{
 			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name())
 			return *m_storage.at(typeIndex);
 		}
 
-		IComponentProvider* getRawProviderNullable(const std::type_index typeIndex)
+		IComponentProvider* rawProviderNullable(const std::type_index typeIndex)
 		{
 			if (!isComponentRegistred(typeIndex))
 			{
@@ -857,7 +857,7 @@ namespace spite
 			return m_storage.at(typeIndex);
 		}
 
-		IEventTable& getRawEventTable(const std::type_index typeIndex)
+		IEventTable& rawEventTable(const std::type_index typeIndex)
 		{
 			SASSERTM(isEventRegistred(typeIndex), "Event %s is not registred", typeIndex.name());
 			return *m_eventStorage.at(typeIndex);
@@ -996,11 +996,11 @@ namespace spite
 
 		bool isEntityTracked(const Entity entity);
 
-		PooledVector<LookupData>& getLookupData(const Entity entity);
+		PooledVector<LookupData>& lookupData(const Entity entity);
 
 		bool hasComponent(const Entity entity, const std::type_index typeIndex);
 
-		sizet getComponentIndex(const Entity entity, const std::type_index typeIndex);
+		sizet componentIndex(const Entity entity, const std::type_index typeIndex);
 
 		void addComponentToLookup(const Entity entity, const std::type_index typeIndex, const sizet componentIndex);
 
@@ -1009,7 +1009,7 @@ namespace spite
 		void setComponentIndex(const Entity entity, const std::type_index typeIndex, const sizet newIndex);
 
 	private:
-		sizet getComponentLookupIndex(const Entity entity, const std::type_index typeIndex);
+		sizet componentLookupIndex(const Entity entity, const std::type_index typeIndex);
 	};
 
 	class IStructuralChangeHandler
@@ -1042,7 +1042,7 @@ namespace spite
 		{
 			auto& components = m_storage->getComponentsSafe<TComponent>();
 			components.addComponent(std::move(component), entity, isActive);
-			sizet componentIndex = components.getTopIndex();
+			sizet componentIndex = components.topIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
@@ -1057,7 +1057,7 @@ namespace spite
 
 			auto& components = m_storage->getComponentsSafe<TComponent>();
 			components.addComponent(std::move(component), entity, isActive);
-			sizet componentIndex = components.getTopIndex();
+			sizet componentIndex = components.topIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
@@ -1071,7 +1071,7 @@ namespace spite
 		{
 			auto& components = m_storage->getComponentsSafe<TComponent>();
 			components.addComponent(std::move(component), entity, isActive);
-			sizet componentIndex = components.getTopIndex();
+			sizet componentIndex = components.topIndex();
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			m_lookup->addComponentToLookup(entity, typeIndex, componentIndex);
@@ -1098,7 +1098,7 @@ namespace spite
 		void addComponent(const Entity source, const Entity target)
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			sizet componentIndex = m_lookup->getComponentIndex(source, typeIndex);
+			sizet componentIndex = m_lookup->componentIndex(source, typeIndex);
 
 			auto& components = m_storage->getComponentsAsserted<TComponent>();
 			components.addComponent(target, componentIndex);
@@ -1116,8 +1116,8 @@ namespace spite
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 
-			sizet index = m_lookup->getComponentIndex(entity, typeIndex);
-			Entity topEntity = componentTable.owner(componentTable.getTopIndex());
+			sizet index = m_lookup->componentIndex(entity, typeIndex);
+			Entity topEntity = componentTable.owner(componentTable.topIndex());
 
 			m_lookup->setComponentIndex(topEntity, typeIndex, index);
 
@@ -1135,9 +1135,9 @@ namespace spite
 
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 
-			sizet index = m_lookup->getComponentIndex(entity, typeIndex);
+			sizet index = m_lookup->componentIndex(entity, typeIndex);
 
-			auto& topEntities = componentTable.owners(componentTable.getTopIndex());
+			auto& topEntities = componentTable.owners(componentTable.topIndex());
 			for (auto topEntity : topEntities)
 			{
 				m_lookup->setComponentIndex(topEntity, typeIndex, index);
@@ -1166,9 +1166,9 @@ namespace spite
 		}
 
 		template <t_singleton_component TComponent>
-		TComponent& getSingleton()
+		TComponent& singleton()
 		{
-			return m_storage->getSingleton<TComponent>().getComponent();
+			return m_storage->getSingleton<TComponent>().component();
 		}
 
 		template <t_singleton_component TComponent>
@@ -1182,7 +1182,7 @@ namespace spite
 			requires t_plain_component<TComponent> || t_shared_component<TComponent>
 		TComponent& getComponent(const Entity entity)
 		{
-			sizet idx = m_lookup->getComponentIndex(entity, std::type_index(typeid(TComponent)));
+			sizet idx = m_lookup->componentIndex(entity, std::type_index(typeid(TComponent)));
 			return m_storage->getComponentsAsserted<TComponent>()[idx];
 		}
 
@@ -1220,7 +1220,7 @@ namespace spite
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
 			         typeIndex.name());
-			sizet idx = m_lookup->getComponentIndex(entity, typeIndex);
+			sizet idx = m_lookup->componentIndex(entity, typeIndex);
 			return m_storage->getComponentsAsserted<TComponent>().isActive(idx);
 		}
 
@@ -1230,7 +1230,7 @@ namespace spite
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
 			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
 			         typeIndex.name());
-			sizet idx = m_lookup->getComponentIndex(entity, typeIndex);
+			sizet idx = m_lookup->componentIndex(entity, typeIndex);
 			m_storage->getComponentsAsserted<TComponent>().setActive(idx, isActive);
 		}
 	};
@@ -1265,13 +1265,13 @@ namespace spite
 
 		void rewindEvent(const std::type_index& typeIndex) const
 		{
-			m_storage->getRawEventTable(typeIndex).rewind();
+			m_storage->rawEventTable(typeIndex).rewind();
 			m_structuralChangeHandler->handleStructuralChange(typeIndex);
 		}
 
 		void rewindAllEvents() const
 		{
-			auto& eventStorage = m_storage->getEventStorage();
+			auto& eventStorage = m_storage->eventStorage();
 
 			for (auto& pair : eventStorage)
 			{
@@ -1416,13 +1416,13 @@ namespace spite
 
 		void commit()
 		{
-			sizet componentsSize = m_componentsToAdd.getOccupiedSize();
+			sizet componentsSize = m_componentsToAdd.occupiedSize();
 			sizet entitesSize = m_entitiesToRemove.size();
 			if (componentsSize != 0)
 			{
 				auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
 
-				sizet topIndex = static_cast<sizet>(componentTable.getTopIndex() + 1);
+				sizet topIndex = static_cast<sizet>(componentTable.topIndex() + 1);
 				componentTable.addComponents(m_componentsToAdd);
 
 				for (sizet i = 0; i < componentsSize; ++i, ++topIndex)
@@ -1434,15 +1434,15 @@ namespace spite
 			if (entitesSize != 0)
 			{
 				auto& componentTable = m_storage->getComponentsAsserted<TComponent>();
-				SASSERTM(componentTable.getOccupiedSize() > 0,
+				SASSERTM(componentTable.occupiedSize() > 0,
 				         "Component table is already empty on removing using commandbuffer");
-				sizet topIndex = static_cast<sizet>(componentTable.getTopIndex());
+				sizet topIndex = static_cast<sizet>(componentTable.topIndex());
 
 				for (sizet i = 0; i < entitesSize; ++i, --topIndex)
 				{
 					//set lookup indices first (top component gets the deleted component's idx) 
 					Entity removedEntity = m_entitiesToRemove[i];
-					sizet index = m_lookup->getComponentIndex(removedEntity, m_typeIndex);
+					sizet index = m_lookup->componentIndex(removedEntity, m_typeIndex);
 					m_lookup->removeComponentFromLookup(removedEntity, m_typeIndex);
 					Entity topEntity = componentTable.owner(topIndex);
 
@@ -1523,7 +1523,7 @@ namespace spite
 		return iterator != m_lookup.end();
 	}
 
-	inline PooledVector<LookupData>& ComponentLookup::getLookupData(const Entity entity)
+	inline PooledVector<LookupData>& ComponentLookup::lookupData(const Entity entity)
 	{
 		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
@@ -1537,7 +1537,7 @@ namespace spite
 
 		auto& vec = m_lookup.at(entity);
 
-		for (sizet i = 0, size = vec.getOccupiedSize(); i < size; ++i)
+		for (sizet i = 0, size = vec.occupiedSize(); i < size; ++i)
 		{
 			if (vec[i].type == typeIndex)
 			{
@@ -1547,9 +1547,9 @@ namespace spite
 		return false;
 	}
 
-	inline sizet ComponentLookup::getComponentIndex(const Entity entity, const std::type_index typeIndex)
+	inline sizet ComponentLookup::componentIndex(const Entity entity, const std::type_index typeIndex)
 	{
-		sizet lookupIndex = getComponentLookupIndex(entity, typeIndex);
+		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
 
 		auto& vec = m_lookup.at(entity);
 		return vec[lookupIndex].index;
@@ -1566,7 +1566,7 @@ namespace spite
 
 	inline void ComponentLookup::removeComponentFromLookup(const Entity entity, const std::type_index typeIndex)
 	{
-		sizet lookupIndex = getComponentLookupIndex(entity, typeIndex);
+		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
 
 		auto& vec = m_lookup.at(entity);
 		vec.removeElement(lookupIndex);
@@ -1575,20 +1575,20 @@ namespace spite
 	inline void ComponentLookup::setComponentIndex(const Entity entity, const std::type_index typeIndex,
 	                                               const sizet newIndex)
 	{
-		sizet lookupIndex = getComponentLookupIndex(entity, typeIndex);
+		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
 
 		auto& vec = m_lookup.at(entity);
 		vec[lookupIndex].index = newIndex;
 	}
 
 
-	inline sizet ComponentLookup::getComponentLookupIndex(const Entity entity, const std::type_index typeIndex)
+	inline sizet ComponentLookup::componentLookupIndex(const Entity entity, const std::type_index typeIndex)
 	{
 		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
 
 		auto& vec = m_lookup.at(entity);
-		for (sizet i = 0, size = vec.getOccupiedSize(); i < size; ++i)
+		for (sizet i = 0, size = vec.occupiedSize(); i < size; ++i)
 		{
 			if (vec[i].type == typeIndex)
 			{
@@ -1604,16 +1604,16 @@ namespace spite
 
 	inline void EntityManager::deleteEntity(const Entity entity)
 	{
-		auto& lookupData = m_lookup->getLookupData(entity);
-		for (sizet i = 0, size = lookupData.getOccupiedSize(); i < size; ++i)
+		auto& lookupData = m_lookup->lookupData(entity);
+		for (sizet i = 0, size = lookupData.occupiedSize(); i < size; ++i)
 		{
 			std::type_index type = lookupData[i].type;
 			sizet index = lookupData[i].index;
 			IComponentProvider& provider =
-				m_storage->getRawProviderAsserted(type);
+				m_storage->rawProviderAsserted(type);
 
 			sizet n = 0;
-			Entity* topEntities = provider.getTopEntities(n);
+			Entity* topEntities = provider.topEntites(n);
 			for (sizet j = 0; j < n; ++j)
 			{
 				m_lookup->setComponentIndex(topEntities[i], type, index);
