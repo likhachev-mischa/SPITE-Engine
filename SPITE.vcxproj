@@ -221,6 +221,7 @@
     <ClCompile Include="source\base\Memory.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
     <ClCompile Include="source\ecs\SystemsCore.cpp" />
+    <ClCompile Include="source\engine\Common.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp" />

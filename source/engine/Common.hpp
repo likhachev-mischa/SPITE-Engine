@@ -15,11 +15,7 @@ namespace spite
 		std::optional<u32> presentFamily;
 		std::optional<u32> transferFamily;
 
-		bool isComplete() const
-		{
-			return graphicsFamily.has_value() && presentFamily.has_value() &&
-				transferFamily.has_value();
-		}
+		bool isComplete() const;
 	};
 
 	struct SwapchainSupportDetails

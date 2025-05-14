@@ -111,7 +111,7 @@ namespace spite
 		                           depthFbComponent.framebuffers[imageIndex],
 		                           {cbComponent.secondaryBuffers[currentFrame]},
 		                           {cbComponent.depthBuffers[currentFrame]},
-		                           swapchainComponent.images[imageIndex],depthImageComponent.image);
+		                           swapchainComponent.images[imageIndex],depthImageComponent.image.image);
 
 		QueueComponent& queueComponent = m_entityService->componentManager()->getSingleton<
 			QueueComponent>();

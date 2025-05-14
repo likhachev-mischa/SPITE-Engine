@@ -8,6 +8,7 @@
 #include "base/VmaUsage.hpp"
 #include "Engine/Common.hpp"
 #include "engine/VulkanBuffer.hpp"
+#include "engine/VulkanImages.hpp"
 
 namespace spite
 {
@@ -305,8 +306,7 @@ namespace spite
 
 	struct DepthImageComponent : ISingletonComponent
 	{
-		vk::Image image;
-		vma::Allocation allocation;
+		Image image;
 		vk::ImageView imageView;
 	};
 

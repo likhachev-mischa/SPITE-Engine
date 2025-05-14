@@ -170,15 +170,18 @@ namespace spite
 
 
 		//DEPTH IMAGE
-		Image depthImage = createDepthImage(queueFamilyIndices, swapExtent, gpuAllocator);
-		vk::ImageView depthImageView = createDepthImageView(
-			device,
-			depthImage.image,
-			allocationCallbacks);
+		Image depthImage = createImage({swapExtent.width, swapExtent.height, 1},
+		                               vk::Format::eD32Sfloat,
+		                               vk::ImageUsageFlagBits::eDepthStencilAttachment,
+		                               gpuAllocator);
+		vk::ImageView depthImageView = createImageView(device,
+		                                               depthImage,
+		                                               vk::ImageAspectFlagBits::eDepth,
+		                                               allocationCallbacks);
 
 		DepthImageComponent depthImageComponent;
-		depthImageComponent.image = depthImage.image;
-		depthImageComponent.allocation = depthImage.allocation;
+		depthImageComponent.image = depthImage;
+
 		depthImageComponent.imageView = depthImageView;
 
 		componentManager->createSingleton(depthImageComponent);
@@ -207,7 +210,8 @@ namespace spite
 		componentManager->createSingleton(depthRenderPassComponent);
 
 		DepthFramebufferComponent depthFramebufferComponent;
-		depthFramebufferComponent.framebuffers = createDepthFramebuffers(swapchainComponent.imageViews.size(),
+		depthFramebufferComponent.framebuffers = createDepthFramebuffers(
+			swapchainComponent.imageViews.size(),
 			device,
 			depthImageView,
 			swapExtent,
@@ -240,9 +244,9 @@ namespace spite
 		                                                MAX_FRAMES_IN_FLIGHT);
 
 		auto depthPipelineLayout = createPipelineLayout(device,
-		                     {depthDescriptorSetLayout},
-		                     sizeof(glm::mat4),
-		                     &allocationCallbacks);
+		                                                {depthDescriptorSetLayout},
+		                                                sizeof(glm::mat4),
+		                                                &allocationCallbacks);
 		Entity depthDescriptorEntity = m_entityService->entityManager()->createEntity();
 		DescriptorPoolComponent depthDescriptorPoolComponent;
 		depthDescriptorPoolComponent.maxSets = MAX_FRAMES_IN_FLIGHT;
@@ -255,7 +259,9 @@ namespace spite
 		depthDescriptorSetLayoutComponent.type = vk::DescriptorType::eUniformBuffer;
 		componentManager->addComponent(depthDescriptorEntity, depthDescriptorSetLayoutComponent);
 		DescriptorSetsComponent depthDescriptorSetsComponent;
-		std::copy_n(depthDescriptorSets.begin(), MAX_FRAMES_IN_FLIGHT, depthDescriptorSetsComponent.descriptorSets.begin());
+		std::copy_n(depthDescriptorSets.begin(),
+		            MAX_FRAMES_IN_FLIGHT,
+		            depthDescriptorSetsComponent.descriptorSets.begin());
 		componentManager->addComponent(depthDescriptorEntity, depthDescriptorSetsComponent);
 
 		Entity depthPipelineLayoutEntity = m_entityService->entityManager()->createEntity();
@@ -271,12 +277,28 @@ namespace spite
 		vertexInputData.attributeDescriptions.reserve(2);
 		vertexInputData.attributeDescriptions.push_back({0, 0, vk::Format::eR32G32B32Sfloat});
 		vertexInputData.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
-		vk::PipelineVertexInputStateCreateInfo depthVertexInputInfo({}, 1, vertexInputData.bindingDescriptions.data(), 2, vertexInputData.attributeDescriptions.data());
+		vk::PipelineVertexInputStateCreateInfo depthVertexInputInfo(
+			{},
+			1,
+			vertexInputData.bindingDescriptions.data(),
+			2,
+			vertexInputData.attributeDescriptions.data());
 
-		vk::PipelineShaderStageCreateInfo depthShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, depthShader.shaderModule,"main");
-		auto depthPipeline = createDepthPipeline(device, depthPipelineLayout, swapExtent, depthRenderPassComponent.renderPass, { depthShaderStageCreateInfo }, depthVertexInputInfo, &allocationCallbacks);
+		vk::PipelineShaderStageCreateInfo depthShaderStageCreateInfo(
+			{},
+			vk::ShaderStageFlagBits::eVertex,
+			depthShader.shaderModule,
+			"main");
+		auto depthPipeline = createDepthPipeline(device,
+		                                         depthPipelineLayout,
+		                                         swapExtent,
+		                                         depthRenderPassComponent.renderPass,
+		                                         {depthShaderStageCreateInfo},
+		                                         depthVertexInputInfo,
+		                                         &allocationCallbacks);
 
-		Entity depthPipelineEntity = m_entityService->entityManager()->createEntity("DepthPipeline");
+		Entity depthPipelineEntity = m_entityService->entityManager()->
+		                                              createEntity("DepthPipeline");
 		PipelineComponent depthPipelineComponent;
 		depthPipelineComponent.vertexInputData = vertexInputData;
 		depthPipelineComponent.pipeline = depthPipeline;

@@ -149,7 +149,7 @@ namespace spite
 
 		auto& depthImageComponent = componentManager->getSingleton<DepthImageComponent>();
 		device.destroyImageView(depthImageComponent.imageView,allocationCallbacks);
-		gpuAllocatorComponent.allocator.destroyImage(depthImageComponent.image, depthImageComponent.allocation);
+		gpuAllocatorComponent.allocator.destroyImage(depthImageComponent.image.image, depthImageComponent.image.allocation);
 
 		gpuAllocatorComponent.allocator.destroy();
 		device.destroy(allocationCallbacks);
