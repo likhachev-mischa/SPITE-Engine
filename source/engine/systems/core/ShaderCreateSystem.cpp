@@ -2,6 +2,8 @@
 
 #include "base/File.hpp"
 
+#include "engine/VulkanResources.hpp"
+
 namespace spite
 {
 	void ShaderCreateSystem::onInitialize()

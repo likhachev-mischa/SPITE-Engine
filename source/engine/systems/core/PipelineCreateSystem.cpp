@@ -1,5 +1,8 @@
 #include "CoreSystems.hpp"
 
+#include "engine/VulkanGeometry.hpp"
+#include "engine/VulkanResources.hpp"
+
 namespace spite
 {
 	void PipelineCreateSystem::onInitialize()
@@ -212,12 +215,12 @@ namespace spite
 		vk::PipelineLayout layout = componentManager->getComponent<PipelineLayoutComponent>(
 			layoutEntity).layout;
 		vk::Extent2D extent = componentManager->getSingleton<SwapchainComponent>().extent;
-		vk::RenderPass renderPass = componentManager->getSingleton<MainRenderPassComponent>().
+		vk::RenderPass renderPass = componentManager->getSingleton<GeometryRenderPassComponent>().
 		                                              renderPass;
 		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->getSingleton<
 			AllocationCallbacksComponent>();
 
-		vk::Pipeline pipeline = createGraphicsPipeline(device,
+		vk::Pipeline pipeline = createGeometryPipeline(device,
 		                                               layout,
 		                                               extent,
 		                                               renderPass,

@@ -196,9 +196,13 @@
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\components\CoreComponents.hpp" />
     <ClInclude Include="source\engine\systems\MovementSystems.hpp" />
+    <ClInclude Include="source\engine\VulkanBuffer.hpp" />
     <ClInclude Include="source\engine\VulkanDebug.hpp" />
     <ClInclude Include="source\engine\components\VulkanComponents.hpp" />
+    <ClInclude Include="source\engine\VulkanDepth.hpp" />
+    <ClInclude Include="source\engine\VulkanGeometry.hpp" />
     <ClInclude Include="source\engine\VulkanImages.hpp" />
+    <ClInclude Include="source\engine\VulkanLighting.hpp" />
     <ClInclude Include="source\engine\VulkanRendering.hpp" />
     <ClInclude Include="source\engine\VulkanResources.hpp" />
     <ClInclude Include="source\engine\VulkanAllocator.hpp" />
@@ -230,7 +234,11 @@
     <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp" />
+    <ClCompile Include="source\engine\VulkanBuffer.cpp" />
     <ClCompile Include="source\engine\VulkanDebug.cpp" />
+    <ClCompile Include="source\engine\VulkanDepth.cpp" />
+    <ClCompile Include="source\engine\VulkanGeometry.cpp" />
+    <ClCompile Include="source\engine\VulkanImages.cpp" />
     <ClCompile Include="source\engine\VulkanRendering.cpp" />
     <ClCompile Include="source\engine\VulkanResources.cpp" />
     <ClCompile Include="source\engine\VulkanAllocator.cpp" />

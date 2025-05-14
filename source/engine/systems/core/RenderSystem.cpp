@@ -30,10 +30,10 @@ namespace spite
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
-		MainFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
-			getSingleton<MainFramebufferComponent>();
+		GeometryFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
+			getSingleton<GeometryFramebufferComponent>();
 		vk::RenderPass mainRenderPass = m_entityService->componentManager()->getSingleton<
-			MainRenderPassComponent>().renderPass;
+			GeometryRenderPassComponent>().renderPass;
 
 		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
 			getSingleton<DepthFramebufferComponent>();

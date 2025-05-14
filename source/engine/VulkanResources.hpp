@@ -12,50 +12,6 @@
 
 namespace spite
 {
-	struct BufferWrapper
-	{
-		BufferWrapper(const BufferWrapper& other) = delete;
-		BufferWrapper& operator=(const BufferWrapper& other) = delete;
-
-		vk::Buffer buffer;
-		vma::Allocation allocation;
-
-		vma::Allocator allocator;
-		vk::DeviceSize size{};
-
-		BufferWrapper();
-
-		BufferWrapper(const u64 size,
-		              const vk::BufferUsageFlags& usage,
-		              const vk::MemoryPropertyFlags memoryProperty,
-		              const vma::AllocationCreateFlags& allocationFlag,
-		              const QueueFamilyIndices& indices,
-		              const vma::Allocator& allocator);
-
-		BufferWrapper(BufferWrapper&& other) noexcept;
-
-		BufferWrapper& operator=(BufferWrapper&& other) noexcept;
-
-		//copies only same sized buffers
-		void copyBuffer(const BufferWrapper& other,
-		                const vk::Device& device,
-		                const vk::CommandPool& transferCommandPool,
-		                const vk::Queue transferQueue,
-		                const vk::AllocationCallbacks* allocationCallbacks) const;
-
-		void copyMemory(const void* data,
-		                const vk::DeviceSize& memorySize,
-		                const vk::DeviceSize& localOffset) const;
-
-		[[nodiscard]] void* mapMemory() const;
-
-		void unmapMemory() const;
-
-		void destroy();
-
-		~BufferWrapper();
-	};
-
 	struct VertexInputDescriptions
 	{
 		eastl::vector<vk::VertexInputBindingDescription, spite::HeapAllocator> bindingDescriptions;
@@ -127,13 +83,6 @@ namespace spite
 	                                                     const vk::AllocationCallbacks*
 	                                                     pAllocationCallbacks);
 
-	vk::RenderPass createGeometryRenderPass(const vk::Device& device,
-	                                        const vk::Format& imageFormat,
-	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	vk::RenderPass createDepthRenderPass(const vk::Device& device,
-	                                     const vk::AllocationCallbacks* pAllocationCallbacks);
-
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
 	                                                  const vk::DescriptorType& type,
 	                                                  const u32 bindingIndex,
@@ -158,40 +107,6 @@ namespace spite
 	                                        const u32 pushConstantSize,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
-	vk::Pipeline createGraphicsPipeline(const vk::Device& device,
-	                                    const vk::PipelineLayout& pipelineLayout,
-	                                    const vk::Extent2D& swapchainExtent,
-	                                    const vk::RenderPass& renderPass,
-	                                    const std::vector<vk::PipelineShaderStageCreateInfo>&
-	                                    shaderStages,
-	                                    const vk::PipelineVertexInputStateCreateInfo&
-	                                    vertexInputInfo,
-	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	vk::Pipeline createDepthPipeline(const vk::Device& device,
-	                                 const vk::PipelineLayout& pipelineLayout,
-	                                 const vk::Extent2D& swapchainExtent,
-	                                 const vk::RenderPass& renderPass,
-	                                 const std::vector<vk::PipelineShaderStageCreateInfo>&
-	                                 shaderStages,
-	                                 const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
-	                                 const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	std::vector<vk::Framebuffer> createGeometryFramebuffers(const vk::Device& device,
-	                                                        const std::vector<vk::ImageView>&
-	                                                        imageViews,
-	                                                        const vk::ImageView depthImageView,
-	                                                        const vk::Extent2D& swapchainExtent,
-	                                                        const vk::RenderPass& renderPass,
-	                                                        const vk::AllocationCallbacks*
-	                                                        pAllocationCallbacks);
-
-	std::vector<vk::Framebuffer> createDepthFramebuffers(const sizet size,
-		const vk::Device& device,
-		const vk::ImageView depthImageView,
-		const vk::Extent2D& swapchainExtent,
-		const vk::RenderPass& depthRenderPass,
-		const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::CommandPool createCommandPool(const vk::Device& device,
 	                                  const vk::AllocationCallbacks* pAllocationCallbacks,

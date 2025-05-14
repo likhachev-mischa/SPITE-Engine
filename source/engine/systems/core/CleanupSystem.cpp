@@ -29,10 +29,10 @@ namespace spite
 		SwapchainComponent swapchainComponent = componentManager->getSingleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
-		vk::RenderPass renderPass = componentManager->getSingleton<MainRenderPassComponent>().
+		vk::RenderPass renderPass = componentManager->getSingleton<GeometryRenderPassComponent>().
 		                                              renderPass;
-		MainFramebufferComponent& framebufferComponent = componentManager->getSingleton<
-			MainFramebufferComponent>();
+		GeometryFramebufferComponent& framebufferComponent = componentManager->getSingleton<
+			GeometryFramebufferComponent>();
 		CommandPoolComponent& commandPoolComponent = componentManager->getSingleton<
 			CommandPoolComponent>();
 		SynchronizationComponent& synchronizationComponent = componentManager->getSingleton<

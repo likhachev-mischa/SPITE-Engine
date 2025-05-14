@@ -1,13 +1,16 @@
 #include "CoreSystems.hpp"
 
-#include "engine/VulkanAllocator.hpp"
-#include "engine/VulkanDebug.hpp"
 #include "application/WindowManager.hpp"
 
 #include "base/Common.hpp"
 #include "base/File.hpp"
 
+#include "engine/VulkanAllocator.hpp"
+#include "engine/VulkanDebug.hpp"
+#include "engine/VulkanDepth.hpp"
+#include "engine/VulkanGeometry.hpp"
 #include "engine/VulkanImages.hpp"
+#include "engine/VulkanResources.hpp"
 
 namespace spite
 {
@@ -181,13 +184,13 @@ namespace spite
 		componentManager->createSingleton(depthImageComponent);
 
 		//TODO: smart pipeline creation
-		MainRenderPassComponent renderPassComponent;
+		GeometryRenderPassComponent renderPassComponent;
 		renderPassComponent.renderPass = createGeometryRenderPass(device,
 			swapchainComponent.imageFormat,
 			&allocationCallbacks);
 		componentManager->createSingleton(renderPassComponent);
 
-		MainFramebufferComponent framebufferComponent;
+		GeometryFramebufferComponent framebufferComponent;
 		framebufferComponent.framebuffers = createGeometryFramebuffers(
 			device,
 			swapchainComponent.imageViews,

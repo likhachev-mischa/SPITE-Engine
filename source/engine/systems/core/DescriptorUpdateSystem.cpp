@@ -1,5 +1,7 @@
 #include "CoreSystems.hpp"
 
+#include "engine/VulkanResources.hpp"
+
 namespace spite
 {
 	void DescriptorUpdateSystem::onInitialize()

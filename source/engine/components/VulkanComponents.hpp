@@ -1,6 +1,5 @@
 #pragma once
 #include <glm/fwd.hpp>
-#include <glm/detail/type_quat.hpp>
 
 #include "Application/AppConifg.hpp"
 
@@ -8,8 +7,7 @@
 
 #include "base/VmaUsage.hpp"
 #include "Engine/Common.hpp"
-
-#include "engine/VulkanResources.hpp"
+#include "engine/VulkanBuffer.hpp"
 
 namespace spite
 {
@@ -95,12 +93,12 @@ namespace spite
 		u32 transferQueueIndex = 0;
 	};
 
-	struct MainRenderPassComponent : ISingletonComponent
+	struct GeometryRenderPassComponent : ISingletonComponent
 	{
 		vk::RenderPass renderPass;
 	};
 
-	struct MainFramebufferComponent : ISingletonComponent
+	struct GeometryFramebufferComponent : ISingletonComponent
 	{
 		std::vector<vk::Framebuffer> framebuffers{};
 	};
