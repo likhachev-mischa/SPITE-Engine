@@ -8,7 +8,7 @@ namespace spite
 	struct Image
 	{
 		vk::ImageUsageFlags usageFlags;
-		vk::Format format;
+		vk::Format format{};
 		vk::Image image;
 		vma::Allocation allocation;
 
@@ -32,4 +32,22 @@ namespace spite
 	                              const Image& image,
 	                              const vk::ImageAspectFlags imageAspectFlags,
 	                              const vk::AllocationCallbacks& allocationCallbacks);
+
+	std::vector<vk::Framebuffer> createFramebuffers(const sizet swapchainImagesCount,
+	                                                const vk::Device& device,
+	                                                const std::vector<vk::ImageView>& imageViews,
+	                                                const vk::Extent2D& swapchainExtent,
+	                                                const vk::RenderPass& renderPass,
+	                                                const vk::AllocationCallbacks*
+	                                                pAllocationCallbacks);
+
+	std::vector<vk::Framebuffer> createSwapchainFramebuffers(const vk::Device& device,
+	                                                         const std::vector<vk::ImageView>&
+	                                                         swapchainImageViews,
+	                                                         const std::vector<vk::ImageView>&
+	                                                         otherAttachments,
+	                                                         const vk::Extent2D& swapchainExtent,
+	                                                         const vk::RenderPass& renderPass,
+	                                                         const vk::AllocationCallbacks*
+	                                                         pAllocationCallbacks);
 }

@@ -155,36 +155,4 @@ namespace spite
 		return graphicsPipeline;
 	}
 
-	std::vector<vk::Framebuffer> createDepthFramebuffers(const sizet size,
-		const vk::Device& device,
-		const vk::ImageView depthImageView,
-		const vk::Extent2D& swapchainExtent,
-		const vk::RenderPass& depthRenderPass,
-		const vk::AllocationCallbacks* pAllocationCallbacks)
-	{
-		std::vector<vk::Framebuffer> framebuffers;
-		framebuffers.resize(size);
-
-		for (size_t i = 0; i < size; ++i)
-		{
-			vk::ImageView attachments[] = {depthImageView};
-
-			vk::FramebufferCreateInfo framebufferInfo({},
-			                                          depthRenderPass,
-			                                          1,
-			                                          attachments,
-			                                          swapchainExtent.width,
-			                                          swapchainExtent.height,
-			                                          1);
-
-			vk::Result result;
-			std::tie(result, framebuffers[i]) = device.createFramebuffer(
-				framebufferInfo,
-				pAllocationCallbacks);
-			SASSERT_VULKAN(result)
-		}
-
-		return framebuffers;
-	}
-
 }

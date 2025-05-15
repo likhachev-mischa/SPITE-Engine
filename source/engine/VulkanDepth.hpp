@@ -15,12 +15,4 @@ namespace spite
 	                                 shaderStages,
 	                                 const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo,
 	                                 const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	std::vector<vk::Framebuffer> createDepthFramebuffers(const sizet size,
-		const vk::Device& device,
-		const vk::ImageView depthImageView,
-		const vk::Extent2D& swapchainExtent,
-		const vk::RenderPass& depthRenderPass,
-		const vk::AllocationCallbacks* pAllocationCallbacks);
-
 }

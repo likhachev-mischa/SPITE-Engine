@@ -194,13 +194,7 @@ namespace spite
 		componentManager->createSingleton(renderPassComponent);
 
 		GeometryFramebufferComponent framebufferComponent;
-		framebufferComponent.framebuffers = createGeometryFramebuffers(
-			device,
-			swapchainComponent.imageViews,
-			depthImageView,
-			swapExtent,
-			renderPassComponent.renderPass,
-			&allocationCallbacks);
+		framebufferComponent.framebuffers = createSwapchainFramebuffers(device, swapchainComponent.imageViews, { depthImageView }, swapExtent, renderPassComponent.renderPass, &allocationCallbacks);
 		componentManager->createSingleton(std::move(framebufferComponent));
 
 		//TEMPORARY
@@ -210,10 +204,10 @@ namespace spite
 		componentManager->createSingleton(depthRenderPassComponent);
 
 		DepthFramebufferComponent depthFramebufferComponent;
-		depthFramebufferComponent.framebuffers = createDepthFramebuffers(
+		depthFramebufferComponent.framebuffers = createFramebuffers(
 			swapchainComponent.imageViews.size(),
 			device,
-			depthImageView,
+			{depthImageView},
 			swapExtent,
 			depthRenderPassComponent.renderPass,
 			&allocationCallbacks);

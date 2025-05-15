@@ -310,6 +310,17 @@ namespace spite
 		vk::ImageView imageView;
 	};
 
+	struct GBufferComponent : ISingletonComponent
+	{
+		Image positionImage;
+		Image normalsImage;
+		Image albedoImage;
+
+		vk::ImageView positionImageView;
+		vk::ImageView normailImageView;
+		vk::ImageView albedoImageView;
+	};
+
 	struct PipelineCreateRequest : IEventComponent
 	{
 		//entity(model) that requires pipeline creation/accuisition

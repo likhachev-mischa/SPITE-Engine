@@ -180,48 +180,4 @@ namespace spite
 		return graphicsPipeline;
 	}
 
-	std::vector<vk::Framebuffer> createGeometryFramebuffers(const vk::Device& device,
-	                                                        const std::vector<vk::ImageView>&
-	                                                        imageViews,
-	                                                        const vk::ImageView depthImageView,
-	                                                        const vk::Extent2D& swapchainExtent,
-	                                                        const vk::RenderPass& renderPass,
-	                                                        const vk::AllocationCallbacks*
-	                                                        pAllocationCallbacks)
-	{
-		std::vector<vk::Framebuffer> swapchainFramebuffers;
-		swapchainFramebuffers.resize(imageViews.size());
-
-		for (size_t i = 0; i < imageViews.size(); ++i)
-		{
-					vk::ImageView attachments[] = {imageViews[i], depthImageView};
-		
-					vk::FramebufferCreateInfo framebufferInfo({},
-					                                          renderPass,
-					                                          2,
-					                                          attachments,
-					                                          swapchainExtent.width,
-					                                          swapchainExtent.height,
-					                                          1);
-
-			//vk::ImageView attachments[] = {imageViews[i]};
-
-			//vk::FramebufferCreateInfo framebufferInfo({},
-			//                                          renderPass,
-			//                                          1,
-			//                                          attachments,
-			//                                          swapchainExtent.width,
-			//                                          swapchainExtent.height,
-			//                                          1);
-
-			vk::Result result;
-			std::tie(result, swapchainFramebuffers[i]) = device.createFramebuffer(
-				framebufferInfo,
-				pAllocationCallbacks);
-			SASSERT_VULKAN(result)
-		}
-
-		return swapchainFramebuffers;
-	}
-
 }

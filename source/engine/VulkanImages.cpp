@@ -57,4 +57,77 @@ namespace spite
 		SASSERT_VULKAN(result)
 		return imageView;
 	}
+
+	std::vector<vk::Framebuffer> createFramebuffers(const sizet swapchainImagesCount,
+		const vk::Device& device,
+		const std::vector<vk::ImageView>& imageViews,
+		const vk::Extent2D& swapchainExtent,
+		const vk::RenderPass& renderPass,
+		const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		std::vector<vk::Framebuffer> framebuffers;
+		framebuffers.resize(swapchainImagesCount);
+
+		for (size_t i = 0; i < swapchainImagesCount; ++i)
+		{
+			vk::FramebufferCreateInfo framebufferInfo({},
+			                                          renderPass,
+			                                          imageViews.size(),
+			                                          imageViews.data(),
+			                                          swapchainExtent.width,
+			                                          swapchainExtent.height,
+			                                          1);
+
+			vk::Result result;
+			std::tie(result, framebuffers[i]) = device.createFramebuffer(
+				framebufferInfo,
+				pAllocationCallbacks);
+			SASSERT_VULKAN(result)
+		}
+
+		return framebuffers;
+	}
+
+	std::vector<vk::Framebuffer> createSwapchainFramebuffers(const vk::Device& device,
+		const std::vector<vk::ImageView>& swapchainImageViews,
+		const std::vector<vk::ImageView>& otherAttachments,
+		const vk::Extent2D& swapchainExtent,
+		const vk::RenderPass& renderPass,
+		const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+		std::vector<vk::Framebuffer> swapchainFramebuffers;
+		swapchainFramebuffers.resize(swapchainImageViews.size());
+
+		std::vector<vk::ImageView> attachments;
+		u32 attachmentsSize = static_cast<u32>(otherAttachments.size()) + 1;
+		attachments.reserve(attachmentsSize);
+
+		attachments.push_back(swapchainImageViews[0]);
+		for (const auto & attachment: otherAttachments)
+		{
+			attachments.push_back(attachment);
+		}
+
+
+		for (size_t i = 0; i < swapchainImageViews.size(); ++i)
+		{
+			attachments[0] = swapchainImageViews[i];
+
+			vk::FramebufferCreateInfo framebufferInfo({},
+			                                          renderPass,
+			                                          attachmentsSize,
+			                                          attachments.data(),
+			                                          swapchainExtent.width,
+			                                          swapchainExtent.height,
+			                                          1);
+
+			vk::Result result;
+			std::tie(result, swapchainFramebuffers[i]) = device.createFramebuffer(
+				framebufferInfo,
+				pAllocationCallbacks);
+			SASSERT_VULKAN(result)
+		}
+
+		return swapchainFramebuffers;
+	}
 }

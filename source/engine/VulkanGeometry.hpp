@@ -17,14 +17,5 @@ namespace spite
 	                                    const vk::PipelineVertexInputStateCreateInfo&
 	                                    vertexInputInfo,
 	                                    const vk::AllocationCallbacks* pAllocationCallbacks);
-
-	std::vector<vk::Framebuffer> createGeometryFramebuffers(const vk::Device& device,
-	                                                        const std::vector<vk::ImageView>&
-	                                                        imageViews,
-	                                                        const vk::ImageView depthImageView,
-	                                                        const vk::Extent2D& swapchainExtent,
-	                                                        const vk::RenderPass& renderPass,
-	                                                        const vk::AllocationCallbacks*
-	                                                        pAllocationCallbacks);
 }
 
