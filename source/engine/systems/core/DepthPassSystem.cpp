@@ -29,10 +29,15 @@ namespace spite
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
 			singleton<SynchronizationComponent>();
 
-		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
-			singleton<DepthFramebufferComponent>();
-		vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
-			DepthRenderPassComponent>().renderPass;
+		Entity depthRenderPassEntity = m_entityService->entityManager()->getNamedEntity("DepthRenderPass");
+
+		auto& depthFbComponent = m_entityService->componentManager()->getComponent<FramebufferComponent>(depthRenderPassEntity);
+		vk::RenderPass depthRenderPass = m_entityService->componentManager()->getComponent<RenderPassComponent>(depthRenderPassEntity).renderPass;
+
+		//DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
+		//	singleton<DepthFramebufferComponent>();
+		//vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
+		//	DepthRenderPassComponent>().renderPass;
 
 		Entity depthPipelineEntity = m_entityService->entityManager()->getNamedEntity(
 			"DepthPipeline");

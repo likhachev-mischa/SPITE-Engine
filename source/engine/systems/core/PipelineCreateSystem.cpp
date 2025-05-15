@@ -215,8 +215,10 @@ namespace spite
 		vk::PipelineLayout layout = componentManager->getComponent<PipelineLayoutComponent>(
 			layoutEntity).layout;
 		vk::Extent2D extent = componentManager->singleton<SwapchainComponent>().extent;
-		vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
-		                                              renderPass;
+		Entity geometryRenderPassEntity = m_entityService->entityManager()->getNamedEntity("GeometryRenderPass");
+		vk::RenderPass renderPass = componentManager->getComponent<RenderPassComponent>(geometryRenderPassEntity).renderPass;
+		//vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
+		  //                                            renderPass;
 		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->singleton<
 			AllocationCallbacksComponent>();
 

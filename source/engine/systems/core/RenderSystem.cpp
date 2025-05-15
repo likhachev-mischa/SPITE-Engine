@@ -30,15 +30,23 @@ namespace spite
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
-		GeometryFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
-			singleton<GeometryFramebufferComponent>();
-		vk::RenderPass mainRenderPass = m_entityService->componentManager()->singleton<
-			GeometryRenderPassComponent>().renderPass;
+		//GeometryFramebufferComponent& mainFbComponent = m_entityService->componentManager()->
+		//	singleton<GeometryFramebufferComponent>();
+		//vk::RenderPass mainRenderPass = m_entityService->componentManager()->singleton<
+		//	GeometryRenderPassComponent>().renderPass;
 
-		DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
-			singleton<DepthFramebufferComponent>();
-		vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
-			DepthRenderPassComponent>().renderPass;
+		//DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
+		//	singleton<DepthFramebufferComponent>();
+		//vk::RenderPass depthRenderPass = m_entityService->componentManager()->singleton<
+		//	DepthRenderPassComponent>().renderPass;
+
+		Entity geometryRenderPassEntity = m_entityService->entityManager()->getNamedEntity("GeometryRenderPass");
+		auto& geometryFbComponent = m_entityService->componentManager()->getComponent<FramebufferComponent>(geometryRenderPassEntity);
+		vk::RenderPass geometryRenderPass = m_entityService->componentManager()->getComponent<RenderPassComponent>(geometryRenderPassEntity).renderPass;
+
+		Entity depthRenderPassEntity = m_entityService->entityManager()->getNamedEntity("DepthRenderPass");
+		auto& depthFbComponent = m_entityService->componentManager()->getComponent<FramebufferComponent>(depthRenderPassEntity);
+		vk::RenderPass depthRenderPass = m_entityService->componentManager()->getComponent<RenderPassComponent>(depthRenderPassEntity).renderPass;
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
 			singleton<SynchronizationComponent>();
@@ -52,8 +60,8 @@ namespace spite
 		auto& modelQuery = *m_modelQuery;
 
 		beginSecondaryCommandBuffer(cbComponent.secondaryBuffers[currentFrame],
-		                            mainRenderPass,
-		                            mainFbComponent.framebuffers[imageIndex]);
+		                            geometryRenderPass,
+		                            geometryFbComponent.framebuffers[imageIndex]);
 		for (sizet i = 0, size = pipelineQuery.size(); i < size; ++i)
 		{
 			auto& pipeline = pipelineQuery[i];
@@ -105,8 +113,8 @@ namespace spite
 
 		recordPrimaryColorCommandBuffer(cbComponent.primaryBuffers[currentFrame],
 		                           extent,
-		                           mainRenderPass,
-		                           mainFbComponent.framebuffers[imageIndex],
+		                           geometryRenderPass,
+		                           geometryFbComponent.framebuffers[imageIndex],
 		                           depthRenderPass,
 		                           depthFbComponent.framebuffers[imageIndex],
 		                           {cbComponent.secondaryBuffers[currentFrame]},

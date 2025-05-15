@@ -187,23 +187,28 @@ namespace spite
 		componentManager->createSingleton(depthImageComponent);
 
 		//TODO: smart pipeline creation
-		GeometryRenderPassComponent renderPassComponent;
-		renderPassComponent.renderPass = createGeometryRenderPass(device,
+		Entity geometryRenderPassEntity = m_entityService->entityManager()->createEntity("GeometryRenderPass");
+		RenderPassComponent geometryRenderPassComponent;
+		geometryRenderPassComponent.renderPass = createGeometryRenderPass(device,
 			swapchainComponent.imageFormat,
 			&allocationCallbacks);
-		componentManager->createSingleton(renderPassComponent);
+		componentManager->addComponent(geometryRenderPassEntity, geometryRenderPassComponent);
+		//componentManager->createSingleton(geometryRenderPassComponent);
 
-		GeometryFramebufferComponent framebufferComponent;
-		framebufferComponent.framebuffers = createSwapchainFramebuffers(device, swapchainComponent.imageViews, { depthImageView }, swapExtent, renderPassComponent.renderPass, &allocationCallbacks);
-		componentManager->createSingleton(std::move(framebufferComponent));
+		FramebufferComponent geometryFramebufferComponent;
+		geometryFramebufferComponent.framebuffers = createSwapchainFramebuffers(device, swapchainComponent.imageViews, { depthImageView }, swapExtent, geometryRenderPassComponent.renderPass, &allocationCallbacks);
+		componentManager->addComponent(geometryRenderPassEntity, std::move(geometryFramebufferComponent));
+		//componentManager->createSingleton(std::move(geometryFramebufferComponent));
 
 		//TEMPORARY
 		//depth
-		DepthRenderPassComponent depthRenderPassComponent;
+		Entity depthRenderPassEntity = m_entityService->entityManager()->createEntity("DepthRenderPass");
+		RenderPassComponent depthRenderPassComponent;
 		depthRenderPassComponent.renderPass = createDepthRenderPass(device, &allocationCallbacks);
-		componentManager->createSingleton(depthRenderPassComponent);
+		componentManager->addComponent(depthRenderPassEntity, depthRenderPassComponent);
+		//componentManager->createSingleton(depthRenderPassComponent);
 
-		DepthFramebufferComponent depthFramebufferComponent;
+		FramebufferComponent depthFramebufferComponent;
 		depthFramebufferComponent.framebuffers = createFramebuffers(
 			swapchainComponent.imageViews.size(),
 			device,
@@ -211,7 +216,8 @@ namespace spite
 			swapExtent,
 			depthRenderPassComponent.renderPass,
 			&allocationCallbacks);
-		componentManager->createSingleton(depthFramebufferComponent);
+		//componentManager->createSingleton(depthFramebufferComponent);
+		componentManager->addComponent(depthRenderPassEntity, std::move(depthFramebufferComponent));
 
 		Entity depthShaderEntity = m_entityService->entityManager()->createEntity();
 		ShaderComponent depthShader;
@@ -299,10 +305,9 @@ namespace spite
 		depthPipelineComponent.pipelineLayoutEntity = depthPipelineLayoutEntity;
 		componentManager->addComponent(depthPipelineEntity, depthPipelineComponent);
 		componentManager->addComponent<DepthPipelineTag>(depthPipelineEntity);
-
 		//
 
-
+		//
 		std::vector<vk::Semaphore> imageAvailableSemaphores;
 		imageAvailableSemaphores.reserve(MAX_FRAMES_IN_FLIGHT);
 		std::vector<vk::Semaphore> renderFinishedSemaphores;

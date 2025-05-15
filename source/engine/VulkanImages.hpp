@@ -33,6 +33,9 @@ namespace spite
 	                              const vk::ImageAspectFlags imageAspectFlags,
 	                              const vk::AllocationCallbacks& allocationCallbacks);
 
+	vk::Sampler createSampler(const vk::Device device,
+	                          const vk::AllocationCallbacks& allocationCallbacks);
+
 	std::vector<vk::Framebuffer> createFramebuffers(const sizet swapchainImagesCount,
 	                                                const vk::Device& device,
 	                                                const std::vector<vk::ImageView>& imageViews,

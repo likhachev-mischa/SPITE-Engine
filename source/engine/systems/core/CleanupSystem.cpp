@@ -26,13 +26,12 @@ namespace spite
 		vk::Device device = componentManager->singleton<DeviceComponent>().device;
 		vk::SurfaceKHR surface = componentManager->singleton<SurfaceComponent>().surface;
 
-		SwapchainComponent swapchainComponent = componentManager->singleton<
-			SwapchainComponent>();
+		SwapchainComponent swapchainComponent = componentManager->singleton<SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
-		vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
-		                                              renderPass;
-		GeometryFramebufferComponent& framebufferComponent = componentManager->singleton<
-			GeometryFramebufferComponent>();
+		//vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
+		//                                              renderPass;
+		//GeometryFramebufferComponent& framebufferComponent = componentManager->singleton<
+		//	GeometryFramebufferComponent>();
 		CommandPoolComponent& commandPoolComponent = componentManager->singleton<
 			CommandPoolComponent>();
 		SynchronizationComponent& synchronizationComponent = componentManager->singleton<
@@ -124,21 +123,38 @@ namespace spite
 		device.destroyCommandPool(commandPoolComponent.graphicsCommandPool, allocationCallbacks);
 		device.destroyCommandPool(commandPoolComponent.transferCommandPool, allocationCallbacks);
 
-		auto& depthFbComponent = componentManager->singleton<DepthFramebufferComponent>();
-		auto& depthRpComponent = componentManager->singleton<DepthRenderPassComponent>();
+		auto& framebufferQuery = *queryBuilder->buildQuery<FramebufferComponent>();
 
-		for (auto& framebuffer : depthFbComponent.framebuffers)
+		for (const auto& fbComponent : framebufferQuery)
 		{
-			device.destroyFramebuffer(framebuffer, allocationCallbacks);
-		}
-		device.destroyRenderPass(depthRpComponent.renderPass, allocationCallbacks);
-
-		for (auto& framebuffer : framebufferComponent.framebuffers)
-		{
-			device.destroyFramebuffer(framebuffer, allocationCallbacks);
+			for (const auto& framebuffer : fbComponent.framebuffers)
+			{
+				device.destroyFramebuffer(framebuffer, allocationCallbacks);
+			}
 		}
 
-		device.destroyRenderPass(renderPass, allocationCallbacks);
+		auto& renderPassQuery = *queryBuilder->buildQuery<RenderPassComponent>();
+
+		for (const auto & renderPassComponent: renderPassQuery)
+		{
+			device.destroyRenderPass(renderPassComponent.renderPass, allocationCallbacks);
+		}
+
+		//auto& depthFbComponent = componentManager->singleton<DepthFramebufferComponent>();
+		//auto& depthRpComponent = componentManager->singleton<DepthRenderPassComponent>();
+
+		//for (auto& framebuffer : depthFbComponent.framebuffers)
+		//{
+		//	device.destroyFramebuffer(framebuffer, allocationCallbacks);
+		//}
+		//device.destroyRenderPass(depthRpComponent.renderPass, allocationCallbacks);
+
+		//for (auto& framebuffer : framebufferComponent.framebuffers)
+		//{
+		//	device.destroyFramebuffer(framebuffer, allocationCallbacks);
+		//}
+
+		//device.destroyRenderPass(renderPass, allocationCallbacks);
 
 		device.destroySwapchainKHR(swapchain, allocationCallbacks);
 
@@ -148,15 +164,15 @@ namespace spite
 		}
 
 		auto& depthImageComponent = componentManager->singleton<DepthImageComponent>();
-		device.destroyImageView(depthImageComponent.imageView,allocationCallbacks);
-		gpuAllocatorComponent.allocator.destroyImage(depthImageComponent.image.image, depthImageComponent.image.allocation);
+		device.destroyImageView(depthImageComponent.imageView, allocationCallbacks);
+		gpuAllocatorComponent.allocator.destroyImage(depthImageComponent.image.image,
+		                                             depthImageComponent.image.allocation);
 
 		gpuAllocatorComponent.allocator.destroy();
 		device.destroy(allocationCallbacks);
 
 		destroyDebugUtilsMessenger(instance,
-		                           componentManager->singleton<DebugMessengerComponent>().
-		                                             messenger,
+		                           componentManager->singleton<DebugMessengerComponent>().messenger,
 		                           nullptr);
 		//instance.destroySurfaceKHR(surface,allocationCallbacks);
 		instance.destroySurfaceKHR(surface);

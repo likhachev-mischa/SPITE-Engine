@@ -58,12 +58,35 @@ namespace spite
 		return imageView;
 	}
 
+	vk::Sampler createSampler(const vk::Device device,
+		const vk::AllocationCallbacks& allocationCallbacks)
+	{
+		vk::SamplerCreateInfo samplerCreateInfo({},
+		                                        vk::Filter::eLinear,
+		                                        vk::Filter::eLinear,
+		                                        vk::SamplerMipmapMode::eLinear,
+		                                        vk::SamplerAddressMode::eClampToEdge,
+		                                        vk::SamplerAddressMode::eClampToEdge,
+		                                        vk::SamplerAddressMode::eClampToEdge,
+		                                        {},
+		                                        vk::False,
+		                                        {},
+		                                        vk::False,
+		                                        {},
+		                                        {},
+		                                        {},
+		                                        vk::BorderColor::eFloatOpaqueWhite);
+		auto [result, sampler] = device.createSampler(samplerCreateInfo, &allocationCallbacks);
+		SASSERT_VULKAN(result);
+		return sampler;
+	}
+
 	std::vector<vk::Framebuffer> createFramebuffers(const sizet swapchainImagesCount,
-		const vk::Device& device,
-		const std::vector<vk::ImageView>& imageViews,
-		const vk::Extent2D& swapchainExtent,
-		const vk::RenderPass& renderPass,
-		const vk::AllocationCallbacks* pAllocationCallbacks)
+	                                                const vk::Device& device,
+	                                                const std::vector<vk::ImageView>& imageViews,
+	                                                const vk::Extent2D& swapchainExtent,
+	                                                const vk::RenderPass& renderPass,
+	                                                const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
 		std::vector<vk::Framebuffer> framebuffers;
 		framebuffers.resize(swapchainImagesCount);

@@ -94,25 +94,35 @@ namespace spite
 		u32 transferQueueIndex = 0;
 	};
 
-	struct GeometryRenderPassComponent : ISingletonComponent
+	struct RenderPassComponent : IComponent
 	{
 		vk::RenderPass renderPass;
 	};
 
-	struct GeometryFramebufferComponent : ISingletonComponent
+	struct FramebufferComponent : IComponent
 	{
 		std::vector<vk::Framebuffer> framebuffers{};
 	};
 
-	struct DepthRenderPassComponent : ISingletonComponent
-	{
-		vk::RenderPass renderPass;
-	};
+	//struct GeometryRenderPassComponent : ISingletonComponent
+	//{
+	//	vk::RenderPass renderPass;
+	//};
 
-	struct DepthFramebufferComponent : ISingletonComponent
-	{
-		std::vector<vk::Framebuffer> framebuffers{};
-	};
+	//struct GeometryFramebufferComponent : ISingletonComponent
+	//{
+	//	std::vector<vk::Framebuffer> framebuffers{};
+	//};
+
+	//struct DepthRenderPassComponent : ISingletonComponent
+	//{
+	//	vk::RenderPass renderPass;
+	//};
+
+	//struct DepthFramebufferComponent : ISingletonComponent
+	//{
+	//	std::vector<vk::Framebuffer> framebuffers{};
+	//};
 
 	struct FrameDataComponent : ISingletonComponent
 	{
@@ -315,10 +325,12 @@ namespace spite
 		Image positionImage;
 		Image normalsImage;
 		Image albedoImage;
+		Image materialImage;
 
 		vk::ImageView positionImageView;
-		vk::ImageView normailImageView;
+		vk::ImageView normalImageView;
 		vk::ImageView albedoImageView;
+		vk::ImageView materialImageView;
 	};
 
 	struct PipelineCreateRequest : IEventComponent
