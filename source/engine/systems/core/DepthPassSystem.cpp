@@ -7,27 +7,29 @@ namespace spite
 	{
 		m_modelQuery = m_entityService->queryBuilder()->buildQuery<MeshComponent>();
 
-		requireComponent(typeid(DepthPipelineTag));
+		//requireComponent(typeid(MeshComponent));
+		//requireComponent(typeid(PipelineComponent));
+		//requireComponent(typeid(DepthPipelineTag));
 	}
 
 	void DepthPassSystem::onUpdate(float deltaTime)
 	{
-		FrameDataComponent& frameData = m_entityService->componentManager()->singleton<
+		FrameDataComponent& frameData = m_entityService->componentManager()->getSingleton<
 			FrameDataComponent>();
 
 		u32 imageIndex = frameData.imageIndex;
 		u32 currentFrame = frameData.currentFrame;
 
-		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->singleton<
+		SwapchainComponent& swapchainComponent = m_entityService->componentManager()->getSingleton<
 			SwapchainComponent>();
 		vk::SwapchainKHR swapchain = swapchainComponent.swapchain;
 		vk::Extent2D extent = swapchainComponent.extent;
 
-		CommandBufferComponent& cbComponent = m_entityService->componentManager()->singleton<
+		CommandBufferComponent& cbComponent = m_entityService->componentManager()->getSingleton<
 			CommandBufferComponent>();
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()->
-			singleton<SynchronizationComponent>();
+			getSingleton<SynchronizationComponent>();
 
 		Entity depthRenderPassEntity = m_entityService->entityManager()->getNamedEntity("DepthRenderPass");
 
@@ -82,6 +84,6 @@ namespace spite
 			                             0,
 			                             meshComponent.indexCount);
 		}
-		endSecondaryCommandBuffer(cbComponent.depthBuffers[currentFrame]);
+		endCommandBuffer(cbComponent.depthBuffers[currentFrame]);
 	}
 }

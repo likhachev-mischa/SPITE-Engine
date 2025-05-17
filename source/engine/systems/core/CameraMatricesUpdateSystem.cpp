@@ -29,7 +29,7 @@ namespace spite
 
 		//TODO: store aspect in swapchain
 
-		auto& swapchainComponent = m_entityService->componentManager()->singleton<
+		auto& swapchainComponent = m_entityService->componentManager()->getSingleton<
 			SwapchainComponent>();
 		float aspect = swapchainComponent.extent.width / static_cast<float>(swapchainComponent.
 			extent.height);

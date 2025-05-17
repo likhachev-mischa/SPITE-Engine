@@ -24,11 +24,11 @@ namespace spite
 		controllableEntitySingleton.entity = camera;
 		componentManager->createSingleton(controllableEntitySingleton);
 
-		auto& physicalDeviceComponent = componentManager->singleton<
+		auto& physicalDeviceComponent = componentManager->getSingleton<
 			PhysicalDeviceComponent>();
-		auto queueIndices = componentManager->singleton<DeviceComponent>().
+		auto queueIndices = componentManager->getSingleton<DeviceComponent>().
 		                                      queueFamilyIndices;
-		auto gpuAllocator = componentManager->singleton<GpuAllocatorComponent>().allocator;
+		auto gpuAllocator = componentManager->getSingleton<GpuAllocatorComponent>().allocator;
 
 		UniformBufferSharedComponent cameraUbo;
 

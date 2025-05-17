@@ -62,9 +62,9 @@ namespace spite
 		const vk::AllocationCallbacks& allocationCallbacks)
 	{
 		vk::SamplerCreateInfo samplerCreateInfo({},
-		                                        vk::Filter::eLinear,
-		                                        vk::Filter::eLinear,
-		                                        vk::SamplerMipmapMode::eLinear,
+		                                        vk::Filter::eNearest,
+		                                        vk::Filter::eNearest,
+		                                        vk::SamplerMipmapMode::eNearest,
 		                                        vk::SamplerAddressMode::eClampToEdge,
 		                                        vk::SamplerAddressMode::eClampToEdge,
 		                                        vk::SamplerAddressMode::eClampToEdge,
@@ -75,7 +75,7 @@ namespace spite
 		                                        {},
 		                                        {},
 		                                        {},
-		                                        vk::BorderColor::eFloatOpaqueWhite);
+		                                        vk::BorderColor::eFloatOpaqueBlack);
 		auto [result, sampler] = device.createSampler(samplerCreateInfo, &allocationCallbacks);
 		SASSERT_VULKAN(result);
 		return sampler;

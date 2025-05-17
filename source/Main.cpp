@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 		new CameraCreateSystem,
 		new ModelLoadSystem,
 		new ShaderCreateSystem,
-		new PipelineCreateSystem,
+		new GeometryPipelineCreateSystem,
 
 		new MovementDirectionControlSystem,
 		new RotationControlSystem,
@@ -53,11 +53,16 @@ int main(int argc, char* argv[])
 		new TransformationMatrixSystem,
 		new CameraMatricesUpdateSystem,
 		new CameraUboUpdateSystem,
+
 		new WaitForFrameSystem,
 		new DescriptorUpdateSystem,
 		
 		new DepthPassSystem,
-		new RenderSystem,
+		new GeometryPassSystem,
+		new LightPassSystem,
+
+		new PresentationSystem,
+
 		new CleanupSystem,
 	};
 
@@ -71,18 +76,20 @@ int main(int argc, char* argv[])
 	ModelLoadRequest modelLoadRequest;
 	modelLoadRequest.entity = entity1;
 	modelLoadRequest.objFilePath = "./models/cube.obj";
-	modelLoadRequest.vertShaderPath = "./shaders/vert.spv";
-	modelLoadRequest.fragShaderPath = "./shaders/frag.spv";
+	modelLoadRequest.vertShaderPath = "./shaders/geometryVert.spv";
+	modelLoadRequest.fragShaderPath = "./shaders/geometryFrag.spv";
 	world.service()->entityEventManager()->createEvent(std::move(modelLoadRequest));
 
 	ModelLoadRequest modelLoadRequest2;
 	modelLoadRequest2.objFilePath = "./models/cube.obj";
-	modelLoadRequest2.vertShaderPath = "./shaders/vert.spv";
-	modelLoadRequest2.fragShaderPath = "./shaders/frag2.spv";
+	modelLoadRequest2.vertShaderPath = "./shaders/geometryVert.spv";
+	modelLoadRequest2.fragShaderPath = "./shaders/geometryFrag.spv";
 	world.service()->entityEventManager()->createEvent(std::move(modelLoadRequest2));
 
 	world.commitSystemsStructuralChange();
+	world.start();
 	world.enable();
+	//world.commitSystemsStructuralChange();
 
 	Time time;
 	while (!windowManager->shouldTerminate())

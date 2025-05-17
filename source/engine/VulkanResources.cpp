@@ -343,16 +343,28 @@ namespace spite
 		return imageViews;
 	}
 
+
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
-	                                                  const vk::DescriptorType& type,
-	                                                  const u32 bindingIndex,
-	                                                  const vk::ShaderStageFlags& stage,
+	                                                  const std::vector<DescriptorLayoutData>&
+	                                                  descriptorData,
+	                                                  //const vk::DescriptorType& type,
+	                                                  //const u32 bindingIndex,
+	                                                  //const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks*
 	                                                  pAllocationCallbacks)
 	{
-		vk::DescriptorSetLayoutBinding uboLayoutBinding(bindingIndex, type, 1, stage, {});
 
-		vk::DescriptorSetLayoutCreateInfo layoutInfo({}, 1, &uboLayoutBinding);
+		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
+		layoutBindings.reserve(descriptorData.size());
+		for (const auto & data : descriptorData)
+		{
+			layoutBindings.emplace_back(data.bindingIndex, data.type, 1, data.shaderStages);
+		}
+
+		//vk::DescriptorSetLayoutBinding uboLayoutBinding(bindingIndex, type, 1, stage, {});
+
+		//vk::DescriptorSetLayoutCreateInfo layoutInfo({}, 1, &uboLayoutBinding);
+		vk::DescriptorSetLayoutCreateInfo layoutInfo({}, layoutBindings.size(), layoutBindings.data());
 
 		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(
 			layoutInfo,

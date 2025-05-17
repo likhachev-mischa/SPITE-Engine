@@ -60,7 +60,7 @@ namespace spite
 		void createDescriptors(const Entity shaderEntity, const vk::ShaderStageFlagBits stage);
 	};
 
-	class PipelineCreateSystem : public SystemBase
+	class GeometryPipelineCreateSystem : public SystemBase
 	{
 		std::type_index m_pipelineCreateRequestType = typeid(PipelineCreateRequest);
 
@@ -154,11 +154,30 @@ namespace spite
 		void onUpdate(float deltaTime) override;
 	};
 
-	class RenderSystem : public SystemBase
+	class GeometryPassSystem : public SystemBase
 	{
-	private:
 		Query1<PipelineComponent>* m_pipelineQuery;
 		Query2<MeshComponent, PipelineReference>* m_modelQuery;
+
+	public:
+		void onInitialize() override;
+
+		void onUpdate(float deltaTime) override;
+	};
+
+	class LightPassSystem : public SystemBase
+	{
+		void onInitialize() override;
+
+	public:
+		void onUpdate(float deltaTime) override;
+	};
+
+	class PresentationSystem : public SystemBase
+	{
+	private:
+		//Query1<PipelineComponent>* m_pipelineQuery;
+		//Query2<MeshComponent, PipelineReference>* m_modelQuery;
 
 	public:
 		void onInitialize() override;

@@ -5,7 +5,7 @@
 
 namespace spite
 {
-	void PipelineCreateSystem::onInitialize()
+	void GeometryPipelineCreateSystem::onInitialize()
 	{
 		auto buildInfo = m_entityService->queryBuilder()->getQueryBuildInfo();
 		m_pipelineLayoutQuery = m_entityService->queryBuilder()->buildQuery<
@@ -14,16 +14,18 @@ namespace spite
 		buildInfo = m_entityService->queryBuilder()->getQueryBuildInfo();
 		m_pipelineQuery = m_entityService->queryBuilder()->buildQuery<PipelineComponent>(buildInfo);
 
-		requireComponent(m_pipelineCreateRequestType);
+		//requireComponent(m_pipelineCreateRequestType);
 	}
 
-	void PipelineCreateSystem::onUpdate(float deltaTime)
+	void GeometryPipelineCreateSystem::onUpdate(float deltaTime)
 	{
 		auto& requests = m_entityService->componentStorage()->getEventsAsserted<
 			PipelineCreateRequest>();
 
-		for (auto request : requests)
+		for (sizet i = 0, size = requests.size();i<size;++i)
 		{
+			auto request = requests[i];
+
 			auto& shaderReference = m_entityService->componentManager()->getComponent<
 				ShaderReference>(request.referencedEntity);
 
@@ -66,7 +68,7 @@ namespace spite
 		m_entityService->entityEventManager()->rewindEvent(m_pipelineCreateRequestType);
 	}
 
-	Entity PipelineCreateSystem::findCompatiblePipelineLayout(const ShaderReference& shaderRef)
+	Entity GeometryPipelineCreateSystem::findCompatiblePipelineLayout(const ShaderReference& shaderRef)
 	{
 		auto& layoutQuery = *m_pipelineLayoutQuery;
 
@@ -100,10 +102,10 @@ namespace spite
 		return Entity::undefined();
 	}
 
-	Entity PipelineCreateSystem::createPipelineLayoutEntity(const ShaderReference& shaderRef)
+	Entity GeometryPipelineCreateSystem::createPipelineLayoutEntity(const ShaderReference& shaderRef)
 	{
-		auto device = m_entityService->componentManager()->singleton<DeviceComponent>().device;
-		auto allocationCallbacks = &m_entityService->componentManager()->singleton<
+		auto device = m_entityService->componentManager()->getSingleton<DeviceComponent>().device;
+		auto allocationCallbacks = &m_entityService->componentManager()->getSingleton<
 			AllocationCallbacksComponent>().allocationCallbacks;
 
 		std::vector<vk::DescriptorSetLayout> layouts;
@@ -139,7 +141,7 @@ namespace spite
 		return layoutEntity;
 	}
 
-	Entity PipelineCreateSystem::findCompatiblePipeline(const Entity layoutEntity,
+	Entity GeometryPipelineCreateSystem::findCompatiblePipeline(const Entity layoutEntity,
 	                                                    const ShaderReference& shaderReference,
 	                                                    const VertexInputComponent& vertexInput)
 	{
@@ -181,7 +183,7 @@ namespace spite
 		return Entity::undefined();
 	}
 
-	Entity PipelineCreateSystem::createPipelineEntity(const Entity layoutEntity,
+	Entity GeometryPipelineCreateSystem::createPipelineEntity(const Entity layoutEntity,
 	                                                  const VertexInputComponent&
 	                                                  vertexInputComponent,
 	                                                  const ShaderReference& shaderReference)
@@ -211,15 +213,15 @@ namespace spite
 			vertexData.attributeDescriptions.data());
 
 
-		vk::Device device = componentManager->singleton<DeviceComponent>().device;
+		vk::Device device = componentManager->getSingleton<DeviceComponent>().device;
 		vk::PipelineLayout layout = componentManager->getComponent<PipelineLayoutComponent>(
 			layoutEntity).layout;
-		vk::Extent2D extent = componentManager->singleton<SwapchainComponent>().extent;
+		vk::Extent2D extent = componentManager->getSingleton<SwapchainComponent>().extent;
 		Entity geometryRenderPassEntity = m_entityService->entityManager()->getNamedEntity("GeometryRenderPass");
 		vk::RenderPass renderPass = componentManager->getComponent<RenderPassComponent>(geometryRenderPassEntity).renderPass;
 		//vk::RenderPass renderPass = componentManager->singleton<GeometryRenderPassComponent>().
 		  //                                            renderPass;
-		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->singleton<
+		AllocationCallbacksComponent& allocationCallbacksComponent = componentManager->getSingleton<
 			AllocationCallbacksComponent>();
 
 		vk::Pipeline pipeline = createGeometryPipeline(device,

@@ -233,7 +233,7 @@
     <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\systems\core\PipelineCreateSystem.cpp">
+    <ClCompile Include="source\engine\systems\core\GeometryPipelineCreateSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp">
@@ -251,7 +251,7 @@
     <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\systems\core\RenderSystem.cpp">
+    <ClCompile Include="source\engine\systems\core\PresentationSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp">
@@ -273,6 +273,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\engine\Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\VulkanLighting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\GeometryPassSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine\systems\core\LightPassSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

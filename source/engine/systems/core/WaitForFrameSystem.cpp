@@ -11,18 +11,18 @@ namespace spite
 
 	void WaitForFrameSystem::onUpdate(float deltaTime)
 	{
-		FrameDataComponent& frameData = m_entityService->componentManager()->singleton<
+		FrameDataComponent& frameData = m_entityService->componentManager()->getSingleton<
 			FrameDataComponent>();
 
 		u32 imageIndex = frameData.imageIndex;
 		u32 currentFrame = frameData.currentFrame;
 
-		vk::SwapchainKHR swapchain = m_entityService->componentManager()->singleton<
+		vk::SwapchainKHR swapchain = m_entityService->componentManager()->getSingleton<
 			SwapchainComponent>().swapchain;
 
 		SynchronizationComponent& synchronizationComponent = m_entityService->componentManager()
-			->singleton<SynchronizationComponent>();
-		vk::Device device = m_entityService->componentManager()->singleton<DeviceComponent>()
+			->getSingleton<SynchronizationComponent>();
+		vk::Device device = m_entityService->componentManager()->getSingleton<DeviceComponent>()
 		                                   .device;
 
 		vk::Result result = waitForFrame(device,

@@ -18,7 +18,7 @@ namespace spite
 	public:
 		void onUpdate(float deltaTime) override
 		{
-			auto actionMap = m_entityService->componentManager()->singleton<
+			auto actionMap = m_entityService->componentManager()->getSingleton<
 				InputManagerComponent>().inputManager->inputActionMap();
 
 			if (!actionMap->isActionActive(m_yAxis) && !actionMap->isActionActive(m_xAxis))
@@ -26,7 +26,7 @@ namespace spite
 				return;
 			}
 
-			auto targetEntity = m_entityService->componentManager()->singleton<
+			auto targetEntity = m_entityService->componentManager()->getSingleton<
 				ControllableEntitySingleton>().entity;
 			auto& moveDirection = m_entityService->componentManager()->getComponent<
 				MovementDirectionComponent>(targetEntity);
@@ -50,10 +50,10 @@ namespace spite
 	public:
 		void onUpdate(float deltaTime) override
 		{
-			auto inputManager = m_entityService->componentManager()->singleton<
+			auto inputManager = m_entityService->componentManager()->getSingleton<
 				InputManagerComponent>().inputManager;
 
-			auto targetEntity = m_entityService->componentManager()->singleton<
+			auto targetEntity = m_entityService->componentManager()->getSingleton<
 				ControllableEntitySingleton>().entity;
 			auto& transform = m_entityService->componentManager()->getComponent<TransformComponent>(
 				targetEntity);

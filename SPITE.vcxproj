@@ -226,11 +226,13 @@
     <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\GeometryPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\LightPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\PipelineCreateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\RenderSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\GeometryPipelineCreateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\PresentationSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp" />
@@ -240,6 +242,7 @@
     <ClCompile Include="source\engine\VulkanDepth.cpp" />
     <ClCompile Include="source\engine\VulkanGeometry.cpp" />
     <ClCompile Include="source\engine\VulkanImages.cpp" />
+    <ClCompile Include="source\engine\VulkanLighting.cpp" />
     <ClCompile Include="source\engine\VulkanRendering.cpp" />
     <ClCompile Include="source\engine\VulkanResources.cpp" />
     <ClCompile Include="source\engine\VulkanAllocator.cpp" />

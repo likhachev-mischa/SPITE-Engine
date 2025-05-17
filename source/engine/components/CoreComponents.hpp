@@ -36,6 +36,13 @@ namespace spite
 		bool isDirty = true;
 	};
 
+	struct PointLightComponent : IComponent
+	{
+		glm::vec3 color;
+		float intensity;
+		float radius;
+	};
+
 	struct CameraMatricesComponent : IComponent
 	{
 		glm::mat4 view;

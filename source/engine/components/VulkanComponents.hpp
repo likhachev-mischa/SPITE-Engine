@@ -141,8 +141,9 @@ namespace spite
 	struct CommandBufferComponent : ISingletonComponent
 	{
 		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryBuffers{};
-		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> secondaryBuffers{};
+		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> geometryBuffers{};
 		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> depthBuffers{};
+		std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> lightBuffers{};
 		//	u32 currentBufferIndex = 0;
 	};
 
@@ -243,6 +244,7 @@ namespace spite
 		}
 	};
 
+	//TODO REMOVE
 	//is attached to model entity 
 	struct VertexInputComponent : IComponent
 	{
@@ -325,12 +327,19 @@ namespace spite
 		Image positionImage;
 		Image normalsImage;
 		Image albedoImage;
+		//unused for now
 		Image materialImage;
 
 		vk::ImageView positionImageView;
 		vk::ImageView normalImageView;
 		vk::ImageView albedoImageView;
+		//unused for now
 		vk::ImageView materialImageView;
+	};
+
+	struct GBufferSampler : ISingletonComponent
+	{
+		vk::Sampler sampler;
 	};
 
 	struct PipelineCreateRequest : IEventComponent

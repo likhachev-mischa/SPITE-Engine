@@ -5,7 +5,6 @@ namespace spite
 {
 	
 	vk::RenderPass createGeometryRenderPass(const vk::Device& device,
-	                                        const vk::Format& imageFormat,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
 
 	vk::Pipeline createGeometryPipeline(const vk::Device& device,

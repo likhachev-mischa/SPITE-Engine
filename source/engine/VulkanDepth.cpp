@@ -13,8 +13,8 @@ namespace spite
 		                                          vk::Format::eD32Sfloat,
 		                                          vk::SampleCountFlagBits::e1,
 		                                          vk::AttachmentLoadOp::eClear,
-		                                          vk::AttachmentStoreOp::eDontCare,
-		                                          vk::AttachmentLoadOp::eDontCare,
+		                                          vk::AttachmentStoreOp::eStore,
+		                                          vk::AttachmentLoadOp::eClear,
 		                                          vk::AttachmentStoreOp::eStore,
 		                                          vk::ImageLayout::eUndefined,
 		                                          vk::ImageLayout::eDepthStencilAttachmentOptimal);

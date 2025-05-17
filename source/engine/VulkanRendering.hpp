@@ -19,9 +19,32 @@ namespace spite
 	                                  const vk::DeviceSize& indicesOffset,
 	                                  const u32 indicesCount);
 
-	void endSecondaryCommandBuffer(const vk::CommandBuffer& commandBuffer);
+	void endCommandBuffer(const vk::CommandBuffer& commandBuffer);
 
-	void recordPrimaryColorCommandBuffer(const vk::CommandBuffer& commandBuffer,
+	void beginCommandBuffer(const vk::CommandBuffer commandBuffer);
+
+	void recordDepthPass(const vk::CommandBuffer primaryCommandBuffer,
+		const vk::CommandBuffer depthCommandBuffer,
+		const vk::RenderPass depthRenderPass,
+		const vk::Framebuffer depthFramebuffer,
+		const vk::Extent2D swapchainExtent,
+		const vk::Image depthImage);
+
+	void recordGeometryPass(const vk::CommandBuffer primaryCommandBuffer,
+		const vk::CommandBuffer geometryCommandBuffer,
+		const vk::RenderPass geometryRenderPass,
+		const vk::Framebuffer geometryFramebuffer,
+		const vk::Extent2D swapchainExtent,
+		const std::array<vk::Image, 3>& gBufferImages);
+
+	void recordLightPass(const vk::CommandBuffer primaryCommandBuffer,
+		const vk::CommandBuffer lightingCommandBuffer,
+		const vk::RenderPass lightingRenderPass,
+		const vk::Framebuffer lightingFramebuffer,
+		const vk::Extent2D swapchainExtent,
+		const vk::Image swapchainImage);
+
+	void recordPrimaryCommandBuffer(const vk::CommandBuffer& commandBuffer,
 	                                const vk::Extent2D& swapchainExtent,
 	                                const vk::RenderPass& geometryRenderPass,
 	                                const vk::Framebuffer& geometryFramebuffer,

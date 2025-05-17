@@ -13,15 +13,15 @@ namespace spite
 		m_uboSharedQuery = m_entityService->queryBuilder()->buildQuery<
 			UniformBufferSharedComponent>();
 
-		requireComponent(typeid(PipelineComponent));
+		//requireComponent(typeid(PipelineComponent));
 	}
 
 	void DescriptorUpdateSystem::onUpdate(float deltaTime)
 	{
-		u32 currentFrame = m_entityService->componentManager()->singleton<FrameDataComponent>().
+		u32 currentFrame = m_entityService->componentManager()->getSingleton<FrameDataComponent>().
 		                                    currentFrame;
 
-		auto device = m_entityService->componentManager()->singleton<DeviceComponent>().device;
+		auto device = m_entityService->componentManager()->getSingleton<DeviceComponent>().device;
 
 		auto& descriptorQuery = *m_descriptorQuery;
 		auto& uboSharedQuery = *m_uboSharedQuery;

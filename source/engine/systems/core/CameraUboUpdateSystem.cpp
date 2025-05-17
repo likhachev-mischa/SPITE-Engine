@@ -4,7 +4,7 @@ namespace spite
 {
 	void CameraUboUpdateSystem::onUpdate(float deltaTime)
 	{
-		Entity camera = m_entityService->componentManager()->singleton<CameraSingleton>().camera;
+		Entity camera = m_entityService->componentManager()->getSingleton<CameraSingleton>().camera;
 
 		auto& cameraUbo = m_entityService->componentManager()->getComponent<
 			UniformBufferSharedComponent>(camera);
@@ -12,7 +12,7 @@ namespace spite
 		auto& cameraMatrices = m_entityService->componentManager()->getComponent<
 			CameraMatricesComponent>(camera);
 
-		u32 currentFrame = m_entityService->componentManager()->singleton<FrameDataComponent>().
+		u32 currentFrame = m_entityService->componentManager()->getSingleton<FrameDataComponent>().
 		                                    currentFrame;
 
 		glm::mat4 viewProjection = cameraMatrices.projection * cameraMatrices.view;

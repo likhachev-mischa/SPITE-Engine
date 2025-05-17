@@ -83,10 +83,19 @@ namespace spite
 	                                                     const vk::AllocationCallbacks*
 	                                                     pAllocationCallbacks);
 
+	struct DescriptorLayoutData
+	{
+		vk::DescriptorType type;
+		u32 bindingIndex;
+		vk::ShaderStageFlags shaderStages;
+	};
+
 	vk::DescriptorSetLayout createDescriptorSetLayout(const vk::Device& device,
-	                                                  const vk::DescriptorType& type,
-	                                                  const u32 bindingIndex,
-	                                                  const vk::ShaderStageFlags& stage,
+	                                                  const std::vector<DescriptorLayoutData>&
+	                                                  descriptorData,
+	                                                  //const vk::DescriptorType& type,
+	                                                  //const u32 bindingIndex,
+	                                                  //const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks*
 	                                                  pAllocationCallbacks);
 

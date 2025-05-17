@@ -656,6 +656,7 @@ namespace spite
 		virtual ~IEventTable() = default;
 	};
 
+	//TODO : FIX ITERATORS ON COMPONENT COLLECTIONS!!!!!!!!!!!!!!
 	template <t_event_component T>
 	class EventComponentTable : public IEventTable
 	{
@@ -1166,7 +1167,7 @@ namespace spite
 		}
 
 		template <t_singleton_component TComponent>
-		TComponent& singleton()
+		TComponent& getSingleton()
 		{
 			return m_storage->getSingleton<TComponent>().component();
 		}
