@@ -295,11 +295,13 @@ namespace spite
 			{
 			case PRESS: if (isKeyPressed && !isKeyHeld)
 				{
+				//SDEBUG_LOG("KEY %u32 PRESSED\n", key);
 					//m_inputActionsMap[bindingAction.action].value = 1.f;
 					m_inputActionsMap.at(bindingAction.action).value = 1.f;
 				}
 				else
 				{
+				//SDEBUG_LOG("KEY %u32 PRESS INACTIVE\n", key);
 					//	m_inputActionsMap[bindingAction.action].value = 0.f;
 					m_inputActionsMap.at(bindingAction.action).value = 0.f;
 				}
@@ -307,10 +309,12 @@ namespace spite
 			case RELEASE: if (isKeyReleased)
 				{
 					//	m_inputActionsMap[bindingAction.action].value = 1.f;
+				//SDEBUG_LOG("KEY %u32 RELEASED\n", key);
 					m_inputActionsMap.at(bindingAction.action).value = 1.f;
 				}
 				else
 				{
+				//SDEBUG_LOG("KEY %u32 RELEASE INACTIVE\n", key);
 					//	m_inputActionsMap[bindingAction.action].value = 0.f;
 					m_inputActionsMap.at(bindingAction.action).value = 0.f;
 				}
@@ -318,22 +322,26 @@ namespace spite
 			//if current holding time >= required holding time for triggering -> trigger action every frame
 			case HOLD: if (holdingTime >= bindingAction.scale)
 				{
+				//SDEBUG_LOG("KEY %u32 HELD\n", key);
 					//	m_inputActionsMap[bindingAction.action].value = holdingTime;
 					m_inputActionsMap.at(bindingAction.action).value = holdingTime;
 				}
 				else
 				{
+				//SDEBUG_LOG("KEY %u32 INACTIVE\n", key);
 					//	m_inputActionsMap[bindingAction.action].value = 0.f;
 					m_inputActionsMap.at(bindingAction.action).value = 0.f;
 				}
 				break;
 			case AXIS: if (isKeyHeld | isKeyPressed)
 				{
+				//SDEBUG_LOG("KEY %u32 AXIS ACTIVE\n", key);
 					//m_inputActionsMap[bindingAction.action].value = bindingAction.scale;
 					m_inputActionsMap.at(bindingAction.action).value = bindingAction.scale;
 				}
 				else
 				{
+				//SDEBUG_LOG("KEY %u32 AXIS INACTIVE\n", key);
 					m_inputActionsMap.at(bindingAction.action).value = 0.f;
 				}
 				break;

@@ -134,17 +134,6 @@ namespace spite
 		componentManager->createSingleton(commandPoolComponent);
 
 		CommandBufferComponent cbComponent;
-		//cbComponent.primaryBuffers = createGraphicsCommandBuffers(
-		//	device,
-		//	commandPoolComponent.graphicsCommandPool,
-		//	vk::CommandBufferLevel::ePrimary,
-		//	MAX_FRAMES_IN_FLIGHT);
-		//cbComponent.secondaryBuffers = createGraphicsCommandBuffers(
-		//	device,
-		//	commandPoolComponent.graphicsCommandPool,
-		//	vk::CommandBufferLevel::eSecondary,
-		//	MAX_FRAMES_IN_FLIGHT);
-
 		std::copy_n(
 			createGraphicsCommandBuffers(device,
 			                             commandPoolComponent.graphicsCommandPool,
@@ -248,6 +237,90 @@ namespace spite
 			&allocationCallbacks);
 		componentManager->addComponent(geometryRenderPassEntity,
 		                               std::move(geometryFramebufferComponent));
+		Entity geometryVertShaderEntity = m_entityService->entityManager()->createEntity();
+		ShaderComponent geomVertShader;
+		geomVertShader.filePath = "./shaders/geometryVert.spv";
+		geomVertShader.stage = vk::ShaderStageFlagBits::eVertex;
+		geomVertShader.shaderModule = createShaderModule(device, readBinaryFile(geomVertShader.filePath.c_str()), &allocationCallbacks);
+		componentManager->addComponent(geometryVertShaderEntity, geomVertShader);
+
+		Entity geometryFragShaderEntity = m_entityService->entityManager()->createEntity();
+		ShaderComponent geomFragShader;
+		geomFragShader.filePath = "./shaders/geometryFrag.spv";
+		geomFragShader.stage = vk::ShaderStageFlagBits::eFragment;
+		geomFragShader.shaderModule = createShaderModule(device, readBinaryFile(geomFragShader.filePath.c_str()), &allocationCallbacks);
+		componentManager->addComponent(geometryFragShaderEntity, geomFragShader);
+
+		auto geomVertDescriptorSetLayout = createDescriptorSetLayout(
+			device,
+			{{vk::DescriptorType::eUniformBuffer, 0, vk::ShaderStageFlagBits::eVertex,}},
+			&allocationCallbacks);
+		Entity geomVertDescriptorEntity = createDescriptorEntity(
+			geomVertDescriptorSetLayout,
+			vk::ShaderStageFlagBits::eVertex,
+			vk::DescriptorType::eUniformBuffer);
+
+		Entity geomFragDescriptorLayoutEntity = m_entityService->entityManager()->createEntity("TextureDescriptorLayout");
+		auto geomFragDescriptorSetLayout = createDescriptorSetLayout(device, { {vk::DescriptorType::eCombinedImageSampler,0,vk::ShaderStageFlagBits::eFragment} },&allocationCallbacks);
+		DescriptorSetLayoutComponent textureLayoutComponent;
+		textureLayoutComponent.bindingIndex = 0;
+		textureLayoutComponent.layout = geomFragDescriptorSetLayout;
+		textureLayoutComponent.stages = vk::ShaderStageFlagBits::eFragment;
+		textureLayoutComponent.type = vk::DescriptorType::eCombinedImageSampler;
+		m_entityService->componentManager()->addComponent(geomFragDescriptorLayoutEntity, textureLayoutComponent);
+
+		auto geomPipelineLayout = createPipelineLayout(device,
+		                                                {geomVertDescriptorSetLayout,geomFragDescriptorSetLayout},
+		                                                sizeof(glm::mat4),
+		                                                &allocationCallbacks);
+		Entity geomPipelineLayoutEntity = m_entityService->entityManager()->createEntity();
+		PipelineLayoutComponent geomPipelineLayoutComponent;
+		geomPipelineLayoutComponent.descriptorSetLayoutEntities = {geomVertDescriptorEntity, geomFragDescriptorLayoutEntity};
+		geomPipelineLayoutComponent.layout = geomPipelineLayout;
+		componentManager->addComponent(geomPipelineLayoutEntity, geomPipelineLayoutComponent);
+
+		VertexInputData geomVertInput;
+
+		geomVertInput.bindingDescriptions.push_back({0, sizeof(Vertex)});
+		geomVertInput.attributeDescriptions.reserve(1);
+		geomVertInput.attributeDescriptions.push_back({0, 0, vk::Format::eR32G32B32Sfloat});
+		geomVertInput.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
+		geomVertInput.attributeDescriptions.push_back({2, 0, vk::Format::eR32G32Sfloat});
+		vk::PipelineVertexInputStateCreateInfo geomVertexInputInfo(
+			{},
+			geomVertInput.bindingDescriptions.size(),
+			geomVertInput.bindingDescriptions.data(),
+			geomVertInput.attributeDescriptions.size(),
+			geomVertInput.attributeDescriptions.data());
+
+		vk::PipelineShaderStageCreateInfo geomVertStage(
+			{},
+			vk::ShaderStageFlagBits::eVertex,
+			geomVertShader.shaderModule,
+			"main");
+		vk::PipelineShaderStageCreateInfo geomFragStage(
+			{},
+			vk::ShaderStageFlagBits::eFragment,
+			geomFragShader.shaderModule,
+			"main");
+
+		auto geomPipeline = createGeometryPipeline(device,
+		                                         geomPipelineLayout,
+		                                         swapExtent,
+		                                         geometryRenderPassComponent.renderPass,
+		                                         {geomVertStage,geomFragStage},
+		                                         geomVertexInputInfo,
+		                                         &allocationCallbacks);
+
+		Entity geomPipelineEntity = m_entityService->entityManager()->
+		                                              createEntity("GeometryPipeline");
+		PipelineComponent geomPipelineComponent;
+		geomPipelineComponent.vertexInputData = geomVertInput;
+		geomPipelineComponent.pipeline = geomPipeline;
+		geomPipelineComponent.pipelineLayoutEntity = geomPipelineLayoutEntity;
+		componentManager->addComponent(geomPipelineEntity,geomPipelineComponent);
+
+
 		//componentManager->createSingleton(std::move(geometryFramebufferComponent));
 
 		//TEMPORARY
@@ -283,36 +356,15 @@ namespace spite
 			device,
 			{{vk::DescriptorType::eUniformBuffer, 0, vk::ShaderStageFlagBits::eVertex,}},
 			&allocationCallbacks);
-		auto depthDescriptorPool = createDescriptorPool(device,
-		                                                &allocationCallbacks,
-		                                                vk::DescriptorType::eUniformBuffer,
-		                                                MAX_FRAMES_IN_FLIGHT);
-		auto depthDescriptorSets = createDescriptorSets(device,
-		                                                depthDescriptorSetLayout,
-		                                                depthDescriptorPool,
-		                                                MAX_FRAMES_IN_FLIGHT);
+		Entity depthDescriptorEntity = createDescriptorEntity(
+			depthDescriptorSetLayout,
+			vk::ShaderStageFlagBits::eVertex,
+			vk::DescriptorType::eUniformBuffer);
 
 		auto depthPipelineLayout = createPipelineLayout(device,
 		                                                {depthDescriptorSetLayout},
 		                                                sizeof(glm::mat4),
 		                                                &allocationCallbacks);
-		Entity depthDescriptorEntity = m_entityService->entityManager()->createEntity();
-		DescriptorPoolComponent depthDescriptorPoolComponent;
-		depthDescriptorPoolComponent.maxSets = MAX_FRAMES_IN_FLIGHT;
-		depthDescriptorPoolComponent.pool = depthDescriptorPool;
-		componentManager->addComponent(depthDescriptorEntity, depthDescriptorPoolComponent);
-		DescriptorSetLayoutComponent depthDescriptorSetLayoutComponent;
-		depthDescriptorSetLayoutComponent.bindingIndex = 0;
-		depthDescriptorSetLayoutComponent.layout = depthDescriptorSetLayout;
-		depthDescriptorSetLayoutComponent.stages = vk::ShaderStageFlagBits::eVertex;
-		depthDescriptorSetLayoutComponent.type = vk::DescriptorType::eUniformBuffer;
-		componentManager->addComponent(depthDescriptorEntity, depthDescriptorSetLayoutComponent);
-		DescriptorSetsComponent depthDescriptorSetsComponent;
-		std::copy_n(depthDescriptorSets.begin(),
-		            MAX_FRAMES_IN_FLIGHT,
-		            depthDescriptorSetsComponent.descriptorSets.begin());
-		componentManager->addComponent(depthDescriptorEntity, depthDescriptorSetsComponent);
-
 		Entity depthPipelineLayoutEntity = m_entityService->entityManager()->createEntity();
 		PipelineLayoutComponent depthPipelineLayoutComponent;
 		depthPipelineLayoutComponent.descriptorSetLayoutEntities = {depthDescriptorEntity};
@@ -323,14 +375,14 @@ namespace spite
 
 		vertexInputData.bindingDescriptions.push_back({0, sizeof(Vertex)});
 
-		vertexInputData.attributeDescriptions.reserve(2);
+		vertexInputData.attributeDescriptions.reserve(1);
 		vertexInputData.attributeDescriptions.push_back({0, 0, vk::Format::eR32G32B32Sfloat});
-		vertexInputData.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
+		//vertexInputData.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
 		vk::PipelineVertexInputStateCreateInfo depthVertexInputInfo(
 			{},
 			1,
 			vertexInputData.bindingDescriptions.data(),
-			2,
+			1,
 			vertexInputData.attributeDescriptions.data());
 
 		vk::PipelineShaderStageCreateInfo depthShaderStageCreateInfo(
@@ -354,7 +406,7 @@ namespace spite
 		depthPipelineComponent.pipelineLayoutEntity = depthPipelineLayoutEntity;
 		componentManager->addComponent(depthPipelineEntity, depthPipelineComponent);
 		componentManager->addComponent<DepthPipelineTag>(depthPipelineEntity);
-		//
+
 		//LIGHTING
 		Entity lightRenderPassEntity = m_entityService->entityManager()->createEntity(
 			"LightRenderPass");
@@ -408,40 +460,36 @@ namespace spite
 				{vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment}
 			},
 			&allocationCallbacks);
-		auto lightDescriptorPool = createDescriptorPool(device,
-		                                                &allocationCallbacks,
-		                                                vk::DescriptorType::eCombinedImageSampler,
-		                                                MAX_FRAMES_IN_FLIGHT);
-		auto lightDescriptorSets = createDescriptorSets(device,
-		                                                lightDescriptorSetLayout,
-		                                                lightDescriptorPool,
-		                                                MAX_FRAMES_IN_FLIGHT);
+		Entity lightDescriptorEntity = createDescriptorEntity(
+			lightDescriptorSetLayout,
+			vk::ShaderStageFlagBits::eFragment,
+			vk::DescriptorType::eCombinedImageSampler);
+
+		auto lightDataDescriptorSetLayout = createDescriptorSetLayout(
+			device,
+			{{vk::DescriptorType::eUniformBuffer, 0, vk::ShaderStageFlagBits::eFragment}},
+			&allocationCallbacks);
+		Entity lightDataDescriptorEntity = createDescriptorEntity(
+			lightDataDescriptorSetLayout,
+			vk::ShaderStageFlagBits::eFragment,
+			vk::DescriptorType::eUniformBuffer);
+
+		//auto cameraLightDataDescriptorSetLayout = createDescriptorSetLayout(device,{{vk:}})
 
 		auto lightPipelineLayout = createPipelineLayout(device,
-		                                                {lightDescriptorSetLayout},
-		                                                sizeof(glm::mat4),
-		                                                &allocationCallbacks);
+		                                                {
+			                                                lightDescriptorSetLayout,
+			                                                lightDataDescriptorSetLayout
+		                                                },
+		                                                sizeof(glm::vec3),
+		                                                &allocationCallbacks,vk::ShaderStageFlagBits::eFragment);
 
-		Entity lightDescriptorEntity = m_entityService->entityManager()->createEntity();
-		DescriptorPoolComponent lightDescriptorPoolComponent;
-		lightDescriptorPoolComponent.maxSets = MAX_FRAMES_IN_FLIGHT;
-		lightDescriptorPoolComponent.pool = lightDescriptorPool;
-		componentManager->addComponent(lightDescriptorEntity, lightDescriptorPoolComponent);
-		DescriptorSetLayoutComponent lightDescriptorSetLayoutComponent;
-		lightDescriptorSetLayoutComponent.bindingIndex = 0;
-		lightDescriptorSetLayoutComponent.layout = lightDescriptorSetLayout;
-		lightDescriptorSetLayoutComponent.stages = vk::ShaderStageFlagBits::eFragment;
-		lightDescriptorSetLayoutComponent.type = vk::DescriptorType::eCombinedImageSampler;
-		componentManager->addComponent(lightDescriptorEntity, lightDescriptorSetLayoutComponent);
-		DescriptorSetsComponent lightDescriptorSetsComponent;
-		std::copy_n(lightDescriptorSets.begin(),
-		            MAX_FRAMES_IN_FLIGHT,
-		            lightDescriptorSetsComponent.descriptorSets.begin());
-		componentManager->addComponent(lightDescriptorEntity, lightDescriptorSetsComponent);
 
 		Entity lightPipelineLayoutEntity = m_entityService->entityManager()->createEntity();
 		PipelineLayoutComponent lightPipelineLayoutComponent;
-		lightPipelineLayoutComponent.descriptorSetLayoutEntities = {lightDescriptorEntity};
+		lightPipelineLayoutComponent.descriptorSetLayoutEntities = {
+			lightDescriptorEntity, lightDataDescriptorEntity
+		};
 		lightPipelineLayoutComponent.layout = lightPipelineLayout;
 		componentManager->addComponent(lightPipelineLayoutEntity, lightPipelineLayoutComponent);
 
@@ -471,6 +519,8 @@ namespace spite
 		gbufferSampler.sampler = createSampler(device, allocationCallbacks);
 		componentManager->createSingleton(gbufferSampler);
 
+		const auto& lightDescriptorSetsComponent = componentManager->getComponent<
+			DescriptorSetsComponent>(lightDescriptorEntity);
 		for (const auto& descriptorSet : lightDescriptorSetsComponent.descriptorSets)
 		{
 			setupLightDescriptors(device,
@@ -518,5 +568,44 @@ namespace spite
 
 		SDEBUG_LOG("VULKAN INITIALIZED\n")
 		//	requireComponent(typeid(VulkanInitRequest));
+	}
+
+	Entity VulkanInitSystem::createDescriptorEntity(
+		const vk::DescriptorSetLayout descriptorSetLayout,
+		const vk::ShaderStageFlags shaderStage,
+		const vk::DescriptorType descriptorType)
+	{
+		auto componentManager = m_entityService->componentManager();
+		auto device = componentManager->getSingleton<DeviceComponent>().device;
+		auto& allocationCallbacks = componentManager->getSingleton<AllocationCallbacksComponent>().
+		                                              allocationCallbacks;
+
+		auto descriptorPool = createDescriptorPool(device,
+		                                           &allocationCallbacks,
+		                                           descriptorType,
+		                                           MAX_FRAMES_IN_FLIGHT);
+		auto descriptorSets = createDescriptorSets(device,
+		                                           descriptorSetLayout,
+		                                           descriptorPool,
+		                                           MAX_FRAMES_IN_FLIGHT);
+
+		Entity descriptorEntity = m_entityService->entityManager()->createEntity();
+		DescriptorPoolComponent descriptorPoolComponent;
+		descriptorPoolComponent.maxSets = MAX_FRAMES_IN_FLIGHT;
+		descriptorPoolComponent.pool = descriptorPool;
+		componentManager->addComponent(descriptorEntity, descriptorPoolComponent);
+		DescriptorSetLayoutComponent descriptorSetLayoutComponent;
+		descriptorSetLayoutComponent.bindingIndex = 0;
+		descriptorSetLayoutComponent.layout = descriptorSetLayout;
+		descriptorSetLayoutComponent.stages = shaderStage;
+		descriptorSetLayoutComponent.type = descriptorType;
+		componentManager->addComponent(descriptorEntity, descriptorSetLayoutComponent);
+		DescriptorSetsComponent descriptorSetsComponent;
+		std::copy_n(descriptorSets.begin(),
+		            MAX_FRAMES_IN_FLIGHT,
+		            descriptorSetsComponent.descriptorSets.begin());
+		componentManager->addComponent(descriptorEntity, descriptorSetsComponent);
+
+		return descriptorEntity;
 	}
 }

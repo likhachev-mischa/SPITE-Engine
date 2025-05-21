@@ -1,6 +1,17 @@
 {
     "actions": [
         {
+            "action": "SelectEntity",
+            "type": "Press",
+            "bindings": [
+                {
+                    "device": "Keyboard",
+                    "key": "Q",
+                    "scale": 1.0
+                }
+            ]
+        },
+        {
             "action": "YAxis",
             "type": "Axis",
             "bindings": [
@@ -35,7 +46,7 @@
         {
             "action": "Test",
             "type": "Hold",
-            "bindings":[
+            "bindings": [
                 {
                     "device": "Keyboard",
                     "key": "E",

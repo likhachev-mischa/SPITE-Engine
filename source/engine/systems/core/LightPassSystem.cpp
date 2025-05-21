@@ -1,5 +1,6 @@
 #include "CoreSystems.hpp"
 #include "engine/VulkanLighting.hpp"
+#include "engine/VulkanRendering.hpp"
 
 namespace spite
 {
@@ -23,10 +24,13 @@ namespace spite
 		CommandBufferComponent& cbComponent = m_entityService->componentManager()->getSingleton<
 			CommandBufferComponent>();
 
-		Entity lightRenderPassEntity = m_entityService->entityManager()->getNamedEntity("LightRenderPass");
+		Entity lightRenderPassEntity = m_entityService->entityManager()->getNamedEntity(
+			"LightRenderPass");
 
-		auto& lightFbComponent = m_entityService->componentManager()->getComponent<FramebufferComponent>(lightRenderPassEntity);
-		vk::RenderPass lightRenderPass = m_entityService->componentManager()->getComponent<RenderPassComponent>(lightRenderPassEntity).renderPass;
+		auto& lightFbComponent = m_entityService->componentManager()->getComponent<
+			FramebufferComponent>(lightRenderPassEntity);
+		vk::RenderPass lightRenderPass = m_entityService->componentManager()->getComponent<
+			RenderPassComponent>(lightRenderPassEntity).renderPass;
 
 		//DepthFramebufferComponent& depthFbComponent = m_entityService->componentManager()->
 		//	singleton<DepthFramebufferComponent>();
@@ -41,14 +45,40 @@ namespace spite
 		auto& lightPipelineLayoutComponent = m_entityService->componentManager()->getComponent<
 			PipelineLayoutComponent>(lightPipelineComponent.pipelineLayoutEntity);
 		vk::PipelineLayout lightPipelineLayout = lightPipelineLayoutComponent.layout;
-		auto& descriptorSets = m_entityService->componentManager()->getComponent<
-			                                        DescriptorSetsComponent>(
-			                                        lightPipelineLayoutComponent.
-			                                        descriptorSetLayoutEntities[0]).
-		                                        descriptorSets;
 
+		std::vector<vk::DescriptorSet> descriptorSets;
+		for (const auto& descriptorSetLayoutEntity : lightPipelineLayoutComponent.
+		     descriptorSetLayoutEntities)
+		{
+			descriptorSets.push_back(
+				m_entityService->componentManager()->getComponent<DescriptorSetsComponent>(
+					descriptorSetLayoutEntity).descriptorSets[currentFrame]);
+		}
+
+		Entity camera = m_entityService->componentManager()->getSingleton<CameraSingleton>().camera;
+		glm::vec3 cameraPos = m_entityService->componentManager()->getComponent<
+			TransformComponent>(camera).position;
 		u32 offsets = 0;
-		recordLightCommandBuffer(cbComponent.lightBuffers[currentFrame],lightRenderPass,lightFbComponent.framebuffers[imageIndex], lightPipeline, lightPipelineLayout, {descriptorSets[currentFrame]}, swapchainComponent.extent, &offsets);
 
+		beginSecondaryCommandBuffer(cbComponent.lightBuffers[currentFrame],
+		                            lightRenderPass,
+		                            lightFbComponent.framebuffers[imageIndex]);
+
+		cbComponent.lightBuffers[currentFrame].pushConstants(
+			lightPipelineLayout,
+			vk::ShaderStageFlagBits::eFragment,
+			0,
+			sizeof(glm::vec3),
+			&cameraPos);
+		recordLightCommandBuffer(cbComponent.lightBuffers[currentFrame],
+		                         lightRenderPass,
+		                         lightFbComponent.framebuffers[imageIndex],
+		                         lightPipeline,
+		                         lightPipelineLayout,
+		                         descriptorSets,
+		                         swapchainComponent.extent,
+		                         &offsets);
+
+		endCommandBuffer(cbComponent.lightBuffers[currentFrame]);
 	}
 }

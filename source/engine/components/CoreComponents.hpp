@@ -31,7 +31,7 @@ namespace spite
 	{
 		float fov = glm::radians(45.0f);
 		float nearPlane = 0.1f;
-		float farPlane = 10.0f;
+		float farPlane = 400.0f;
 
 		bool isDirty = true;
 	};
@@ -41,6 +41,20 @@ namespace spite
 		glm::vec3 color;
 		float intensity;
 		float radius;
+	};
+
+	struct DirectionalLightComponent : IComponent
+	{
+		glm::vec3 color;
+		float intensity;
+	};
+
+	struct SpotlightComponent : IComponent
+	{
+		glm::vec3 color;
+		float intensity;
+		float radius;
+		glm::vec2 cutoffs;
 	};
 
 	struct CameraMatricesComponent : IComponent

@@ -10,6 +10,49 @@
 
 namespace spite
 {
+	class ControllableEntitySelectSystem : public SystemBase
+	{
+		const cstring m_inputActionName = "SelectEntity";
+		Query1<TransformComponent>* m_entityQuery;
+
+	public:
+		void onInitialize() override
+		{
+			m_entityQuery = m_entityService->queryBuilder()->buildQuery<TransformComponent>();
+		}
+
+		void onUpdate(float deltaTime) override
+		{
+			auto actionMap = m_entityService->componentManager()->getSingleton<
+				InputManagerComponent>().inputManager->inputActionMap();
+			if (!actionMap->isActionActive(m_inputActionName) || actionMap->actionValue(
+				m_inputActionName) <= 0.5f)
+			{
+				return;
+			}
+
+			auto& controllableEntity = m_entityService->componentManager()->getSingleton<
+				ControllableEntitySingleton>();
+			Entity currentEntity = controllableEntity.entity;
+			Entity newEntity;
+			auto& entityQuery = *m_entityQuery;
+			for (sizet i = 0, size = entityQuery.size(); i < size; ++i)
+			{
+				newEntity = entityQuery.owner(i);
+				if (newEntity.id() > currentEntity.id())
+				{
+					SDEBUG_LOG("New entity %llu selected\n", newEntity.id());
+					controllableEntity.entity = newEntity;
+					return;
+				}
+			}
+
+			newEntity = entityQuery.owner(0);
+			SDEBUG_LOG("New entity %llu selected (from query start)\n", newEntity.id());
+			controllableEntity.entity = newEntity;
+		}
+	};
+
 	class MovementDirectionControlSystem : public SystemBase
 	{
 		const cstring m_yAxis = "YAxis";
@@ -37,8 +80,8 @@ namespace spite
 			moveDirection.direction[0] = x;
 			moveDirection.direction[1] = 0;
 			moveDirection.direction[2] = -y;
-			if (x != 0.0f && y != 0.0f)
-				moveDirection.direction = glm::normalize(moveDirection.direction);
+			if (x != 0.0f && y != 0.0f) moveDirection.direction = glm::normalize(
+				moveDirection.direction);
 			//SDEBUG_LOG("MOVED ON %f x %f y\n", moveDirection.direction[0], moveDirection.direction[1]);
 		}
 	};
@@ -73,13 +116,15 @@ namespace spite
 		}
 	};
 
-	class MovementDirectionRotationSynchSystem: public SystemBase
+	class MovementDirectionRotationSynchSystem : public SystemBase
 	{
 		Query2<MovementDirectionComponent, TransformComponent>* m_query;
+
 	public:
 		void onInitialize() override
 		{
-			m_query = m_entityService->queryBuilder()->buildQuery<MovementDirectionComponent, TransformComponent>();
+			m_query = m_entityService->queryBuilder()->buildQuery<
+				MovementDirectionComponent, TransformComponent>();
 		}
 
 		void onUpdate(float deltaTime) override

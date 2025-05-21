@@ -34,13 +34,13 @@ namespace spite
 				entity = request.entity;
 			}
 
-			// Load vertices and indices from .obj file
 			eastl::vector<Vertex, HeapAllocator> vertices(m_entityService->allocator());
 			eastl::vector<u32, HeapAllocator> indices(m_entityService->allocator());
-			readModelInfoFile(request.objFilePath.c_str(),
-			                  vertices,
-			                  indices,
-			                  m_entityService->allocator());
+			importModelAssimp(request.objFilePath.c_str(), vertices, indices);
+			//readModelInfoFile(request.objFilePath.c_str(),
+			//                  vertices,
+			//                  indices,
+			//                  m_entityService->allocator());
 
 			// Create mesh component
 			MeshComponent mesh;
@@ -49,14 +49,17 @@ namespace spite
 				entity,
 				std::move(mesh));
 
-			VertexInputData vertexInputData;
-			assingVertexInput(vertexInputData);
+			//VertexInputData vertexInputData;
+			//assingVertexInput(vertexInputData);
 
-			VertexInputComponent vertexInputComponent;
-			vertexInputComponent.vertexInputData = std::move(vertexInputData);
-			m_entityService->componentManager()->addComponent(
-				entity,
-				std::move(vertexInputComponent));
+			//VertexInputComponent vertexInputComponent;
+			//vertexInputComponent.vertexInputData = std::move(vertexInputData);
+			//m_entityService->componentManager()->addComponent(
+			//	entity,
+			//	std::move(vertexInputComponent));
+
+			m_entityService->componentManager()->addComponent<MovementDirectionComponent>(entity);
+			m_entityService->componentManager()->addComponent<MovementSpeedComponent>(entity);
 
 			if (!m_entityService->componentManager()->hasComponent(
 				entity,
@@ -80,6 +83,7 @@ namespace spite
 
 			SDEBUG_LOG("MODEL LOADED\n")
 		}
+		m_entityService->entityEventManager()->rewindEvent(typeid(ModelLoadRequest));
 	}
 
 	void ModelLoadSystem::createModelBuffers(Entity entity,
@@ -161,10 +165,10 @@ namespace spite
 	{
 		vertexInputData.bindingDescriptions.push_back({0, sizeof(Vertex)});
 
-		vertexInputData.attributeDescriptions.reserve(2);
+		vertexInputData.attributeDescriptions.reserve(3);
 		vertexInputData.attributeDescriptions.push_back({0, 0, vk::Format::eR32G32B32Sfloat});
 		vertexInputData.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
+		vertexInputData.attributeDescriptions.push_back({2, 0, vk::Format::eR32G32Sfloat});
 	}
 
-	
 }

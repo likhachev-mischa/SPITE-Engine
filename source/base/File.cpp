@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <stb_image.h>
 #include <vector>
 
 #include <glm/vec3.hpp>
@@ -17,7 +18,7 @@
 
 namespace spite
 {
-	std::vector<char> readBinaryFile(cstring filename)
+	std::vector<char> readBinaryFile(const cstring filename)
 
 	{
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -36,15 +37,32 @@ namespace spite
 		return buffer;
 	}
 
-	//TODO dodelat
-	void importModelAssimp(cstring filename,
+	u8* loadTexture(const cstring path, int& width, int& height, int& channels)
+	{
+		u8* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
+
+		if (pixels == nullptr)
+		{
+			SASSERTM(pixels != nullptr, "Failed to load texture! %s\n", stbi_failure_reason());
+			return nullptr;
+		}
+		return pixels;
+	}
+
+	void freeTexture(u8* pixels)
+	{
+		stbi_image_free(pixels);
+	}
+
+	void importModelAssimp(const cstring filename,
 	                       eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 	                       eastl::vector<u32, spite::HeapAllocator>& indices)
 	{
 		Assimp::Importer importer;
 
 		const aiScene* scene = importer.ReadFile(filename,
-		                                         aiProcess_Triangulate | aiProcess_MakeLeftHanded);
+			aiProcess_Triangulate | aiProcess_MakeLeftHanded |
+			aiProcess_GenNormals | aiProcess_GenUVCoords);
 
 		if (!scene)
 		{
@@ -55,10 +73,55 @@ namespace spite
 
 		SASSERTM(scene->HasMeshes(), "file %s has no meshes", filename)
 
+			vertices.clear();
+		indices.clear();
 
+		u32 vertexOffset = 0; // Used to offset indices for multiple meshes
+
+		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+		{
+			aiMesh* mesh = scene->mMeshes[i];
+
+			// Process vertices
+			for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
+			{
+				Vertex vertex{};
+				vertex.position = {
+					mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z
+				};
+
+				SASSERTM(mesh->HasNormals(), "Mesh %s has no normals!");
+				vertex.normal = { mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z };
+
+				if (mesh->HasTextureCoords(0)) // Check for the first UV channel
+				{
+					vertex.uv = {
+						mesh->mTextureCoords[0][j].x,
+						mesh->mTextureCoords[0][j].y
+					};
+				}
+				// If no UVs, vertex.uv remains (0,0) due to Vertex vertex{}; initialization.
+
+				vertices.push_back(vertex);
+			}
+
+			// Process indices
+			for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
+			{
+				aiFace face = mesh->mFaces[j];
+				// Assuming aiProcess_Triangulate ensures 3 indices per face
+				SASSERTM(face.mNumIndices == 3,
+					"Face is not a triangle after aiProcess_Triangulate");
+				for (unsigned int k = 0; k < face.mNumIndices; ++k)
+				{
+					indices.push_back(vertexOffset + face.mIndices[k]);
+				}
+			}
+			vertexOffset += mesh->mNumVertices;
+		}
 	}
 
-	void readModelInfoFile(cstring filename,
+	void readModelInfoFile(const cstring filename,
 	                       eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 	                       eastl::vector<u32, spite::HeapAllocator>& indices,
 	                       const spite::HeapAllocator& allocator)

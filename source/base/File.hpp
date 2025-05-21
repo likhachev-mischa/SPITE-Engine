@@ -38,6 +38,14 @@ namespace spite
 		return obj;
 	}
 
+	u8* loadTexture(const cstring path, int& width, int& height, int& channels);
+
+	void freeTexture(u8* pixels);
+
+	void importModelAssimp(const cstring filename,
+		eastl::vector<Vertex, spite::HeapAllocator>& vertices,
+		eastl::vector<u32, spite::HeapAllocator>& indices);
+
 	std::vector<char> readBinaryFile(cstring filename);
 
 	void readModelInfoFile(

@@ -67,6 +67,4 @@ namespace spite
 		proj[1][1] *= -1;
 		return proj;
 	}
-
-	
 }

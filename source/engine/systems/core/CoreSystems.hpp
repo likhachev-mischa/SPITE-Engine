@@ -15,9 +15,20 @@ namespace spite
 	{
 	public:
 		void onInitialize() override;
+
+	private:
+		Entity createDescriptorEntity(const vk::DescriptorSetLayout descriptorSetLayout,
+		                              const vk::ShaderStageFlags shaderStage,
+		                              const vk::DescriptorType descriptorType);
 	};
 
 	class CameraCreateSystem : public SystemBase
+	{
+	public:
+		void onInitialize() override;
+	};
+
+	class LightUboCreateSystem : public SystemBase
 	{
 	public:
 		void onInitialize() override;
@@ -40,6 +51,14 @@ namespace spite
 		void assingVertexInput(VertexInputData& vertexInputData);
 	};
 
+	class TextureLoadSystem : public SystemBase
+	{
+	public:
+		void onInitialize() override;
+
+		void onUpdate(float deltaTime) override;
+	};
+
 	//creates named entites for ShaderComponents
 	//name is filepath 
 	class ShaderCreateSystem : public SystemBase
@@ -55,9 +74,14 @@ namespace spite
 	private:
 		Entity findExistingShader(const cstring path);
 
-		Entity createShaderEntity(const cstring path, const vk::ShaderStageFlagBits& stage);
+		Entity createShaderEntity(const cstring path,
+		                          const vk::ShaderStageFlagBits& stage,
+		                          const vk::DescriptorType descriptorType);
 
-		void createDescriptors(const Entity shaderEntity, const vk::ShaderStageFlagBits stage);
+		void createDescriptors(const Entity shaderEntity,
+		                       const vk::ShaderStageFlagBits stage,
+		                       const vk::DescriptorType descriptorType,
+		                       const u32 count);
 	};
 
 	class GeometryPipelineCreateSystem : public SystemBase
@@ -116,6 +140,17 @@ namespace spite
 		glm::mat4 createProjectionMatrix(CameraDataComponent& data, float aspect);
 	};
 
+	class LightUboUpdateSystem : public SystemBase
+	{
+		Query2<PointLightComponent, TransformComponent>* m_pointLightQuery;
+		Query2<DirectionalLightComponent, TransformComponent>* m_directionalLightQuery;
+		Query2<SpotlightComponent, TransformComponent>* m_spotlightQuery;
+
+	public:
+		void onInitialize() override;
+		void onUpdate(float deltaTime) override;
+	};
+
 	class CameraUboUpdateSystem : public SystemBase
 	{
 	public:
@@ -156,8 +191,9 @@ namespace spite
 
 	class GeometryPassSystem : public SystemBase
 	{
-		Query1<PipelineComponent>* m_pipelineQuery;
-		Query2<MeshComponent, PipelineReference>* m_modelQuery;
+		//Query1<PipelineComponent>* m_pipelineQuery;
+		//Query2<MeshComponent, PipelineReference>* m_modelQuery;
+		Query1<MeshComponent>* m_modelQuery;
 
 	public:
 		void onInitialize() override;

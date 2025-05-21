@@ -167,6 +167,7 @@ namespace spite
 	{
 		vk::DescriptorSetLayout layout;
 		vk::DescriptorType type{};
+		//UNUSED
 		u32 bindingIndex = 0;
 		vk::ShaderStageFlags stages;
 	};
@@ -314,6 +315,21 @@ namespace spite
 		std::string vertShaderPath;
 		std::string fragShaderPath;
 		std::string name; // Optional name for entity
+	};
+
+	struct TextureComponent : ISharedComponent
+	{
+		//descr pool + sets per texture
+		Entity descriptorEntity;
+		Image texture;
+		vk::ImageView imageView;
+		vk::Sampler sampler;
+	};
+
+	struct TextureLoadRequest : IEventComponent
+	{
+		std::vector<Entity> targets; 
+		std::string path{};
 	};
 
 	struct DepthImageComponent : ISingletonComponent

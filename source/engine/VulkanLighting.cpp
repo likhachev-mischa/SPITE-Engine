@@ -213,16 +213,6 @@ namespace spite
 		const vk::Extent2D& swapchainExtent,
 		const u32* dynamicOffsets)
 	{
-		vk::Result result = commandBuffer.reset();
-		SASSERT_VULKAN(result)
-
-		vk::CommandBufferInheritanceInfo inheritanceInfo(renderPass, 0, framebuffer);
-		vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-		                                     &inheritanceInfo);
-
-		result = commandBuffer.begin(beginInfo);
-		SASSERT_VULKAN(result)
-
 		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
 		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
@@ -247,8 +237,5 @@ namespace spite
 		commandBuffer.setScissor(0, 1, &renderArea);
 
 		commandBuffer.draw(3, 1, 0,0);
-
-		result = commandBuffer.end();
-		SASSERT_VULKAN(result)
 	}
 }

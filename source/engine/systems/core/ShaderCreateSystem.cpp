@@ -22,7 +22,8 @@ namespace spite
 			if (vertShader == Entity::undefined())
 			{
 				vertShader = createShaderEntity(request.vertShaderPath.c_str(),
-				                                vk::ShaderStageFlagBits::eVertex);
+				                                vk::ShaderStageFlagBits::eVertex,
+				                                vk::DescriptorType::eUniformBuffer);
 				SDEBUG_LOG("VERTEX SHADER CREATED\n")
 			}
 			ShaderReference shaderRef;
@@ -32,7 +33,8 @@ namespace spite
 			if (fragShader == Entity::undefined())
 			{
 				fragShader = createShaderEntity(request.fragShaderPath.c_str(),
-				                                vk::ShaderStageFlagBits::eFragment);
+				                                vk::ShaderStageFlagBits::eFragment,
+				                                vk::DescriptorType::eCombinedImageSampler);
 				SDEBUG_LOG("FRAGMENT SHADER CREATED\n")
 			}
 			shaderRef.shaders.push_back(fragShader);
@@ -56,7 +58,8 @@ namespace spite
 	}
 
 	Entity ShaderCreateSystem::createShaderEntity(const cstring path,
-	                                              const vk::ShaderStageFlagBits& stage)
+	                                              const vk::ShaderStageFlagBits& stage,
+	                                              const vk::DescriptorType descriptorType)
 	{
 		// Create shader module from file
 		std::vector<char> code = readBinaryFile(path);
@@ -83,26 +86,34 @@ namespace spite
 		m_entityService->componentManager()->addComponent<ShaderComponent>(shaderEntity, shader);
 
 		//TODO: DESCRIPTOR LAYOUT IS HARDCODED FOR NOW
-		if (stage == vk::ShaderStageFlagBits::eVertex)
+		// if (stage == vk::ShaderStageFlagBits::eVertex)
+		// {
+		// 	createDescriptors(shaderEntity, vk::ShaderStageFlagBits::eVertex);
+		// }
+
+		u32 count = 1;
+	/*	if (stage == vk::ShaderStageFlagBits::eFragment)
 		{
-			createDescriptors(shaderEntity, vk::ShaderStageFlagBits::eVertex);
-		}
+			count = 2;
+		}*/
+		createDescriptors(shaderEntity, stage, descriptorType, count);
 
 		return shaderEntity;
 	}
 
 	void ShaderCreateSystem::createDescriptors(const Entity shaderEntity,
-	                                           const vk::ShaderStageFlagBits stage)
+	                                           const vk::ShaderStageFlagBits stage,
+	                                           const vk::DescriptorType descriptorType,const u32 count)
 	{
 		auto deviceComponent = m_entityService->componentManager()->getSingleton<DeviceComponent>();
 		auto allocationCallbacksComponent = m_entityService->componentManager()->getSingleton<
 			AllocationCallbacksComponent>();
 		auto layout = createDescriptorSetLayout(deviceComponent.device,
-		                                        {{vk::DescriptorType::eUniformBuffer, 0, stage,}},
-		                                        &allocationCallbacksComponent.allocationCallbacks);
+		                                        {{descriptorType,0, stage,}},
+		                                        &allocationCallbacksComponent.allocationCallbacks,count);
 		auto pool = createDescriptorPool(deviceComponent.device,
 		                                 &allocationCallbacksComponent.allocationCallbacks,
-		                                 vk::DescriptorType::eUniformBuffer,
+		                                 descriptorType,
 		                                 MAX_FRAMES_IN_FLIGHT);
 		auto sets = createDescriptorSets(deviceComponent.device,
 		                                 layout,
@@ -113,7 +124,7 @@ namespace spite
 		layoutComponent.layout = layout;
 		layoutComponent.bindingIndex = 0;
 		layoutComponent.stages = stage;
-		layoutComponent.type = vk::DescriptorType::eUniformBuffer;
+		layoutComponent.type = descriptorType;
 
 		DescriptorPoolComponent poolComponent;
 		poolComponent.maxSets = MAX_FRAMES_IN_FLIGHT;

@@ -10,6 +10,7 @@ namespace spite
 		vk::ImageUsageFlags usageFlags;
 		vk::Format format{};
 		vk::Image image;
+		vk::Extent3D size;
 		vma::Allocation allocation;
 
 		Image() = default;
@@ -17,6 +18,7 @@ namespace spite
 		Image(const vk::ImageUsageFlags& usageFlags,
 		      const vk::Format& format,
 		      const vk::Image& image,
+		      const vk::Extent3D& size,
 		      const vma::Allocation& allocation);
 	};
 
@@ -27,6 +29,15 @@ namespace spite
 	                  const vk::SharingMode sharingMode = vk::SharingMode::eExclusive,
 	                  const u32* queueIndices = nullptr,
 	                  const u32 queueIndicesCount = 0);
+
+	Image createTexture(const cstring path,
+	                    const QueueFamilyIndices& queueFamilyIndices,
+	                    const vma::Allocator& gpuAllocator,
+	                    const vk::Device device,
+	                    const vk::Queue transferQueue,
+	                    const vk::CommandPool transferCommandPool,
+	                    const vk::Queue graphicsQueue,
+	                    const vk::CommandPool graphicsCommandPool);
 
 	vk::ImageView createImageView(const vk::Device device,
 	                              const Image& image,

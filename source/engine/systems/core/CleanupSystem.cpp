@@ -82,6 +82,17 @@ namespace spite
 			}
 		}
 
+		auto* textureQueryPtr = m_entityService->queryBuilder()->buildQuery<TextureComponent>();
+		auto& textureQuery = *textureQueryPtr;
+
+		for (auto & texture : textureQuery)
+		{
+			gpuAllocatorComponent.allocator.destroyImage(texture.texture.image, texture.texture.allocation);
+			device.destroyImageView(texture.imageView, allocationCallbacks);
+			device.destroySampler(texture.sampler, allocationCallbacks);
+		}
+
+
 		for (auto& pipeline : pipelineQuery)
 		{
 			device.destroyPipeline(pipeline.pipeline, allocationCallbacks);

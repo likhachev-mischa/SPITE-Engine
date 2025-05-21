@@ -351,14 +351,14 @@ namespace spite
 	                                                  //const u32 bindingIndex,
 	                                                  //const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks*
-	                                                  pAllocationCallbacks)
+	                                                  pAllocationCallbacks, const u32 count)
 	{
 
 		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
 		layoutBindings.reserve(descriptorData.size());
 		for (const auto & data : descriptorData)
 		{
-			layoutBindings.emplace_back(data.bindingIndex, data.type, 1, data.shaderStages);
+			layoutBindings.emplace_back(data.bindingIndex, data.type, count, data.shaderStages);
 		}
 
 		//vk::DescriptorSetLayoutBinding uboLayoutBinding(bindingIndex, type, 1, stage, {});
@@ -399,14 +399,32 @@ namespace spite
 		return shaderStageInfo;
 	}
 
+	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
+	                                        const std::vector<vk::DescriptorSetLayout>&
+	                                        descriptorSetLayouts,
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks)
+	{
+
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({},
+		                                                descriptorSetLayouts.size(),
+		                                                descriptorSetLayouts.data());
+
+		auto [result, pipelineLayout] = device.createPipelineLayout(
+			pipelineLayoutInfo,
+			pAllocationCallbacks);
+		SASSERT_VULKAN(result)
+		return pipelineLayout;
+		
+	}
+
 
 	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
 	                                        const std::vector<vk::DescriptorSetLayout>&
 	                                        descriptorSetLayouts,
 	                                        const u32 pushConstantSize,
-	                                        const vk::AllocationCallbacks* pAllocationCallbacks)
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks,const vk::ShaderStageFlags pushConstantsStage)
 	{
-		vk::PushConstantRange pushConstant(vk::ShaderStageFlagBits::eVertex, 0, pushConstantSize);
+		vk::PushConstantRange pushConstant(pushConstantsStage, 0, pushConstantSize);
 
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({},
 		                                                descriptorSetLayouts.size(),

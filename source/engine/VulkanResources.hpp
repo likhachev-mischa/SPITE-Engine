@@ -97,7 +97,7 @@ namespace spite
 	                                                  //const u32 bindingIndex,
 	                                                  //const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks*
-	                                                  pAllocationCallbacks);
+	                                                  pAllocationCallbacks, const u32 count = 1);
 
 	vk::ShaderModule createShaderModule(const vk::Device& device,
 	                                    const std::vector<char>& code,
@@ -111,10 +111,15 @@ namespace spite
 	                                                        pAllocationCallbacks);
 
 	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
+		const std::vector<vk::DescriptorSetLayout>&
+		descriptorSetLayouts,
+		const vk::AllocationCallbacks* pAllocationCallbacks);
+
+	vk::PipelineLayout createPipelineLayout(const vk::Device& device,
 	                                        const std::vector<vk::DescriptorSetLayout>&
 	                                        descriptorSetLayouts,
 	                                        const u32 pushConstantSize,
-	                                        const vk::AllocationCallbacks* pAllocationCallbacks);
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks,const vk::ShaderStageFlags pushConstantsStage = vk::ShaderStageFlagBits::eVertex);
 
 
 	vk::CommandPool createCommandPool(const vk::Device& device,

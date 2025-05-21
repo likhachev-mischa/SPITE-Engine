@@ -219,6 +219,7 @@
     <ClCompile Include="source\base\File.cpp" />
     <ClCompile Include="source\base\Logging.cpp" />
     <ClCompile Include="source\base\Memory.cpp" />
+    <ClCompile Include="source\base\StbUsage.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
     <ClCompile Include="source\ecs\SystemsCore.cpp" />
     <ClCompile Include="source\engine\Common.cpp" />
@@ -229,11 +230,14 @@
     <ClCompile Include="source\engine\systems\core\GeometryPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\LightUboUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\LightUboCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\LightPassSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\GeometryPipelineCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\PresentationSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\core\TextureLoadSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp" />
