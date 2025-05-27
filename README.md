@@ -8,6 +8,7 @@
 5. [Vulkan Integration Strategy](#vulkan-integration-strategy)
 6. [Rendering Pipeline](#rendering-pipeline)
 7. [Resource Management](#resource-management)
+7. [Performance Characteristics](#performance-characteristics)
 
 ## Executive Summary
 
