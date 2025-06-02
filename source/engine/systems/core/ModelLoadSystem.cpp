@@ -81,7 +81,7 @@ namespace spite
 					matrix);
 			}
 
-			SDEBUG_LOG("MODEL LOADED\n")
+			//SDEBUG_LOG("MODEL LOADED\n")
 		}
 		m_entityService->entityEventManager()->rewindEvent(typeid(ModelLoadRequest));
 	}

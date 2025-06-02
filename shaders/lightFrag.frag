@@ -43,7 +43,7 @@ void main() {
     vec3 albedo     = albedoSpec.rgb;
     float specularStrength = 0.1;
 
-   /*  float ambient = 0.5;
+     float ambient = 0.5;
 
     // Calculate viewDir in WORLD space
     vec3 viewDir = normalize(cameraInfo.cameraPositionWorld - fragPosWorld);
@@ -142,10 +142,7 @@ void main() {
             spotLightContribution += (diffuse + specular) * lightIntensity * attenuation * spotEffect;
         }
     }
- */
-   // vec3 finalColor = albedo * ambient + pointLightContribution + directionalLightContribution + spotLightContribution;
+    vec3 finalColor = albedo * ambient + pointLightContribution + directionalLightContribution + spotLightContribution;
 
-float ambient = 1.0;
-vec3 finalColor = albedo * ambient;
     outFragColor = vec4(finalColor, 1.0);
 }

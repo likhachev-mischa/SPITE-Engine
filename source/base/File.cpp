@@ -39,6 +39,7 @@ namespace spite
 
 	u8* loadTexture(const cstring path, int& width, int& height, int& channels)
 	{
+		//stbi_set_flip_vertically_on_load(true);
 		u8* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
 
 		if (pixels == nullptr)
@@ -60,9 +61,7 @@ namespace spite
 	{
 		Assimp::Importer importer;
 
-		const aiScene* scene = importer.ReadFile(filename,
-			aiProcess_Triangulate | aiProcess_MakeLeftHanded |
-			aiProcess_GenNormals | aiProcess_GenUVCoords);
+		 const aiScene* scene = importer.ReadFile(filename,aiProcess_MakeLeftHanded | aiProcess_Triangulate);
 
 		if (!scene)
 		{
@@ -78,6 +77,7 @@ namespace spite
 
 		u32 vertexOffset = 0; // Used to offset indices for multiple meshes
 
+					//SDEBUG_LOG("MESH %s\n", filename);
 		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
@@ -90,7 +90,7 @@ namespace spite
 					mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z
 				};
 
-				SASSERTM(mesh->HasNormals(), "Mesh %s has no normals!");
+				SASSERTM(mesh->HasNormals(), "Mesh %s has no normals!")
 				vertex.normal = { mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z };
 
 				if (mesh->HasTextureCoords(0)) // Check for the first UV channel

@@ -65,7 +65,7 @@ namespace spite
 
 	struct MovementSpeedComponent: IComponent
 	{
-		float speed = 1.0f;
+		float speed = .1f;
 	};
 
 	struct MovementDirectionComponent : IComponent
@@ -76,6 +76,11 @@ namespace spite
 	struct ControllableEntitySingleton: ISingletonComponent
 	{
 		Entity entity;
+	};
+
+	struct RotationTargetTag: IComponent
+	{
+		
 	};
 
 }

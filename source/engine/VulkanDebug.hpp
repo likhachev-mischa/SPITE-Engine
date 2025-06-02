@@ -6,10 +6,10 @@
 
 namespace spite
 {
-#ifdef NDEBUG
-	constexpr bool ENABLE_VALIDATION_LAYERS = false;
-#else
+#ifdef DEBUG
 	constexpr bool ENABLE_VALIDATION_LAYERS = true;
+#else
+	constexpr bool ENABLE_VALIDATION_LAYERS = false;
 #endif
 
 	const std::array VALIDATION_LAYERS = {

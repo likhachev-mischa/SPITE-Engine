@@ -80,8 +80,8 @@ namespace spite
 			moveDirection.direction[0] = x;
 			moveDirection.direction[1] = 0;
 			moveDirection.direction[2] = -y;
-			if (x != 0.0f && y != 0.0f) moveDirection.direction = glm::normalize(
-				moveDirection.direction);
+			if (x != 0.0f && y != 0.0f)
+				moveDirection.direction = glm::normalize(moveDirection.direction);
 			//SDEBUG_LOG("MOVED ON %f x %f y\n", moveDirection.direction[0], moveDirection.direction[1]);
 		}
 	};
@@ -137,8 +137,36 @@ namespace spite
 
 				glm::vec3 inputDirection = movement.direction;
 				movement.direction = transform.rotation * inputDirection;
+				if (movement.direction != glm::vec3(0.0f))
+				{
+					movement.direction = glm::normalize(movement.direction);
+				}
 			}
 		}
+	};
+
+	class RotationSystem : public SystemBase
+	{
+		Query2<TransformComponent, RotationTargetTag>* m_query;
+
+		public:
+		void onInitialize() override
+		{
+			m_query = m_entityService->queryBuilder()->buildQuery<TransformComponent, RotationTargetTag>();
+		}
+
+		void onUpdate(float deltaTime) override
+		{
+			auto& query = *m_query;
+
+			for (sizet i = 0, size = query.size();i<size;++i)
+			{
+				auto& transform = query.componentT1(i);
+				transform.rotation = glm::rotate(transform.rotation, 0.01f, { 0,1,0 });
+				transform.isDirty = true;
+			}
+		}
+
 	};
 
 	class MovementSystem : public SystemBase

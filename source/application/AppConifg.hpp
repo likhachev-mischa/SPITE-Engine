@@ -10,8 +10,8 @@ namespace spite
 	inline constexpr char APPLICATION_NAME[] = "Game";
 	inline constexpr char ENGINE_NAME[] = "SPITE";
 
-	inline constexpr u32 WIDTH = 800;
-	inline constexpr u32 HEIGHT = 600;
+	inline constexpr u32 WIDTH = 1600;
+	inline constexpr u32 HEIGHT = 1200;
 
 	inline constexpr u32 MAX_FRAMES_IN_FLIGHT = 2;
 }

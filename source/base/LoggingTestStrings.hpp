@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+
 #include "Platform.hpp"
 //only for unit testing purpose
 

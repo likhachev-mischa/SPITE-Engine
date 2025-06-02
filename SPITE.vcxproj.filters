@@ -43,6 +43,7 @@
     <None Include="shaders\shader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="shaders\geometryFrag.frag" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\application\AppConifg.hpp">
@@ -294,6 +295,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\engine\systems\core\TextureLoadSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\external\tracy\TracyClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -233,8 +233,7 @@ namespace spite
 	                    const vk::Queue graphicsQueue,
 	                    const vk::CommandPool graphicsCommandPool)
 	{
-		int width, height;
-		int channels = 4;
+		int width, height,channels;
 		u8* pixels = loadTexture(path, width, height, channels);
 		channels = 4;
 
@@ -301,9 +300,9 @@ namespace spite
 		                                        vk::Filter::eNearest,
 		                                        vk::Filter::eNearest,
 		                                        vk::SamplerMipmapMode::eNearest,
-		                                        vk::SamplerAddressMode::eClampToEdge,
-		                                        vk::SamplerAddressMode::eClampToEdge,
-		                                        vk::SamplerAddressMode::eClampToEdge,
+		                                        vk::SamplerAddressMode::eRepeat,
+		                                        vk::SamplerAddressMode::eRepeat,
+		                                        vk::SamplerAddressMode::eRepeat,
 		                                        {},
 		                                        vk::False,
 		                                        {},

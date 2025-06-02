@@ -1,9 +1,9 @@
 #pragma once
 
-#if defined (SPITE_TEST)
+//#if defined (SPITE_TEST)
 #include "Logging.hpp"
 #include <iostream>
-#endif
+//#endif
 
 namespace spite
 {

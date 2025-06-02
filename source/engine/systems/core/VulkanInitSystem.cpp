@@ -48,7 +48,9 @@ namespace spite
 
 		//debug messenger
 		DebugMessengerComponent debugMessenger;
+#ifdef DEBUG
 		debugMessenger.messenger = createDebugUtilsMessenger(instance, &allocationCallbacks);
+#endif
 		componentManager->createSingleton(debugMessenger);
 
 		vk::PhysicalDevice physicalDevice = getPhysicalDevice(instance);
