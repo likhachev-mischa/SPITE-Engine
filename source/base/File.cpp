@@ -10,7 +10,7 @@
 #include "Base/Assert.hpp"
 #include "Base/Common.hpp"
 #include "Base/Logging.hpp"
-#include "Base/Memory.hpp"
+#include "Base/memory/HeapAllocator.hpp"
 
 #include "assimp/importer.hpp"
 #include "assimp/scene.h"

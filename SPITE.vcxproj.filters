@@ -73,7 +73,7 @@
     <ClInclude Include="source\base\Logging.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="source\base\Memory.hpp">
+    <ClInclude Include="source\base\memory\Memory.hpp">
       <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="source\base\Platform.hpp">
@@ -172,6 +172,27 @@
     <ClInclude Include="source\engine\VulkanBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\ecs\Aspect.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\memory\MemoryStats.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\Collections.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\memory\HeapAllocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\memory\ScratchAllocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\memory\PoolAllocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\memory\AllocatorRegistry.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\application\EventDispatcher.cpp">
@@ -189,7 +210,7 @@
     <ClCompile Include="source\base\Logging.cpp">
       <Filter>Base</Filter>
     </ClCompile>
-    <ClCompile Include="source\base\Memory.cpp">
+    <ClCompile Include="source\base\memory\Memory.cpp">
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="source\base\VmaUsage.cpp">
@@ -298,6 +319,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\external\tracy\TracyClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\Collections.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\memory\HeapAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\memory\ScratchAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\memory\AllocatorRegistry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

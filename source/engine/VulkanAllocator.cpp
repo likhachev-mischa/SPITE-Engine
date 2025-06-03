@@ -1,7 +1,7 @@
 #include "VulkanAllocator.hpp"
 
 #include "Base/Logging.hpp"
-#include "Base/Memory.hpp"
+#include "base/memory/AllocatorRegistry.hpp"
 
 namespace spite
 {

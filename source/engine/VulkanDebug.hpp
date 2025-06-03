@@ -1,7 +1,6 @@
 #pragma once
 //TODO: refactor
 #include "Base/Logging.hpp"
-#include "Base/Memory.hpp"
 #include "Base/VulkanUsage.hpp"
 
 namespace spite

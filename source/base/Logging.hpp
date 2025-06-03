@@ -20,8 +20,10 @@ namespace spite
 
 #if defined(_MSC_VER)
 #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,__VA_ARGS__);
+#define SDEBUG_LOG_FUNC(format,...) spite::LogService::instance()->printFormat("[%s] " format, SPITE_FUNCTION, __VA_ARGS__);
 #else
  #define SDEBUG_LOG(format,...) spite::LogService::instance()->printFormat(format,## __VA_ARGS__);
+ #define SDEBUG_LOG_FUNC(format,...) spite::LogService::instance()->printFormat("[%s] " format, SPITE_FUNCTION, ## __VA_ARGS__);
 #endif
 
 	//made for counting test logs and asserting quantity of logged events
@@ -85,8 +87,12 @@ namespace spite
 
 #define STEST_LOG(string) spite::getTestLoggerInstance().printTestLog(string);
 #define STEST_LOG_UNPRINTED(string) spite::getTestLoggerInstance().recordTestLog(string);
+#define STEST_LOG_FUNC(string) spite::getTestLoggerInstance().printTestLog(std::string("[") + SPITE_FUNCTION + "] " + string);
+#define STEST_LOG_UNPRINTED_FUNC(string) spite::getTestLoggerInstance().recordTestLog(std::string("[") + SPITE_FUNCTION + "] " + string);
 #else
 #define STEST_LOG(string) 
 #define STEST_LOG_UNPRINTED(string)
+#define STEST_LOG_FUNC(string)
+#define STEST_LOG_UNPRINTED_FUNC(string)
 #endif
 }

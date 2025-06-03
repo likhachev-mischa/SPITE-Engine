@@ -5,10 +5,10 @@
 
 #include "Application/AppConifg.hpp"
 
-#include "Base/Memory.hpp"
 #include "Base/VmaUsage.hpp"
 
 #include "Engine/Common.hpp"
+#include "base/memory/HeapAllocator.hpp"
 
 namespace spite
 {

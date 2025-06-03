@@ -1,17 +1,20 @@
 #pragma once
-#include <any>
 #include <memory>
 #include <typeindex>
 
 #include <EASTL/hash_map.h>
 #include <EASTL/vector.h>
 #include <EASTL/string.h>
+#include <EASTL/vector_set.h>
 
 #include "base/Assert.hpp"
 #include "base/Event.hpp"
 #include "base/Logging.hpp"
-#include "base/Memory.hpp"
+#include "base/memory/Memory.hpp"
 #include "base/Platform.hpp"
+#include "base/memory/HeapAllocator.hpp"
+
+#include "ecs/Aspect.hpp"
 
 namespace spite
 {
@@ -63,38 +66,35 @@ namespace spite
 	};
 
 	//components in general
-	template <typename TComponent>
-	concept t_component = std::is_base_of_v<IComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+	template <typename TComponent> concept t_component = std::is_base_of_v<IComponent, TComponent>
+		&& std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
+		std::is_move_constructible_v<TComponent>;
 
 	//specificly only IComponent
-	template <typename TComponent>
-	concept t_plain_component = std::is_base_of_v<IComponent, TComponent> && !std::is_base_of_v<
-		ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<IEventComponent, TComponent>&&
-		std::is_default_constructible_v<TComponent>&&
-		std::is_move_assignable_v<TComponent>&& std::is_move_constructible_v<TComponent>;
+	template <typename TComponent> concept t_plain_component = std::is_base_of_v<
+			IComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> && !
+		std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
+			IEventComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
+		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
 
 	//specificly ISharedComponent
-	template <typename TComponent>
-	concept t_shared_component = std::is_base_of_v<ISharedComponent, TComponent> && !std::is_base_of_v<
-		ISingletonComponent, TComponent>&& std::is_default_constructible_v<
-		TComponent>&&
-		std::is_move_assignable_v<TComponent>&& std::is_move_constructible_v<TComponent>;
+	template <typename TComponent> concept t_shared_component = std::is_base_of_v<
+			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
+		std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
+		std::is_move_constructible_v<TComponent>;
 
 	//specificly ISingletonComponent
-	template <typename TComponent>
-	concept t_singleton_component = std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
-			ISharedComponent, TComponent> && std::is_default_constructible_v<
-			TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+	template <typename TComponent> concept t_singleton_component = std::is_base_of_v<
+			ISingletonComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> &&
+		std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
+		std::is_move_constructible_v<TComponent>;
 
 	//specificly IEventComponent
-	template <typename TComponent>
-	concept t_event_component = std::is_base_of_v<IEventComponent, TComponent> && !std::is_base_of_v<
-			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
-		std::is_default_constructible_v<
-			TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
+	template <typename TComponent> concept t_event_component = std::is_base_of_v<
+			IEventComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> && !
+		std::is_base_of_v<ISingletonComponent, TComponent> && std::is_default_constructible_v<
+			TComponent> && std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<
+			TComponent>;
 
 	//interface for component vector usage when type is resolved in runtime
 	//any casting should be avoided whenever possible
@@ -110,11 +110,9 @@ namespace spite
 		virtual ~IComponentProvider() = default;
 	};
 
+
 	template <typename T>
-	//concept t_movable = std::is_copy_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<
-		//T>;
-	concept t_movable =  std::is_move_assignable_v<T> && std::is_move_constructible_v<
-		T>;
+	concept t_movable = std::is_move_assignable_v<T> && std::is_move_constructible_v<T>;
 
 
 	//TODO IMPLEMENT AUTO MEM DEALLOC ON COMPONENT TABLES
@@ -123,6 +121,7 @@ namespace spite
 	{
 	public:
 		using VectorType = eastl::vector<T, spite::HeapAllocator>;
+
 	protected:
 		VectorType m_vector;
 
@@ -130,8 +129,8 @@ namespace spite
 		int m_topIdx;
 
 	public:
-		explicit PooledVector(const spite::HeapAllocator& allocator, const sizet initialSize = 10) :
-			m_vector(allocator)
+		explicit PooledVector(const spite::HeapAllocator& allocator,
+		                      const sizet initialSize = 10) : m_vector(allocator)
 		{
 			m_vector.reserve(initialSize);
 			m_topIdx = -1;
@@ -141,9 +140,8 @@ namespace spite
 		{
 		}
 
-		PooledVector(PooledVector&& other) noexcept :
-			m_vector(std::move(other.m_vector)),
-			m_topIdx(std::move(other.m_topIdx))
+		PooledVector(PooledVector&& other) noexcept : m_vector(std::move(other.m_vector)),
+		                                              m_topIdx(std::move(other.m_topIdx))
 		{
 		}
 
@@ -201,8 +199,8 @@ namespace spite
 			auto srcIter = begin;
 
 			//if there is previously initialized but unused space in vector
-			for (sizet i = m_topIdx + 1, size = m_vector.size(); i < size && srcIter != end; ++i, ++destIter, ++
-			     srcIter, ++m_topIdx)
+			for (sizet i = m_topIdx + 1, size = m_vector.size(); i < size && srcIter != end; ++i, ++
+			     destIter, ++srcIter, ++m_topIdx)
 			{
 				*destIter = std::move(*srcIter);
 				++destIter;
@@ -211,10 +209,15 @@ namespace spite
 			if (srcIter != end)
 			{
 				sizet resizeCount = std::distance(srcIter, end);;
-				SDEBUG_LOG("pooled vector of type %s: insert %llu elems, fill factor: %f, total size: %llu\n",
-				           std::type_index(typeid(T)).name(), resizeCount,
-				           fillFactor(), m_vector.size());
-				m_vector.insert(destIter, eastl::make_move_iterator(srcIter), eastl::make_move_iterator(end));
+				SDEBUG_LOG(
+					"pooled vector of type %s: insert %llu elems, fill factor: %f, total size: %llu\n",
+					std::type_index(typeid(T)).name(),
+					resizeCount,
+					fillFactor(),
+					m_vector.size());
+				m_vector.insert(destIter,
+				                eastl::make_move_iterator(srcIter),
+				                eastl::make_move_iterator(end));
 				m_topIdx += static_cast<int>(resizeCount);
 			}
 		}
@@ -303,7 +306,8 @@ namespace spite
 		PooledVector<TComponent> m_components;
 
 	public:
-		explicit ComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize = 10);
+		explicit ComponentTable(const spite::HeapAllocator& allocator,
+		                        const sizet initialSize = 10);
 
 		ComponentTable(const ComponentTable& other) = delete;
 		ComponentTable(ComponentTable&& other) = delete;
@@ -436,9 +440,10 @@ namespace spite
 		PooledVector<T> m_components;
 
 	public:
-		explicit SharedComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize = 10):
-			m_componentsStatuses(allocator, initialSize), m_componentsOwners(allocator, initialSize),
-			m_components(allocator, initialSize)
+		explicit SharedComponentTable(const spite::HeapAllocator& allocator,
+		                              const sizet initialSize = 10):
+			m_componentsStatuses(allocator, initialSize),
+			m_componentsOwners(allocator, initialSize), m_components(allocator, initialSize)
 		{
 		}
 
@@ -514,7 +519,10 @@ namespace spite
 		//adds entity to already existing shared component
 		void addComponent(const Entity entity, const sizet idx)
 		{
-			SASSERTM(!hasOwner(entity), "Entity %llu already owns component %s", entity.id(), typeid(T).name());
+			SASSERTM(!hasOwner(entity),
+			         "Entity %llu already owns component %s",
+			         entity.id(),
+			         typeid(T).name());
 			m_componentsOwners[idx].push_back(entity);
 		}
 
@@ -531,7 +539,10 @@ namespace spite
 		//false otherwise
 		bool removeComponent(const Entity entity)
 		{
-			SASSERTM(hasOwner(entity), "Entity %llu doesnt own component %s", entity.id(), typeid(T).name());
+			SASSERTM(hasOwner(entity),
+			         "Entity %llu doesnt own component %s",
+			         entity.id(),
+			         typeid(T).name());
 			for (sizet i = 0, size = occupiedSize(); i < size; ++i)
 			{
 				auto& owners = m_componentsOwners[i];
@@ -557,7 +568,10 @@ namespace spite
 		{
 			auto& owners = m_componentsOwners[idx];
 			auto iter = eastl::find(owners.begin(), owners.end(), entity);
-			SASSERTM(iter != owners.end(), "Entity %llu doesnt own component %s", entity.id(), typeid(T).name());
+			SASSERTM(iter != owners.end(),
+			         "Entity %llu doesnt own component %s",
+			         entity.id(),
+			         typeid(T).name());
 			owners.erase(iter);
 
 			if (owners.size() == 0)
@@ -663,8 +677,8 @@ namespace spite
 		PooledVector<T> m_events;
 
 	public:
-		EventComponentTable(const HeapAllocator& allocator, const sizet initialCount = 10): m_events(
-			allocator, initialCount)
+		EventComponentTable(const HeapAllocator& allocator,
+		                    const sizet initialCount = 10): m_events(allocator, initialCount)
 		{
 		}
 
@@ -708,21 +722,21 @@ namespace spite
 
 	class ComponentStorage
 	{
-		eastl::hash_map<std::type_index, IComponentProvider*, std::hash<std::type_index>, eastl::equal_to<
-			                std::type_index>, ComponentAllocator> m_storage;
+		eastl::hash_map<std::type_index, IComponentProvider*, std::hash<std::type_index>,
+		                eastl::equal_to<std::type_index>, ComponentAllocator> m_storage;
 
 		eastl::hash_map<std::type_index, IEventTable*, std::hash<std::type_index>, eastl::equal_to<
 			                std::type_index>, ComponentAllocator> m_eventStorage;
 
-		eastl::hash_map<std::type_index, ISingletonTable*, std::hash<std::type_index>, eastl::equal_to<
-			                std::type_index>, ComponentAllocator> m_singletonStorage;
+		eastl::hash_map<std::type_index, ISingletonTable*, std::hash<std::type_index>,
+		                eastl::equal_to<std::type_index>, ComponentAllocator> m_singletonStorage;
 
 		ComponentAllocator m_componentAllocator;
 
 	public:
 		explicit ComponentStorage(const ComponentAllocator& componentAllocator) :
-			m_storage(componentAllocator),m_eventStorage(componentAllocator),m_singletonStorage(componentAllocator),
-			m_componentAllocator(componentAllocator)
+			m_storage(componentAllocator), m_eventStorage(componentAllocator),
+			m_singletonStorage(componentAllocator), m_componentAllocator(componentAllocator)
 		{
 		}
 
@@ -736,7 +750,9 @@ namespace spite
 		void registerComponent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(!isComponentRegistred(typeIndex), "Component of type %s is already registered", typeIndex.name());
+			SASSERTM(!isComponentRegistred(typeIndex),
+			         "Component of type %s is already registered",
+			         typeIndex.name());
 
 			IComponentProvider* provider = new ComponentTable<TComponent>(m_componentAllocator);
 			m_storage.emplace(typeIndex, provider);
@@ -746,9 +762,12 @@ namespace spite
 		void registerComponent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(!isComponentRegistred(typeIndex), "Component of type %s is already registered", typeIndex.name());
+			SASSERTM(!isComponentRegistred(typeIndex),
+			         "Component of type %s is already registered",
+			         typeIndex.name());
 
-			IComponentProvider* provider = new SharedComponentTable<TComponent>(m_componentAllocator);
+			IComponentProvider* provider = new SharedComponentTable<TComponent>(
+				m_componentAllocator);
 			m_storage.emplace(typeIndex, provider);
 		}
 
@@ -756,7 +775,9 @@ namespace spite
 		void registerEvent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(T));
-			SASSERTM(!isComponentRegistred(typeIndex), "Event of type %s is already registered", typeIndex.name());
+			SASSERTM(!isComponentRegistred(typeIndex),
+			         "Event of type %s is already registered",
+			         typeIndex.name());
 
 			IEventTable* table = new EventComponentTable<T>(m_componentAllocator);
 			m_eventStorage.emplace(typeIndex, table);
@@ -766,7 +787,9 @@ namespace spite
 		void createSingleton(TComponent component)
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(!isSingletonCreated(typeIndex), "Singleton of type %s is already created", typeIndex.name());
+			SASSERTM(!isSingletonCreated(typeIndex),
+			         "Singleton of type %s is already created",
+			         typeIndex.name());
 
 			ISingletonTable* table = new SingletonComponentTable<TComponent>(component);
 			m_singletonStorage.emplace(typeIndex, table);
@@ -794,7 +817,8 @@ namespace spite
 		void unregisterComponent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(isComponentRegistred(typeIndex), "Component %s was not present in storage to unregister it",
+			SASSERTM(isComponentRegistred(typeIndex),
+			         "Component %s was not present in storage to unregister it",
 			         typeIndex.name());
 
 			delete m_storage.at(typeIndex);
@@ -804,7 +828,8 @@ namespace spite
 		void deleteSingleton()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(isSingletonCreated(typeIndex), "Singleton %s was not present in storage to delete it",
+			SASSERTM(isSingletonCreated(typeIndex),
+			         "Singleton %s was not present in storage to delete it",
 			         typeIndex.name());
 
 			delete m_singletonStorage.at(typeIndex);
@@ -814,7 +839,8 @@ namespace spite
 		void unregisterEvent()
 		{
 			std::type_index typeIndex = std::type_index(typeid(T));
-			SASSERTM(isEventRegistred(typeIndex), "Event %s was not present in storage to delete it",
+			SASSERTM(isEventRegistred(typeIndex),
+			         "Event %s was not present in storage to delete it",
 			         typeIndex.name());
 
 			delete m_eventStorage.at(typeIndex);
@@ -844,7 +870,9 @@ namespace spite
 
 		IComponentProvider& rawProviderAsserted(const std::type_index typeIndex)
 		{
-			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name())
+			SASSERTM(isComponentRegistred(typeIndex),
+			         "No components of type %s exist in storage",
+			         typeIndex.name())
 			return *m_storage.at(typeIndex);
 		}
 
@@ -868,7 +896,9 @@ namespace spite
 		ComponentTable<TComponent>& getComponentsAsserted()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name());
+			SASSERTM(isComponentRegistred(typeIndex),
+			         "No components of type %s exist in storage",
+			         typeIndex.name());
 
 			auto& value = m_storage.at(typeIndex);
 			auto table = reinterpret_cast<ComponentTable<TComponent>*>(value);
@@ -879,7 +909,9 @@ namespace spite
 		SharedComponentTable<TComponent>& getComponentsAsserted()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(isComponentRegistred(typeIndex), "No components of type %s exist in storage", typeIndex.name());
+			SASSERTM(isComponentRegistred(typeIndex),
+			         "No components of type %s exist in storage",
+			         typeIndex.name());
 
 			auto& value = m_storage.at(typeIndex);
 			auto table = reinterpret_cast<SharedComponentTable<TComponent>*>(value);
@@ -890,7 +922,9 @@ namespace spite
 		EventComponentTable<T>& getEventsAsserted()
 		{
 			std::type_index typeIndex = std::type_index(typeid(T));
-			SASSERTM(isEventRegistred(typeIndex), "No event of type %s exist in storage", typeIndex.name());
+			SASSERTM(isEventRegistred(typeIndex),
+			         "No event of type %s exist in storage",
+			         typeIndex.name());
 
 			auto& value = m_eventStorage.at(typeIndex);
 			auto table = reinterpret_cast<EventComponentTable<T>*>(value);
@@ -941,7 +975,9 @@ namespace spite
 		SingletonComponentTable<TComponent>& getSingleton()
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(isSingletonCreated(typeIndex), "Singleton of type %s is not present in storage", typeIndex.name());
+			SASSERTM(isSingletonCreated(typeIndex),
+			         "Singleton of type %s is not present in storage",
+			         typeIndex.name());
 
 			auto& value = m_singletonStorage.at(typeIndex);
 			auto table = reinterpret_cast<SingletonComponentTable<TComponent>*>(value);
@@ -984,8 +1020,8 @@ namespace spite
 
 	class ComponentLookup
 	{
-		eastl::hash_map<Entity, PooledVector<LookupData>, Entity::hash, eastl::equal_to<
-			                Entity>, spite::HeapAllocator> m_lookup;
+		eastl::hash_map<Entity, PooledVector<LookupData>, Entity::hash, eastl::equal_to<Entity>,
+		                spite::HeapAllocator> m_lookup;
 		spite::HeapAllocator m_allocator;
 
 	public:
@@ -1003,11 +1039,15 @@ namespace spite
 
 		sizet componentIndex(const Entity entity, const std::type_index typeIndex);
 
-		void addComponentToLookup(const Entity entity, const std::type_index typeIndex, const sizet componentIndex);
+		void addComponentToLookup(const Entity entity,
+		                          const std::type_index typeIndex,
+		                          const sizet componentIndex);
 
 		void removeComponentFromLookup(const Entity entity, const std::type_index typeIndex);
 
-		void setComponentIndex(const Entity entity, const std::type_index typeIndex, const sizet newIndex);
+		void setComponentIndex(const Entity entity,
+		                       const std::type_index typeIndex,
+		                       const sizet newIndex);
 
 	private:
 		sizet componentLookupIndex(const Entity entity, const std::type_index typeIndex);
@@ -1032,8 +1072,7 @@ namespace spite
 		ComponentManager(std::shared_ptr<ComponentStorage> componentStorage,
 		                 std::shared_ptr<ComponentLookup> componentLookup,
 		                 std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler) :
-			m_storage(std::move(componentStorage)),
-			m_lookup(std::move(componentLookup)),
+			m_storage(std::move(componentStorage)), m_lookup(std::move(componentLookup)),
 			m_structuralChangeHandler(std::move(structuralChangeHandler))
 		{
 		}
@@ -1179,16 +1218,16 @@ namespace spite
 		}
 
 		//asserts that entity has component
-		template <typename TComponent>
-			requires t_plain_component<TComponent> || t_shared_component<TComponent>
+		template <typename TComponent> requires t_plain_component<TComponent> || t_shared_component<
+			TComponent>
 		TComponent& getComponent(const Entity entity)
 		{
 			sizet idx = m_lookup->componentIndex(entity, std::type_index(typeid(TComponent)));
 			return m_storage->getComponentsAsserted<TComponent>()[idx];
 		}
 
-		template <typename TComponent>
-			requires t_plain_component<TComponent> || t_shared_component<TComponent>
+		template <typename TComponent> requires t_plain_component<TComponent> || t_shared_component<
+			TComponent>
 		bool tryGetComponent(const Entity entity, TComponent& outComponent)
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
@@ -1219,7 +1258,9 @@ namespace spite
 		bool isComponentActive(const Entity& entity) const
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
+			SASSERTM(hasComponent(entity, typeIndex),
+			         "Entity %llu has no component of type %s ",
+			         entity.id(),
 			         typeIndex.name());
 			sizet idx = m_lookup->componentIndex(entity, typeIndex);
 			return m_storage->getComponentsAsserted<TComponent>().isActive(idx);
@@ -1229,7 +1270,9 @@ namespace spite
 		void setComponentActive(const Entity& entity, const bool isActive) const
 		{
 			std::type_index typeIndex = std::type_index(typeid(TComponent));
-			SASSERTM(hasComponent(entity, typeIndex), "Entity %llu has no component of type %s ", entity.id(),
+			SASSERTM(hasComponent(entity, typeIndex),
+			         "Entity %llu has no component of type %s ",
+			         entity.id(),
 			         typeIndex.name());
 			sizet idx = m_lookup->componentIndex(entity, typeIndex);
 			m_storage->getComponentsAsserted<TComponent>().setActive(idx, isActive);
@@ -1243,9 +1286,9 @@ namespace spite
 
 	public:
 		EntityEventManager(std::shared_ptr<ComponentStorage> storage,
-		                   std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler)
-			: m_storage(std::move(storage)),
-			  m_structuralChangeHandler(std::move(structuralChangeHandler))
+		                   std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler) :
+			m_storage(std::move(storage)),
+			m_structuralChangeHandler(std::move(structuralChangeHandler))
 		{
 		}
 
@@ -1297,24 +1340,24 @@ namespace spite
 		std::shared_ptr<IStructuralChangeHandler> m_structuralChangeHandler;
 
 		//for named entities
-		eastl::hash_map<eastl::string, Entity, eastl::hash<eastl::string>, eastl::equal_to<eastl::string>,
-		                HeapAllocator> m_namedEntities;
+		eastl::hash_map<eastl::string, Entity, eastl::hash<eastl::string>, eastl::equal_to<
+			                eastl::string>, HeapAllocator> m_namedEntities;
 
 	public:
-		EntityManager(std::shared_ptr<ComponentStorage> storage, std::shared_ptr<ComponentLookup> lookup,
+		EntityManager(std::shared_ptr<ComponentStorage> storage,
+		              std::shared_ptr<ComponentLookup> lookup,
 		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler,
-		              const HeapAllocator& allocator) :
-			m_storage(std::move(storage)),
-			m_lookup(std::move(lookup)),
-			m_structuralChangeHandler(std::move(structuralChangeHandler)),
-			m_namedEntities(allocator)
+		              const HeapAllocator& allocator) : m_storage(std::move(storage)),
+		                                                m_lookup(std::move(lookup)),
+		                                                m_structuralChangeHandler(
+			                                                std::move(structuralChangeHandler)),
+		                                                m_namedEntities(allocator)
 		{
 		}
 
 		bool isNamePresent(const cstring name)
 		{
-			return m_namedEntities.find(eastl::string(name)) != m_namedEntities.
-				end();
+			return m_namedEntities.find(eastl::string(name)) != m_namedEntities.end();
 		}
 
 		bool isEntityNamed(const Entity entity)
@@ -1385,10 +1428,12 @@ namespace spite
 		std::shared_ptr<IStructuralChangeHandler> m_structuralChangeHandler;
 
 	public:
-		CommandBuffer(ComponentStorage* storage, ComponentLookup* lookup, const spite::HeapAllocator& allocator,
+		CommandBuffer(ComponentStorage* storage,
+		              ComponentLookup* lookup,
+		              const spite::HeapAllocator& allocator,
 		              std::shared_ptr<IStructuralChangeHandler> structuralChangeHandler) :
-			m_storage(storage),
-			m_lookup(lookup), m_componentsToAdd(allocator), m_entitiesToRemove(allocator),
+			m_storage(storage), m_lookup(lookup), m_componentsToAdd(allocator),
+			m_entitiesToRemove(allocator),
 			m_structuralChangeHandler(std::move(structuralChangeHandler))
 		{
 		}
@@ -1428,7 +1473,9 @@ namespace spite
 
 				for (sizet i = 0; i < componentsSize; ++i, ++topIndex)
 				{
-					m_lookup->addComponentToLookup(m_componentsToAdd.owner(i), m_typeIndex, topIndex);
+					m_lookup->addComponentToLookup(m_componentsToAdd.owner(i),
+					                               m_typeIndex,
+					                               topIndex);
 				}
 			}
 			//removal strongly depends on how PooledVector works
@@ -1461,7 +1508,6 @@ namespace spite
 		}
 	};
 
-
 	inline Entity::Entity(const u64 id): m_id(id)
 	{
 	}
@@ -1487,25 +1533,27 @@ namespace spite
 	}
 
 	template <t_plain_component TComponent>
-	ComponentTable<TComponent>::ComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize):
+	ComponentTable<
+		TComponent>::ComponentTable(const spite::HeapAllocator& allocator, const sizet initialSize):
 		m_componentsStatuses(allocator, initialSize), m_componentsOwners(allocator, initialSize),
 		m_components(allocator, initialSize)
 	{
 	}
 
-	inline LookupData::LookupData(const std::type_index type,
-	                              const sizet index): type(type), index(index)
+	inline LookupData::LookupData(const std::type_index type, const sizet index): type(type),
+		index(index)
 	{
 	}
 
-	inline ComponentLookup::ComponentLookup(const spite::HeapAllocator& allocator): m_lookup(allocator),
-		m_allocator(allocator)
+	inline ComponentLookup::ComponentLookup(const spite::HeapAllocator& allocator):
+		m_lookup(allocator), m_allocator(allocator)
 	{
 	}
 
 	inline void ComponentLookup::trackEntity(const Entity entity)
 	{
-		SASSERTM(!isEntityTracked(entity), "Entity %llu is already tracked by component lookup instance",
+		SASSERTM(!isEntityTracked(entity),
+		         "Entity %llu is already tracked by component lookup instance",
 		         entity.id())
 
 		m_lookup.emplace(entity, PooledVector<LookupData>(m_allocator));
@@ -1513,7 +1561,8 @@ namespace spite
 
 	inline void ComponentLookup::untrackEntity(const Entity entity)
 	{
-		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
+		SASSERTM(isEntityTracked(entity),
+		         "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
 		m_lookup.erase(entity);
 	}
@@ -1526,14 +1575,16 @@ namespace spite
 
 	inline PooledVector<LookupData>& ComponentLookup::lookupData(const Entity entity)
 	{
-		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
+		SASSERTM(isEntityTracked(entity),
+		         "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
 		return m_lookup.at(entity);
 	}
 
 	inline bool ComponentLookup::hasComponent(const Entity entity, const std::type_index typeIndex)
 	{
-		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
+		SASSERTM(isEntityTracked(entity),
+		         "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
 
 		auto& vec = m_lookup.at(entity);
@@ -1548,7 +1599,8 @@ namespace spite
 		return false;
 	}
 
-	inline sizet ComponentLookup::componentIndex(const Entity entity, const std::type_index typeIndex)
+	inline sizet ComponentLookup::componentIndex(const Entity entity,
+	                                             const std::type_index typeIndex)
 	{
 		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
 
@@ -1556,16 +1608,20 @@ namespace spite
 		return vec[lookupIndex].index;
 	}
 
-	inline void ComponentLookup::addComponentToLookup(const Entity entity, const std::type_index typeIndex,
+	inline void ComponentLookup::addComponentToLookup(const Entity entity,
+	                                                  const std::type_index typeIndex,
 	                                                  const sizet componentIndex)
 	{
-		SASSERTM(!hasComponent(entity,typeIndex), "Entity %llu already has component of type %s", entity.id(),
+		SASSERTM(!hasComponent(entity,typeIndex),
+		         "Entity %llu already has component of type %s",
+		         entity.id(),
 		         typeIndex.name())
 		auto& vec = m_lookup.at(entity);
 		vec.addElement(LookupData(typeIndex, componentIndex));
 	}
 
-	inline void ComponentLookup::removeComponentFromLookup(const Entity entity, const std::type_index typeIndex)
+	inline void ComponentLookup::removeComponentFromLookup(const Entity entity,
+	                                                       const std::type_index typeIndex)
 	{
 		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
 
@@ -1573,7 +1629,8 @@ namespace spite
 		vec.removeElement(lookupIndex);
 	}
 
-	inline void ComponentLookup::setComponentIndex(const Entity entity, const std::type_index typeIndex,
+	inline void ComponentLookup::setComponentIndex(const Entity entity,
+	                                               const std::type_index typeIndex,
 	                                               const sizet newIndex)
 	{
 		sizet lookupIndex = componentLookupIndex(entity, typeIndex);
@@ -1583,9 +1640,11 @@ namespace spite
 	}
 
 
-	inline sizet ComponentLookup::componentLookupIndex(const Entity entity, const std::type_index typeIndex)
+	inline sizet ComponentLookup::componentLookupIndex(const Entity entity,
+	                                                   const std::type_index typeIndex)
 	{
-		SASSERTM(isEntityTracked(entity), "Entity %llu is not tracked by component lookup instance",
+		SASSERTM(isEntityTracked(entity),
+		         "Entity %llu is not tracked by component lookup instance",
 		         entity.id())
 
 		auto& vec = m_lookup.at(entity);
@@ -1598,7 +1657,9 @@ namespace spite
 		}
 		int index = -1;
 
-		SASSERTM(index != -1, "Component lookup data for type %s, entity %llu was not present", typeIndex.name(),
+		SASSERTM(index != -1,
+		         "Component lookup data for type %s, entity %llu was not present",
+		         typeIndex.name(),
 		         entity.id())
 		return index;
 	}
@@ -1610,8 +1671,7 @@ namespace spite
 		{
 			std::type_index type = lookupData[i].type;
 			sizet index = lookupData[i].index;
-			IComponentProvider& provider =
-				m_storage->rawProviderAsserted(type);
+			IComponentProvider& provider = m_storage->rawProviderAsserted(type);
 
 			sizet n = 0;
 			Entity* topEntities = provider.topEntites(n);

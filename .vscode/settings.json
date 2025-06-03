@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "typeindex": "cpp",
+        "span": "cpp",
+        "algorithm": "cpp"
+    }
+}

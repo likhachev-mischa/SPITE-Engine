@@ -4,6 +4,7 @@
 
 #include "base/Common.hpp"
 #include "base/File.hpp"
+#include "base/memory/AllocatorRegistry.hpp"
 
 #include "engine/VulkanAllocator.hpp"
 #include "engine/VulkanDebug.hpp"
@@ -14,13 +15,14 @@
 #include "engine/VulkanResources.hpp"
 
 namespace spite
-{
-	void VulkanInitSystem::onInitialize()
+{	void VulkanInitSystem::onInitialize()
 	{
 		auto componentManager = m_entityService->componentManager();
 
+
+		// Use dedicated renderer allocator for Vulkan allocations
 		vk::AllocationCallbacks allocationCallbacks = vk::AllocationCallbacks(
-			m_entityService->allocatorPtr(),
+			&AllocatorRegistry::instance().getAllocator("MainAllocator"),
 			&vkAllocate,
 			&vkReallocate,
 			&vkFree,

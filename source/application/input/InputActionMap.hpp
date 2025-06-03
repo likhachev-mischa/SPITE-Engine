@@ -13,7 +13,7 @@
 #include <SDL3/SDL_keycode.h>
 
 #include "Base/Assert.hpp"
-#include "base/Memory.hpp"
+#include "base/memory/HeapAllocator.hpp"
 #include "base/Platform.hpp"
 
 namespace spite

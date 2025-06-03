@@ -23,6 +23,16 @@
 #define SPITE_LINE_STRING                          SPITE_MAKESTRING( __LINE__ )
 #define SPITE_FILELINE(MESSAGE)                    __FILE__ "(" SPITE_LINE_STRING ") : " MESSAGE
 
+// Function information macros
+#if defined (_MSC_VER)
+#define SPITE_FUNCTION                             __FUNCTION__
+#else
+#define SPITE_FUNCTION                             __func__
+#endif
+
+#define SPITE_FUNCTION_INFO                        SPITE_FUNCTION "() "
+#define SPITE_FILELINE_FUNC(MESSAGE)               __FILE__ "(" SPITE_LINE_STRING ") " SPITE_FUNCTION "() : " MESSAGE
+
 //native types
 typedef uint8_t u8;
 typedef uint16_t u16;
