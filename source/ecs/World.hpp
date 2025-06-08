@@ -168,6 +168,7 @@ namespace spite
 			return &m_allocator;
 		}
 
+		~EntityService() = default;
 	};
 
 	class SystemBase

@@ -630,6 +630,7 @@ namespace spite
 
 	struct ISingletonTable
 	{
+		virtual ~ISingletonTable() = default;
 	};
 
 	//holds only one component of type
@@ -660,7 +661,7 @@ namespace spite
 			return m_component;
 		}
 
-		~SingletonComponentTable() = default;
+		~SingletonComponentTable() override = default;
 	};
 
 	struct IEventTable
@@ -791,7 +792,7 @@ namespace spite
 			         "Singleton of type %s is already created",
 			         typeIndex.name());
 
-			ISingletonTable* table = new SingletonComponentTable<TComponent>(component);
+			ISingletonTable* table = new SingletonComponentTable<TComponent>(std::move(component));
 			m_singletonStorage.emplace(typeIndex, table);
 		}
 
