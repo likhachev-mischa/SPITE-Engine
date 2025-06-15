@@ -3,17 +3,21 @@
 #include <fstream>
 #include <vector>
 
+#include "assimp/importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
+
 #include <EASTL/vector.h>
 
 #include <nlohmann/json.hpp>
 
+#include "base/Common.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Platform.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 namespace spite
 {
-	struct Vertex;
-	class HeapAllocator;
 
 	//nlohmann json templated parser
 	template<typename T>
@@ -42,9 +46,10 @@ namespace spite
 
 	void freeTexture(u8* pixels);
 
+
 	void importModelAssimp(const cstring filename,
-		eastl::vector<Vertex, spite::HeapAllocator>& vertices,
-		eastl::vector<u32, spite::HeapAllocator>& indices);
+		scratch_vector<Vertex>& vertices,
+		scratch_vector<u32>& indices);
 
 	std::vector<char> readBinaryFile(cstring filename);
 
