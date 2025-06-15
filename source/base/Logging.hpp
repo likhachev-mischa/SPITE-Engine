@@ -11,9 +11,12 @@
 
 namespace spite
 {
-	struct LogService final : public Service
+	struct LogService
 	{
-		SPITE_DECLARE_SERVICE(LogService)
+		//SPITE_DECLARE_SERVICE(LogService)
+
+		static LogService* instance();
+
 		void printFormat(cstring format, ...);
 	};
 

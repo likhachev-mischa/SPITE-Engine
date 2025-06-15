@@ -103,15 +103,6 @@
     <ClInclude Include="source\engine\VulkanAllocator.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\external\StackWalker.h">
-      <Filter>External</Filter>
-    </ClInclude>
-    <ClInclude Include="source\external\tlsf.h">
-      <Filter>External</Filter>
-    </ClInclude>
-    <ClInclude Include="source\ecs\Systems.hpp">
-      <Filter>ecs</Filter>
-    </ClInclude>
     <ClInclude Include="source\ecs\Core.hpp">
       <Filter>ecs</Filter>
     </ClInclude>
@@ -193,6 +184,15 @@
     <ClInclude Include="source\base\memory\AllocatorRegistry.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\base\CallstackDebug.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\external\StackWalker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\external\tlsf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\application\EventDispatcher.cpp">
@@ -228,14 +228,8 @@
     <ClCompile Include="source\engine\VulkanAllocator.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="source\external\tlsf.c">
-      <Filter>External</Filter>
-    </ClCompile>
     <ClCompile Include="source\Main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\ecs\SystemsCore.cpp">
-      <Filter>ecs</Filter>
     </ClCompile>
     <ClCompile Include="source\application\input\InputActionMap.cpp">
       <Filter>Source Files</Filter>
@@ -318,9 +312,6 @@
     <ClCompile Include="source\engine\systems\core\TextureLoadSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\external\tracy\TracyClient.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\base\Collections.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -331,6 +322,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\base\memory\AllocatorRegistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base\CallstackDebug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\external\tlsf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\external\tracy\TracyClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

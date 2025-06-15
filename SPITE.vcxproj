@@ -177,6 +177,7 @@
     <ClInclude Include="source\application\Time.hpp" />
     <ClInclude Include="source\application\WindowManager.hpp" />
     <ClInclude Include="source\base\Assert.hpp" />
+    <ClInclude Include="source\base\CallstackDebug.hpp" />
     <ClInclude Include="source\base\Collections.hpp" />
     <ClInclude Include="source\base\Common.hpp" />
     <ClInclude Include="source\base\Event.hpp" />
@@ -199,7 +200,6 @@
     <ClInclude Include="source\engine\components\FrameGraphComponents.hpp" />
     <ClInclude Include="source\engine\components\InputEventComponents.hpp" />
     <ClInclude Include="source\ecs\Queries.hpp" />
-    <ClInclude Include="source\ecs\Systems.hpp" />
     <ClInclude Include="source\ecs\World.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
     <ClInclude Include="source\engine\components\CoreComponents.hpp" />
@@ -224,6 +224,7 @@
     <ClCompile Include="source\application\input\InputActionMap.cpp" />
     <ClCompile Include="source\application\Time.cpp" />
     <ClCompile Include="source\application\WindowManager.cpp" />
+    <ClCompile Include="source\base\CallstackDebug.cpp" />
     <ClCompile Include="source\base\Collections.cpp" />
     <ClCompile Include="source\base\File.cpp" />
     <ClCompile Include="source\base\Logging.cpp" />
@@ -233,7 +234,6 @@
     <ClCompile Include="source\base\memory\ScratchAllocator.cpp" />
     <ClCompile Include="source\base\StbUsage.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
-    <ClCompile Include="source\ecs\SystemsCore.cpp" />
     <ClCompile Include="source\engine\Common.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
