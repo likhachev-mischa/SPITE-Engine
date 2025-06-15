@@ -19,7 +19,7 @@ namespace spite
 		~EventDispatcher() = default;
 
 		EventDispatcher(std::shared_ptr<InputManager> inputManager,
-		             std::shared_ptr<WindowManager> windowManager);
+		                std::shared_ptr<WindowManager> windowManager);
 
 		void pollEvents();
 

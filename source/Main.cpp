@@ -11,14 +11,19 @@
 #include "engine/systems/MovementSystems.hpp"
 #include "base/memory/AllocatorRegistry.hpp"
 #include "external/tracy/tracy/Tracy.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 
 int main(int argc, char* argv[])
 {
-		spite::HeapAllocator allocator = spite::AllocatorRegistry::instance().createAllocator("MainAllocator", 32 * spite::MB);
+	using namespace spite;
+	tracy::InitCallstack();
+	spite::initGlobalAllocator();
+	spite::FrameScratchAllocator::init();
+	spite::AllocatorRegistry::instance().createSubsystemAllocators();
 	{
-		using namespace spite;
-
+		spite::HeapAllocator allocator = spite::AllocatorRegistry::instance().getAllocator(
+			"MainAllocator");
 
 		std::shared_ptr<InputActionMap> inputActionMap = std::make_shared<InputActionMap>(
 			"./config/InputActions.json",
@@ -29,37 +34,33 @@ int main(int argc, char* argv[])
 			inputManager,
 			windowManager);
 
-
 		EntityWorld world(allocator, allocator);
-
 		InputManagerComponent inputManagerComponent;
 		inputManagerComponent.inputManager = inputManager;
-		world.service()->componentManager()->createSingleton(inputManagerComponent);
-
+		world.service()->componentManager()->createSingleton(std::move(inputManagerComponent));
 		WindowManagerComponent windowManagerComponent;
 		windowManagerComponent.windowManager = windowManager;
-		world.service()->componentManager()->createSingleton(windowManagerComponent);
-
+		world.service()->componentManager()->createSingleton(std::move(windowManagerComponent));
 
 		std::vector<SystemBase*> systems = {
-			new VulkanInitSystem, new LightUboCreateSystem, new CameraCreateSystem, new ModelLoadSystem,
-			new TextureLoadSystem,
+			new VulkanInitSystem, new LightUboCreateSystem, new CameraCreateSystem,
+			new ModelLoadSystem, new TextureLoadSystem,
 			//new ShaderCreateSystem,
 			//new GeometryPipelineCreateSystem,
 
 			new ControllableEntitySelectSystem, new MovementDirectionControlSystem,
-			new RotationControlSystem, new MovementDirectionRotationSynchSystem, new MovementSystem, new RotationSystem,
-			new TransformationMatrixSystem, new CameraMatricesUpdateSystem, new LightUboUpdateSystem,
-			new CameraUboUpdateSystem, new WaitForFrameSystem, new DescriptorUpdateSystem,
-			new DepthPassSystem, new GeometryPassSystem, new LightPassSystem, new PresentationSystem,
-			new CleanupSystem,
+			new RotationControlSystem, new MovementDirectionRotationSynchSystem, new MovementSystem,
+			new RotationSystem, new TransformationMatrixSystem, new CameraMatricesUpdateSystem,
+			new LightUboUpdateSystem, new CameraUboUpdateSystem, new WaitForFrameSystem,
+			new DescriptorUpdateSystem, new DepthPassSystem, new GeometryPassSystem,
+			new LightPassSystem, new PresentationSystem, new CleanupSystem,
 		};
 
 		world.addSystems(systems.data(), systems.size());
 
 		Entity pointLightEntity = world.service()->entityManager()->createEntity();
 		TransformComponent pointLightTransform;
-		pointLightTransform.position = { 0.5, 0.5, 0 };
+		pointLightTransform.position = {0.5, 0.5, 0};
 		world.service()->componentManager()->addComponent(pointLightEntity, pointLightTransform);
 		PointLightComponent pointLightComponent;
 		pointLightComponent.color = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -72,13 +73,13 @@ int main(int argc, char* argv[])
 		world.service()->entityEventManager()->createEvent(std::move(pointLightModelReq));
 		TextureLoadRequest pointLightTextReq;
 		pointLightTextReq.path = "./textures/glass.jpg";
-		pointLightTextReq.targets = { pointLightEntity };
+		pointLightTextReq.targets = {pointLightEntity};
 		world.service()->entityEventManager()->createEvent(std::move(pointLightTextReq));
 		SDEBUG_LOG("ENTITY %llu IS POINT LIGHT\n", pointLightEntity.id());
 
 		Entity dirLightEntity = world.service()->entityManager()->createEntity();
 		TransformComponent dirLightTransform;
-		dirLightTransform.position = { 1, 1, 0 };
+		dirLightTransform.position = {1, 1, 0};
 		world.service()->componentManager()->addComponent(dirLightEntity, dirLightTransform);
 		DirectionalLightComponent dirLightComponent;
 		dirLightComponent.color = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -90,13 +91,13 @@ int main(int argc, char* argv[])
 		world.service()->entityEventManager()->createEvent(std::move(dirLightModelReq));
 		TextureLoadRequest dirLightTextReq;
 		dirLightTextReq.path = "./textures/wood.jpg";
-		dirLightTextReq.targets = { dirLightEntity };
+		dirLightTextReq.targets = {dirLightEntity};
 		world.service()->entityEventManager()->createEvent(std::move(dirLightTextReq));
 		SDEBUG_LOG("ENTITY %llu IS DIR LIGHT\n", dirLightEntity.id());
 
 		Entity spotlightEntity = world.service()->entityManager()->createEntity();
 		TransformComponent spotlightTransform;
-		spotlightTransform.position = { 2, 1, 0 };
+		spotlightTransform.position = {2, 1, 0};
 		world.service()->componentManager()->addComponent(spotlightEntity, spotlightTransform);
 		SpotlightComponent spotlightComponent;
 		spotlightComponent.color = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -105,7 +106,7 @@ int main(int argc, char* argv[])
 		float innerConeAngleRadians = glm::radians(12.5f);
 		float outerConeAngleRadians = glm::radians(17.5f);
 		spotlightComponent.cutoffs = glm::vec2(glm::cos(innerConeAngleRadians),
-			glm::cos(outerConeAngleRadians));
+		                                       glm::cos(outerConeAngleRadians));
 		world.service()->componentManager()->addComponent(spotlightEntity, spotlightComponent);
 		ModelLoadRequest spotlightModelReq;
 		spotlightModelReq.entity = spotlightEntity;
@@ -113,7 +114,7 @@ int main(int argc, char* argv[])
 		world.service()->entityEventManager()->createEvent(std::move(spotlightModelReq));
 		TextureLoadRequest spotlightTextReq;
 		spotlightTextReq.path = "./textures/glass.jpg";
-		spotlightTextReq.targets = { spotlightEntity };
+		spotlightTextReq.targets = {spotlightEntity};
 		world.service()->entityEventManager()->createEvent(std::move(spotlightTextReq));
 		SDEBUG_LOG("ENTITY %llu IS SPOTLIGHT\n", spotlightEntity.id());
 #ifdef SPITE_TEST
@@ -121,7 +122,7 @@ int main(int argc, char* argv[])
 #endif
 
 
-		constexpr sizet ENTITIES_SIZE = 20;
+		constexpr sizet ENTITIES_SIZE = 10;
 		std::vector<Entity> entities;
 		entities.reserve(ENTITIES_SIZE * ENTITIES_SIZE);
 
@@ -131,7 +132,8 @@ int main(int argc, char* argv[])
 
 		// Calculate an offset to center the grid around the origin (0, y_coordinate, 0)
 		// This offset applies to both x and z axes.
-		const float grid_center_offset = (static_cast<float>(ENTITIES_SIZE) - 1.0f) * spacing / 2.0f;
+		const float grid_center_offset = (static_cast<float>(ENTITIES_SIZE) - 1.0f) * spacing /
+			2.0f;
 
 		auto cbuffer = world.service()->getCommandBuffer<TransformComponent>();
 		cbuffer.reserveForAddition(ENTITIES_SIZE * ENTITIES_SIZE);
@@ -213,21 +215,18 @@ int main(int argc, char* argv[])
 			time.updateDeltaTime();
 			//TODO: HOLDING TIME SHOULD UPDATE IN LOOP, INSTEAD OF RELYING ON EXTERNAL EVENTS
 			inputManager->reset();
+			FrameScratchAllocator::get().print_stats();
+			FrameScratchAllocator::resetFrame();
 			FrameMark;
 		}
 		CleanupRequest cleanupRequest{};
 		world.service()->entityEventManager()->createEvent(cleanupRequest);
 		world.commitSystemsStructuralChange();
 		world.update(0.1f);
-
-		// Shutdown all subsystem allocators
-		AllocatorRegistry::instance().shutdownAll();
-
-		// Print final statistics
-		SDEBUG_LOG("=== Final Memory Statistics ===\n");
-		AllocatorRegistry::instance().printStatistics();
-
 	}
+
+	spite::FrameScratchAllocator::shutdown();
 	spite::AllocatorRegistry::instance().shutdownAll();
+	SDEBUG_LOG("\n===SHUTTING DOWN GLOBAL ALLOCATOR===\n")
 	spite::shutdownGlobalAllocator(false);
 }
