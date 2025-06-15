@@ -10,16 +10,16 @@ namespace spite
 	public:
 		static AllocatorRegistry& instance();
 
+		//creates allocators for main subsystems
+		void createSubsystemAllocators();
+
 		// Create a new allocator or return existing one
-		HeapAllocator& createAllocator(cstring name, size_t size);
+		HeapAllocator& createAllocator(cstring name, sizet size);
 
 		HeapAllocator& getAllocator(cstring name);
 
 		// Check if an allocator exists
 		bool hasAllocator(cstring name) const;
-
-		// Get statistics for all allocators
-		void printStatistics() const;
 
 		void shutdownAll();
 	};

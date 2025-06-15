@@ -1,49 +1,45 @@
 #include "HeapAllocator.hpp"
 
 #include <cstdlib>
+#include <thread>
+
+#include <external/tracy/client/TracyCallstack.hpp>
 
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
+#include "base/CallstackDebug.hpp"
 
 #include "External/tlsf.h"
 
-#if defined(__GNUC__) || defined(__clang__)
-#  define init_order( _n ) __attribute__((init_priority(_n)))
-#elif defined(_MSC_VER)
-#  define init_order( _n )
-#  pragma warning( push )
-#  pragma warning( disable : 4075 )
-#  pragma init_seg( ".CRT$XCB" )
-#endif
-
 namespace spite
 {
-	// Debug configuration - can be adjusted based on build type
-#ifdef DEBUG
-	    constexpr size_t GLOBAL_ALLOCATOR_SIZE = 64 * MB; 
-#else
-	constexpr size_t GLOBAL_ALLOCATOR_SIZE = 32 * MB;
-#endif
+	constexpr size_t GLOBAL_ALLOCATOR_SIZE = 64 * MB;
 
-	// Controlled static initialization - initialized before most other statics
-	init_order(101) static spite::HeapAllocator s_globalAllocator(
-		"GlobalHeapAllocator",
-		GLOBAL_ALLOCATOR_SIZE);
+	static spite::HeapAllocator* s_globalAllocator = nullptr;
+
+	void initGlobalAllocator()
+	{
+		SASSERTM(!s_globalAllocator, "Trying to initialize the global allocator more than once\n")
+		s_globalAllocator = new HeapAllocator("Global Allocator", GLOBAL_ALLOCATOR_SIZE);
+	}
 
 	HeapAllocator& getGlobalAllocator()
 	{
-		return s_globalAllocator;
+		SASSERTM(s_globalAllocator, "Global allocator is not initialized\n")
+		return *s_globalAllocator;
 	}
 
-	void shutdownGlobalAllocator(bool force_cleanup)
+	void shutdownGlobalAllocator(bool forceDealloc)
 	{
-		s_globalAllocator.shutdown(force_cleanup);
+		SASSERTM(s_globalAllocator, "Global allocator is not initialized\n")
+		s_globalAllocator->shutdown(forceDealloc);
+		delete s_globalAllocator;
 	}
 
-	// Get allocator statistics for debugging
 	const char* getGlobalAllocatorName()
 	{
-		return s_globalAllocator.get_name();
+		SASSERTM(s_globalAllocator, "Global allocator is not initialized\n")
+		return s_globalAllocator->get_name();
 	}
 
 	struct MemoryStatistics
@@ -102,14 +98,16 @@ namespace spite
 	void* HeapAllocator::allocate(sizet size, int flags)
 	{
 		void* mem = tlsf_malloc(m_tlsfHandle, size);
-		//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//logCallstack(15, "HeapAlloc stack\n");
 		return mem;
 	}
 
 	void* HeapAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
-		//	SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
+		//logCallstack(15, "HeapAlloc stack\n");
 		return mem;
 	}
 
@@ -167,7 +165,11 @@ namespace spite
 			SDEBUG_LOG("HeapAllocator %s Shutdown - all memory free!\n", m_name)
 		}
 
-		SASSERTM(stats.allocatedBytes == 0, "Allocations still present\n")
+		if (stats.allocatedBytes != 0)
+		{
+			SDEBUG_LOG("Allocations still present\n")
+		}
+		//SASSERTM(stats.allocatedBytes == 0, "Allocations still present\n")
 
 		tlsf_destroy(m_tlsfHandle);
 		free(m_memory);

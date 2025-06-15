@@ -72,10 +72,11 @@ namespace spite
 	                                                eastl::hash<Key>, eastl::equal_to<Key>,
 	                                                HeapAllocator>;
 
+	void initGlobalAllocator();
 	spite::HeapAllocator& getGlobalAllocator();
 
 	// Optional: Global allocator lifecycle management
-	void shutdownGlobalAllocator(bool force_cleanup = false);
+	void shutdownGlobalAllocator(bool forceDealloc = false);
 	const char* getGlobalAllocatorName();
 
 	// Stateless allocator that always uses the global allocator

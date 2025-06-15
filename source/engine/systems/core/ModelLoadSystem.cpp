@@ -16,6 +16,10 @@ namespace spite
 			ModelLoadRequest>();
 
 
+		//5 mb max per mesh
+		auto allocator = ScratchAllocator(5 * MB,
+		                                  "MeshScratchAllocator",
+		                                  ScratchAllocatorType_Frame);
 		for (auto& request : requestTable)
 		{
 			Entity entity;
@@ -34,29 +38,16 @@ namespace spite
 				entity = request.entity;
 			}
 
-			eastl::vector<Vertex, HeapAllocator> vertices(m_entityService->allocator());
-			eastl::vector<u32, HeapAllocator> indices(m_entityService->allocator());
-			importModelAssimp(request.objFilePath.c_str(), vertices, indices);
-			//readModelInfoFile(request.objFilePath.c_str(),
-			//                  vertices,
-			//                  indices,
-			//                  m_entityService->allocator());
+			allocator.reset();
+			auto vertices = makeScratchVector<Vertex>(allocator);
+			auto indices = makeScratchVector<u32>(allocator);
 
-			// Create mesh component
+			importModelAssimp(request.objFilePath.c_str(), vertices, indices);
 			MeshComponent mesh;
 			createModelBuffers(entity, vertices, indices, mesh);
 			m_entityService->componentManager()->addComponent<MeshComponent>(
 				entity,
 				std::move(mesh));
-
-			//VertexInputData vertexInputData;
-			//assingVertexInput(vertexInputData);
-
-			//VertexInputComponent vertexInputComponent;
-			//vertexInputComponent.vertexInputData = std::move(vertexInputData);
-			//m_entityService->componentManager()->addComponent(
-			//	entity,
-			//	std::move(vertexInputComponent));
 
 			m_entityService->componentManager()->addComponent<MovementDirectionComponent>(entity);
 			m_entityService->componentManager()->addComponent<MovementSpeedComponent>(entity);
@@ -80,27 +71,25 @@ namespace spite
 					entity,
 					matrix);
 			}
-
-			//SDEBUG_LOG("MODEL LOADED\n")
 		}
+
+		allocator.reset();
 		m_entityService->entityEventManager()->rewindEvent(typeid(ModelLoadRequest));
 	}
 
 	void ModelLoadSystem::createModelBuffers(Entity entity,
-		const eastl::vector<Vertex, HeapAllocator>& vertices,
-		const eastl::vector<u32, HeapAllocator>& indices,
-		MeshComponent& mesh)
+	                                         const scratch_vector<Vertex>& vertices,
+	                                         const scratch_vector<u32>& indices,
+	                                         MeshComponent& mesh)
 	{
-		mesh.indexCount = indices.size();
+		mesh.indexCount = static_cast<u32>(indices.size());
 
-		auto deviceComponent = m_entityService->componentManager()->getSingleton<
-			DeviceComponent>();
+		auto deviceComponent = m_entityService->componentManager()->getSingleton<DeviceComponent>();
 		auto gpuAllocatorComponent = m_entityService->componentManager()->getSingleton<
 			GpuAllocatorComponent>();
 		auto commandPoolComponent = m_entityService->componentManager()->getSingleton<
 			CommandPoolComponent>();
-		auto queueComponent = m_entityService->componentManager()->getSingleton<
-			QueueComponent>();
+		auto queueComponent = m_entityService->componentManager()->getSingleton<QueueComponent>();
 		auto& allocationCallbacksComponent = m_entityService->componentManager()->getSingleton<
 			AllocationCallbacksComponent>();
 
@@ -120,8 +109,8 @@ namespace spite
 		                                vk::BufferUsageFlagBits::eIndexBuffer,
 		                                vk::MemoryPropertyFlagBits::eHostVisible |
 		                                vk::MemoryPropertyFlagBits::eHostCoherent,
-		                                vma::AllocationCreateFlagBits::eHostAccessSequentialWrite
-		                                | vma::AllocationCreateFlagBits::eStrategyMinTime,
+		                                vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+		                                vma::AllocationCreateFlagBits::eStrategyMinTime,
 		                                deviceComponent.queueFamilyIndices,
 		                                gpuAllocatorComponent.allocator);
 
@@ -147,8 +136,8 @@ namespace spite
 		                                 vk::BufferUsageFlagBits::eVertexBuffer,
 		                                 vk::MemoryPropertyFlagBits::eHostVisible |
 		                                 vk::MemoryPropertyFlagBits::eHostCoherent,
-		                                 vma::AllocationCreateFlagBits::eHostAccessSequentialWrite
-		                                 | vma::AllocationCreateFlagBits::eStrategyMinTime,
+		                                 vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+		                                 vma::AllocationCreateFlagBits::eStrategyMinTime,
 		                                 deviceComponent.queueFamilyIndices,
 		                                 gpuAllocatorComponent.allocator);
 
@@ -170,5 +159,4 @@ namespace spite
 		vertexInputData.attributeDescriptions.push_back({1, 0, vk::Format::eR32G32B32Sfloat});
 		vertexInputData.attributeDescriptions.push_back({2, 0, vk::Format::eR32G32Sfloat});
 	}
-
 }

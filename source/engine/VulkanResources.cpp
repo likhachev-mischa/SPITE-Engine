@@ -7,6 +7,7 @@
 
 #include "Base/Assert.hpp"
 #include "Base/Logging.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 namespace spite
 {
@@ -91,7 +92,8 @@ namespace spite
 			indices.transferFamily.value()
 		};
 
-		std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+		auto queueCreateInfos = FrameScratchAllocator::makeVector<vk::DeviceQueueCreateInfo>();
+
 		queueCreateInfos.reserve(uniqueQueueFamilies.size());
 
 		float queuePriority = 1.0f;
@@ -351,20 +353,20 @@ namespace spite
 	                                                  //const u32 bindingIndex,
 	                                                  //const vk::ShaderStageFlags& stage,
 	                                                  const vk::AllocationCallbacks*
-	                                                  pAllocationCallbacks, const u32 count)
+	                                                  pAllocationCallbacks,
+	                                                  const u32 count)
 	{
-
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
+		auto layoutBindings = FrameScratchAllocator::makeVector<vk::DescriptorSetLayoutBinding>();
 		layoutBindings.reserve(descriptorData.size());
-		for (const auto & data : descriptorData)
+		for (const auto& data : descriptorData)
 		{
 			layoutBindings.emplace_back(data.bindingIndex, data.type, count, data.shaderStages);
 		}
 
-		//vk::DescriptorSetLayoutBinding uboLayoutBinding(bindingIndex, type, 1, stage, {});
 
-		//vk::DescriptorSetLayoutCreateInfo layoutInfo({}, 1, &uboLayoutBinding);
-		vk::DescriptorSetLayoutCreateInfo layoutInfo({}, layoutBindings.size(), layoutBindings.data());
+		vk::DescriptorSetLayoutCreateInfo layoutInfo({},
+		                                             static_cast<u32>(layoutBindings.size()),
+		                                             layoutBindings.data());
 
 		auto [result, descriptorSetLayout] = device.createDescriptorSetLayout(
 			layoutInfo,
@@ -404,9 +406,9 @@ namespace spite
 	                                        descriptorSetLayouts,
 	                                        const vk::AllocationCallbacks* pAllocationCallbacks)
 	{
-
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({},
-		                                                descriptorSetLayouts.size(),
+		                                                static_cast<u32>(descriptorSetLayouts.
+			                                                size()),
 		                                                descriptorSetLayouts.data());
 
 		auto [result, pipelineLayout] = device.createPipelineLayout(
@@ -414,7 +416,6 @@ namespace spite
 			pAllocationCallbacks);
 		SASSERT_VULKAN(result)
 		return pipelineLayout;
-		
 	}
 
 
@@ -422,12 +423,14 @@ namespace spite
 	                                        const std::vector<vk::DescriptorSetLayout>&
 	                                        descriptorSetLayouts,
 	                                        const u32 pushConstantSize,
-	                                        const vk::AllocationCallbacks* pAllocationCallbacks,const vk::ShaderStageFlags pushConstantsStage)
+	                                        const vk::AllocationCallbacks* pAllocationCallbacks,
+	                                        const vk::ShaderStageFlags pushConstantsStage)
 	{
 		vk::PushConstantRange pushConstant(pushConstantsStage, 0, pushConstantSize);
 
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({},
-		                                                descriptorSetLayouts.size(),
+		                                                static_cast<u32>(descriptorSetLayouts.
+			                                                size()),
 		                                                descriptorSetLayouts.data(),
 		                                                1,
 		                                                &pushConstant);

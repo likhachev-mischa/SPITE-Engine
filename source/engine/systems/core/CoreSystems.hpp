@@ -1,5 +1,7 @@
 #pragma once
 
+#include "base/memory/ScratchAllocator.hpp"
+
 #include "ecs/Core.hpp"
 #include "ecs/Queries.hpp"
 #include "ecs/World.hpp"
@@ -43,8 +45,8 @@ namespace spite
 
 	private:
 		void createModelBuffers(Entity entity,
-		                        const eastl::vector<Vertex, HeapAllocator>& vertices,
-		                        const eastl::vector<u32, HeapAllocator>& indices,
+		                        const scratch_vector<Vertex>& vertices,
+		                        const scratch_vector<u32>& indices,
 		                        MeshComponent& mesh);
 
 		//hardcoded for now

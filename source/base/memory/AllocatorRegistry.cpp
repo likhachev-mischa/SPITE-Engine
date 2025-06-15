@@ -9,7 +9,13 @@ namespace spite
 		return registry;
 	}
 
-	HeapAllocator& AllocatorRegistry::createAllocator(cstring name, size_t size)
+	void AllocatorRegistry::createSubsystemAllocators()
+	{
+		createAllocator("MainAllocator",32*MB);
+		createAllocator("GpuAllocator", 128 * MB);
+	}
+
+	HeapAllocator& AllocatorRegistry::createAllocator(cstring name, sizet size)
 	{
 		auto it = m_allocators.find(name);
 		if (it != m_allocators.end()) {
@@ -42,17 +48,6 @@ namespace spite
 		return m_allocators.find(name) != m_allocators.end();
 	}
 
-	void AllocatorRegistry::printStatistics() const
-	{
-		SDEBUG_LOG("=== AllocatorRegistry Statistics ===\n")
-		SDEBUG_LOG("Global: %s\n", getGlobalAllocatorName())
-        
-		for (const auto& [name, allocator] : m_allocators) {
-			SDEBUG_LOG("Subsystem: %s\n", allocator->get_name())
-		}
-		SDEBUG_LOG("====================================\n")
-	}
-
 	void AllocatorRegistry::shutdownAll()
 	{
 		SDEBUG_LOG("AllocatorRegistry: Shutting down %zu subsystem allocators\n", m_allocators.size())
@@ -61,6 +56,6 @@ namespace spite
 			SDEBUG_LOG("Shutting down allocator: %s\n", name.c_str())
 			allocator->shutdown(false);
 		}
-		m_allocators.clear();
+		m_allocators.clear(true);
 	}
 }

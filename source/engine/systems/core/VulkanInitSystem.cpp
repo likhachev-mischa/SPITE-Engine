@@ -22,7 +22,7 @@ namespace spite
 
 		// Use dedicated renderer allocator for Vulkan allocations
 		vk::AllocationCallbacks allocationCallbacks = vk::AllocationCallbacks(
-			&AllocatorRegistry::instance().getAllocator("MainAllocator"),
+			&AllocatorRegistry::instance().getAllocator("GpuAllocator"),
 			&vkAllocate,
 			&vkReallocate,
 			&vkFree,
