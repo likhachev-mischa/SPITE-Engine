@@ -1,119 +1,104 @@
 #pragma once
 #include <typeindex>
 
-#include <EASTL/vector.h>
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
 
 #include "base/Collections.hpp"
+#include "base/memory/HeapAllocator.hpp"
 
 namespace spite
 {	
-	// Memory-optimized Aspect struct using Small Buffer Optimization
-	// Most aspects contain only a few component types, so this avoids heap allocations
-	// for small collections while eliminating HeapAllocator storage overhead
-	/*
 	struct Aspect
 	{
 	private:
-		// Small Buffer Optimized vector - stores up to 8 types inline (zero allocations for most cases)
-		// Falls back to global allocator for larger collections (no per-container allocator overhead)
-		sbo_vector<std::type_index, 8> types;
+		sbo_vector<std::type_index> m_types;
 
-	public:		// Default constructor - creates empty aspect
+	public:		
 		Aspect() = default;
 
-		// Constructor from initializer list
 		Aspect(std::initializer_list<std::type_index> typeList)
-			: types(typeList) {
-			// Sort and remove duplicates
-			eastl::sort(types.begin(), types.end());
-			// Manual unique removal since sbo_vector doesn't have erase
-			auto write_it = types.begin();
-			for (auto read_it = types.begin(); read_it != types.end(); ++read_it) {
-				if (write_it == types.begin() || *read_it != *(write_it - 1)) {
-					*write_it = *read_it;
-					++write_it;
+			: m_types(typeList) {
+			eastl::sort(m_types.begin(), m_types.end());
+
+			// Manual unique removal
+			auto writeIt = m_types.begin();
+			for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt) {
+				if (writeIt == m_types.begin() || *readIt != *(writeIt - 1)) {
+					*writeIt = *readIt;
+					++writeIt;
 				}
 			}
-			// Remove extra elements by adjusting size manually
-			while (types.end() != write_it) {
-				types.pop_back();
+			while (m_types.end() != writeIt) {
+				m_types.pop_back();
 			}
 		}
-		// Constructor from iterator range
+
 		template<typename Iterator>
 		Aspect(Iterator begin, Iterator end) {
-			types.reserve(eastl::distance(begin, end));
+			m_types.reserve(eastl::distance(begin, end));
 			for (auto it = begin; it != end; ++it) {
-				types.push_back(*it);
+				m_types.push_back(*it);
 			}
-			eastl::sort(types.begin(), types.end());
+			eastl::sort(m_types.begin(), m_types.end());
 			// Manual unique removal
-			auto write_it = types.begin();
-			for (auto read_it = types.begin(); read_it != types.end(); ++read_it) {
-				if (write_it == types.begin() || *read_it != *(write_it - 1)) {
-					*write_it = *read_it;
-					++write_it;
+			auto writeIt = m_types.begin();
+			for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt) {
+				if (writeIt == m_types.begin() || *readIt != *(writeIt - 1)) {
+					*writeIt = *readIt;
+					++writeIt;
 				}
 			}
-			while (types.end() != write_it) {
-				types.pop_back();
+			while (m_types.end() != writeIt) {
+				m_types.pop_back();
 			}
 		}
 
-		// Constructor from single type
 		explicit Aspect(std::type_index type) {
-			types.push_back(type);
+			m_types.push_back(type);
 		}
-		// Copy constructor
+
 		Aspect(const Aspect& other) = default;
-
-		// Move constructor
 		Aspect(Aspect&& other) noexcept = default;
-
-		// Copy assignment
 		Aspect& operator=(const Aspect& other) = default;
-
-		// Move assignment
 		Aspect& operator=(Aspect&& other) noexcept = default;
 
-		// Equality comparison
 		bool operator==(const Aspect& other) const {
-			return types == other.types;
+			return m_types == other.m_types;
 		}
 
-		// Inequality comparison
 		bool operator!=(const Aspect& other) const {
 			return !(*this == other);
 		}
 
-		// Less than comparison (for use in ordered containers)
 		bool operator<(const Aspect& other) const {
-			return types < other.types;
+			return m_types < other.m_types;
 		}
 
-		// Greater than comparison
 		bool operator>(const Aspect& other) const {
 			return other < *this;
 		}
 
-		// Less than or equal comparison
 		bool operator<=(const Aspect& other) const {
 			return !(other < *this);
 		}
 
-		// Greater than or equal comparison
 		bool operator>=(const Aspect& other) const {
 			return !(*this < other);
 		}
+
+		const sbo_vector<std::type_index>& getTypes() const
+		{
+			return m_types;
+		}
+
 		// Check if this aspect contains all types from another aspect (subset check)
 		bool contains(const Aspect& other) const {
 			// Manual implementation of subset check for sorted vectors
-			auto it1 = types.begin();
-			auto it2 = other.types.begin();
+			auto it1 = m_types.begin();
+			auto it2 = other.m_types.begin();
 			
-			while (it1 != types.end() && it2 != other.types.end()) {
+			while (it1 != m_types.end() && it2 != other.m_types.end()) {
 				if (*it1 < *it2) {
 					++it1;
 				} else if (*it1 == *it2) {
@@ -126,24 +111,24 @@ namespace spite
 			}
 			
 			// If we've processed all of other's types, then this contains other
-			return it2 == other.types.end();
+			return it2 == other.m_types.end();
 		}
 
-		// Check if this aspect contains a specific type
 		bool contains(std::type_index type) const {
-			return eastl::binary_search(types.begin(), types.end(), type);
+			return eastl::binary_search(m_types.begin(), m_types.end(), type);
 		}
 
 		// Check if this aspect intersects with another (has common types)
 		bool intersects(const Aspect& other) const {
 			// Use two-pointer technique for sorted vectors
-			auto it1 = types.begin();
-			auto it2 = other.types.begin();
+			auto it1 = m_types.begin();
+			auto it2 = other.m_types.begin();
 			
-			while (it1 != types.end() && it2 != other.types.end()) {
+			while (it1 != m_types.end() && it2 != other.m_types.end()) {
 				if (*it1 == *it2) {
 					return true;
-				} else if (*it1 < *it2) {
+				}
+				if (*it1 < *it2) {
 					++it1;
 				} else {
 					++it2;
@@ -152,21 +137,18 @@ namespace spite
 			return false;
 		}
 
-		// Get the number of types in this aspect
 		size_t size() const {
-			return types.size();
+			return m_types.size();
 		}
 
-		// Check if aspect is empty
 		bool empty() const {
-			return types.empty();
+			return m_types.empty();
 		}
 
-		// Hash function for use in hash containers
 		struct hash {
 			size_t operator()(const Aspect& aspect) const {
 				size_t seed = 0;
-				for (const auto& type : aspect.types) {
+				for (const auto& type : aspect.m_types) {
 					// Combine hashes using a simple hash combination method
 					seed ^= std::hash<std::type_index>{}(type) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 				}
@@ -176,151 +158,246 @@ namespace spite
 
 		~Aspect() = default;
 	};
-	*/
 
-	//class AspectRegistry
-	//{
-	//private:
-	//	// Memory-efficient registry using global allocator with zero per-container overhead
-	//	global_vector<Aspect> registeredAspects;
-	//	
-	//	// Optional: Use small buffer optimization for commonly accessed aspects
-	//	SboVector<Aspect, 16> commonAspects;
-	//	
-	//	// Fast lookup cache for frequently used aspect combinations
-	//	struct AspectCache {
-	//		SboVector<std::type_index, 8> types;
-	//		size_t aspectIndex;
-	//		
-	//		bool matches(const Aspect& aspect) const {
-	//			if (types.size() != aspect.size()) return false;
-	//			for (size_t i = 0; i < types.size(); ++i) {
-	//				if (types[i] != aspect.types[i]) return false;
-	//			}
-	//			return true;
-	//		}
-	//	};
-	//	
-	//	SboVector<AspectCache, 8> recentlyUsed;
+	class AspectRegistry
+	{
+	private:
+		struct AspectNode
+		{
+			const Aspect* aspect;
+			glheap_vector<AspectNode*> children;
+			AspectNode* parent;
 
-	//public:
-	//	AspectRegistry() = default;
-	//	
-	//	// Register an aspect and return its index
-	//	size_t registerAspect(const Aspect& aspect) {
-	//		// Check if already registered
-	//		for (size_t i = 0; i < registeredAspects.size(); ++i) {
-	//			if (registeredAspects[i] == aspect) {
-	//				return i;
-	//			}
-	//		}
-	//		
-	//		// Register new aspect
-	//		size_t index = registeredAspects.size();
-	//		registeredAspects.push_back(aspect);
-	//		
-	//		// Add to common aspects cache if it's small
-	//		if (aspect.size() <= 4 && commonAspects.size() < 16) {
-	//			commonAspects.pushBack(aspect);
-	//		}
-	//		
-	//		return index;
-	//	}
-	//	
-	//	// Get aspect by index
-	//	const Aspect& getAspect(size_t index) const {
-	//		return registeredAspects[index];
-	//	}
-	//	
-	//	// Find aspect index with caching for performance
-	//	size_t findAspectIndex(const Aspect& aspect) {
-	//		// Check cache first
-	//		for (const auto& cached : recentlyUsed) {
-	//			if (cached.matches(aspect)) {
-	//				return cached.aspectIndex;
-	//			}
-	//		}
-	//		
-	//		// Search in registered aspects
-	//		for (size_t i = 0; i < registeredAspects.size(); ++i) {
-	//			if (registeredAspects[i] == aspect) {
-	//				// Add to cache
-	//				if (recentlyUsed.size() < 8) {
-	//					AspectCache cache;
-	//					for (const auto& type : aspect.types) {
-	//						cache.types.pushBack(type);
-	//					}
-	//					cache.aspectIndex = i;
-	//					recentlyUsed.pushBack(std::move(cache));
-	//				}
-	//				return i;
-	//			}
-	//		}
-	//		
-	//		// Not found
-	//		return SIZE_MAX;
-	//	}
-	//	
-	//	// Create aspect from type indices with memory optimization
-	//	template<typename... ComponentTypes>
-	//	Aspect createAspect() {
-	//		SboVector<std::type_index, 8> types;
-	//		(types.push_back(std::type_index(typeid(ComponentTypes))), ...);
-	//		
-	//		Aspect aspect;
-	//		aspect.types.reserve(types.size());
-	//		for (const auto& type : types) {
-	//			aspect.types.push_back(type);
-	//		}
-	//		
-	//		// Sort and deduplicate
-	//		eastl::sort(aspect.types.begin(), aspect.types.end());
-	//		auto write_it = aspect.types.begin();
-	//		for (auto read_it = aspect.types.begin(); read_it != aspect.types.end(); ++read_it) {
-	//			if (write_it == aspect.types.begin() || *read_it != *(write_it - 1)) {
-	//				*write_it = *read_it;
-	//				++write_it;
-	//			}
-	//		}
-	//		while (aspect.types.end() != write_it) {
-	//			aspect.types.popBack();
-	//		}
-	//		
-	//		return aspect;
-	//	}
-	//	
-	//	// Get all registered aspects
-	//	const global_vector<Aspect>& getAllAspects() const {
-	//		return registeredAspects;
-	//	}
-	//	
-	//	// Clear cache for memory cleanup
-	//	void clearCache() {
-	//		recentlyUsed.clear();
-	//		commonAspects.clear();
-	//	}
-	//	
-	//	// Get memory usage statistics
-	//	struct MemoryStats {
-	//		size_t registeredAspects;
-	//		size_t commonAspects;
-	//		size_t cacheEntries;
-	//		size_t estimatedMemoryUsage;
-	//	};
-	//	
-	//	MemoryStats getMemoryStats() const {
-	//		MemoryStats stats;
-	//		stats.registeredAspects = registeredAspects.size();
-	//		stats.commonAspects = commonAspects.size();
-	//		stats.cacheEntries = recentlyUsed.size();
-	//		
-	//		// Estimate memory usage (no allocator overhead thanks to global_vector/sbo_vector)
-	//		stats.estimatedMemoryUsage = 
-	//			sizeof(registeredAspects) + registeredAspects.capacity() * sizeof(Aspect) +
-	//			sizeof(commonAspects) + commonAspects.capacity() * sizeof(Aspect) +
-	//			sizeof(recentlyUsed) + recentlyUsed.capacity() * sizeof(AspectCache);
-	//			
-	//		return stats;
-	//	}
-//	};
+			explicit AspectNode(const Aspect* asp, AspectNode* par = nullptr) 
+				: aspect(asp), parent(par)
+			{
+			}
+		};
+
+		AspectNode* m_root;
+		glheap_unordered_map<Aspect, AspectNode*, Aspect::hash> m_aspectToNode;
+
+	public:
+		AspectRegistry() 
+		{
+			auto [it, inserted] = m_aspectToNode.emplace(Aspect(), nullptr);
+			m_root = new AspectNode(&it->first);
+			it->second = m_root;
+		}
+
+		~AspectRegistry() 
+		{
+			destroyNode(m_root);
+		}
+
+		// Non-copyable for now 
+		AspectRegistry(const AspectRegistry&) = delete;
+		AspectRegistry& operator=(const AspectRegistry&) = delete;
+
+		// Add an aspect to the registry and return the node
+		AspectNode* addAspect(const Aspect& aspect)
+		{
+			// Check if aspect already exists
+			auto it = m_aspectToNode.find(aspect);
+			if (it != m_aspectToNode.end()) {
+				return it->second;
+			}
+
+			AspectNode* bestParent = findBestParent(aspect);
+			
+			auto [mapIt, inserted] = m_aspectToNode.emplace(aspect, nullptr);
+
+			AspectNode* newNode = new AspectNode(&mapIt->first, bestParent);
+			mapIt->second = newNode;  
+
+			bestParent->children.push_back(newNode);
+
+			reparentChildren(newNode);
+
+			return newNode;
+		}
+
+		// Get the node for an aspect (returns nullptr if not found)
+		AspectNode* getNode(const Aspect& aspect) const
+		{
+			auto it = m_aspectToNode.find(aspect);
+			return (it != m_aspectToNode.end()) ? it->second : nullptr;
+		}
+
+		// Get all children of an aspect (aspects that contain this aspect)
+		glheap_vector<AspectNode*> getChildren(const Aspect& aspect) const
+		{
+			AspectNode* node = getNode(aspect);
+			return node ? node->children : glheap_vector<AspectNode*>();
+		}
+
+		// Get parent of an aspect (most specific aspect that contains this one)
+		AspectNode* getParent(const Aspect& aspect) const
+		{
+			AspectNode* node = getNode(aspect);
+			return node ? node->parent : nullptr;
+		}
+
+		// Get all descendants of an aspect (recursively all children)
+		glheap_vector<AspectNode*> getDescendants(const Aspect& aspect) const
+		{
+			glheap_vector<AspectNode*> descendants;
+			AspectNode* node = getNode(aspect);
+			if (node) {
+				collectDescendants(node, descendants);
+			}
+			return descendants;
+		}
+
+		// Get all ancestors of an aspect (path to root)
+		glheap_vector<AspectNode*> getAncestors(const Aspect& aspect) const
+		{
+			glheap_vector<AspectNode*> ancestors;
+			AspectNode* node = getNode(aspect);
+			while (node && node->parent) {
+				ancestors.push_back(node->parent);
+				node = node->parent;
+			}
+			return ancestors;
+		}
+
+		// Remove an aspect from the registry
+		bool removeAspect(const Aspect& aspect)
+		{
+			if (aspect.empty()) {
+				return false; // Cannot remove root
+			}
+
+			AspectNode* node = getNode(aspect);
+			if (!node) {
+				return false;
+			}
+
+			// Reparent children to this node's parent
+			for (AspectNode* child : node->children) {
+				child->parent = node->parent;
+				if (node->parent) {
+					node->parent->children.push_back(child);
+				}
+			}
+
+			// Remove from parent's children list
+			if (node->parent) {
+				auto& parentChildren = node->parent->children;
+				parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), node), 
+				                    parentChildren.end());
+			}
+
+			// Remove from map and delete
+			m_aspectToNode.erase(aspect);
+			delete node;
+			return true;
+		}
+
+		// Get the root node (empty aspect)
+		AspectNode* getRoot() const 
+		{
+			return m_root;
+		}
+
+		// Check if an aspect is registered
+		bool hasAspect(const Aspect& aspect) const
+		{
+			return m_aspectToNode.find(aspect) != m_aspectToNode.end();
+		}
+		// Get count of registered aspects
+		size_t size() const
+		{
+			return m_aspectToNode.size();
+		}
+
+		// Find all aspects that intersect with the given aspect (have common components)
+		glheap_vector<AspectNode*> findIntersecting(const Aspect& aspect) const
+		{
+			glheap_vector<AspectNode*> intersecting;
+			for (const auto& [storedAspect, node] : m_aspectToNode) {
+				if (storedAspect.intersects(aspect) && storedAspect != aspect) {
+					intersecting.push_back(node);
+				}
+			}
+			return intersecting;
+		}
+
+		// Get all aspects in the registry (for iteration)
+		glheap_vector<AspectNode*> getAllAspects() const
+		{
+			glheap_vector<AspectNode*> allAspects;
+			allAspects.reserve(m_aspectToNode.size());
+			for (const auto& [aspect, node] : m_aspectToNode) {
+				allAspects.push_back(node);
+			}
+			return allAspects;
+		}
+
+	private:
+		// Find the best parent for a new aspect (most specific aspect that contains the new one)
+		AspectNode* findBestParent(const Aspect& newAspect)
+		{
+			AspectNode* bestParent = m_root;
+			
+			// Search for the most specific aspect that contains newAspect
+			for (const auto& [aspect, node] : m_aspectToNode) {
+				if (aspect.contains(newAspect) && aspect != newAspect) {
+					// This aspect contains the new one, check if it's more specific than current best
+					if (bestParent->aspect->empty() || bestParent->aspect->contains(aspect)) {
+						bestParent = node;
+					}
+				}
+			}
+			
+			return bestParent;
+		}
+
+		// Check if any children of the current best parent should become children of the new node
+		void reparentChildren(AspectNode* newNode)
+		{
+			if (!newNode->parent) return;
+
+			auto& parentChildren = newNode->parent->children;
+			glheap_vector<AspectNode*> toReparent;
+
+			// Find children that should be reparented to the new node
+			for (AspectNode* child : parentChildren) {
+				if (child != newNode && newNode->aspect->contains(*child->aspect)) {
+					toReparent.push_back(child);
+				}
+			}
+
+			// Reparent the children
+			for (AspectNode* child : toReparent) {
+				// Remove from current parent
+				parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), child), 
+				                    parentChildren.end());
+				
+				// Add to new parent
+				child->parent = newNode;
+				newNode->children.push_back(child);
+			}
+		}
+
+		// Recursively collect all descendants
+		void collectDescendants(AspectNode* node, glheap_vector<AspectNode*>& descendants) const
+		{
+			for (AspectNode* child : node->children) {
+				descendants.push_back(child);
+				collectDescendants(child, descendants);
+			}
+		}
+
+		// Recursively destroy a node and all its children
+		void destroyNode(AspectNode* node)
+		{
+			if (!node) return;
+			
+			for (AspectNode* child : node->children) {
+				destroyNode(child);
+			}
+			delete node;
+		}
+	};
 }
