@@ -51,7 +51,6 @@ namespace spite
 
         sbo_vector& operator=(sbo_vector&& other) noexcept;
 
-        // Element access
         T& operator[](size_t index) noexcept;
         const T& operator[](size_t index) const noexcept;
 
@@ -65,7 +64,6 @@ namespace spite
         T& back() noexcept;
         const T& back() const noexcept;
 
-        // Iterators
         iterator begin() noexcept;
         const_iterator begin() const noexcept;
         const_iterator cbegin() const noexcept;
@@ -74,7 +72,6 @@ namespace spite
         const_iterator end() const noexcept;
         const_iterator cend() const noexcept;
 
-        // Capacity
         bool empty() const noexcept;
         size_t size() const noexcept;
         size_t capacity() const noexcept;
@@ -93,7 +90,6 @@ namespace spite
 
         void pop_back() noexcept;
 
-        // Comparison operators
         bool operator==(const sbo_vector& other) const;
 
         bool operator!=(const sbo_vector& other) const;
