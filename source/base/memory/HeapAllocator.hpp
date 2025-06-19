@@ -67,9 +67,9 @@ namespace spite
 	using heap_string16 = heap_string<char16_t>;
 	using heap_string32 = heap_string<char32_t>;
 
-	template <typename Key, typename Value>
+	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
 	using heap_unordered_map = eastl::unordered_map<Key, Value,
-	                                                eastl::hash<Key>, eastl::equal_to<Key>,
+	                                                Hash, eastl::equal_to<Key>,
 	                                                HeapAllocator>;
 
 	void initGlobalAllocator();
@@ -147,9 +147,9 @@ namespace spite
 	using glheap_string16 = glheap_string<char16_t>;
 	using glheap_string32 = glheap_string<char32_t>;
 
-	template <typename Key, typename Value>
+	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
 	using glheap_unordered_map = eastl::unordered_map<Key, Value,
-	                                                  eastl::hash<Key>, eastl::equal_to<Key>,
+	                                                  Hash, eastl::equal_to<Key>,
 	                                                  GlobalHeapAllocator<eastl::pair<
 		                                                  const Key, Value>>>;
 
