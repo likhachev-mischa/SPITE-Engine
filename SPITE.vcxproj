@@ -138,6 +138,12 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python ./scripts/ScriptRunner.py</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Running python scripts</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -159,6 +165,12 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python ./scripts/ScriptRunner.py</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Running python scripts</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="shaders\geometryFrag.frag" />
@@ -196,6 +208,8 @@
     <ClInclude Include="source\base\VmaUsage.hpp" />
     <ClInclude Include="source\base\VulkanUsage.hpp" />
     <ClInclude Include="source\ecs\Aspect.hpp" />
+    <ClInclude Include="source\ecs\Chunk.hpp" />
+    <ClInclude Include="source\ecs\ComponentMetadata.hpp" />
     <ClInclude Include="source\ecs\Core.hpp" />
     <ClInclude Include="source\engine\components\FrameGraphComponents.hpp" />
     <ClInclude Include="source\engine\components\InputEventComponents.hpp" />
@@ -234,6 +248,7 @@
     <ClCompile Include="source\base\memory\ScratchAllocator.cpp" />
     <ClCompile Include="source\base\StbUsage.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
+    <ClCompile Include="source\ecs\GeneratedComponentRegistration.cpp" />
     <ClCompile Include="source\engine\Common.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp" />
     <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
