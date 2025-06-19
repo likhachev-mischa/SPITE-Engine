@@ -14,12 +14,14 @@
 
 The SPITE (Scalable Performance-Intensive Technology Engine) is a modern 3D graphics engine built on data-oriented design principles and leveraging the Vulkan API for maximum performance. The engine employs an Entity-Component-System (ECS) architecture to manage complex rendering scenarios while maintaining high performance and scalability.
 
+# ECS FRAMEWORK REVAMP INCOMING
+
 ### Key Features
 - **Data-Oriented Design**: Optimized for cache locality and parallel processing
 - **ECS Architecture**: Modular and extensible component-based system
 - **Vulkan Integration**: Low-overhead GPU control with explicit resource management
 - **Deferred Rendering**: Multi-pass rendering pipeline for complex lighting scenarios
-- **Cross-Platform**: Designed for Windows, Linux, and potentially mobile platforms
+- **Cross-Platform**: Designed for cross platform potential
 
 ## Architectural Overview
 
@@ -97,7 +99,7 @@ base/
 **Purpose**: Application framework and windowing system
 
 **Components**:
-- **WindowManager**: GLFW-based window creation and management
+- **WindowManager**: SDL3 based window creation and management
 - **InputManager**: Input event processing and action mapping
 - **EventDispatcher**: Centralized event distribution system
 - **TimeManager**: Frame timing and delta time calculation
