@@ -3,98 +3,24 @@
 #include <typeindex>
 
 #include <EASTL/hash_map.h>
-#include <EASTL/vector.h>
 #include <EASTL/string.h>
+#include <EASTL/vector.h>
 #include <EASTL/vector_set.h>
+
+#include "Entity.hpp"
+#include "IComponent.hpp"
 
 #include "base/Assert.hpp"
 #include "base/Event.hpp"
 #include "base/Logging.hpp"
-#include "base/memory/Memory.hpp"
 #include "base/Platform.hpp"
 #include "base/memory/HeapAllocator.hpp"
-
-#include "ecs/Aspect.hpp"
+#include "base/memory/Memory.hpp"
 
 namespace spite
 {
 	class IStructuralChangeHandler;
 	typedef HeapAllocator ComponentAllocator;
-
-	struct Entity
-	{
-	private:
-		u64 m_id;
-
-	public:
-		explicit Entity(const u64 id = 0);
-		u64 id() const;
-		friend bool operator==(const Entity& lhs, const Entity& rhs);
-		friend bool operator!=(const Entity& lhs, const Entity& rhs);
-
-		struct hash
-		{
-			size_t operator()(const spite::Entity& entity) const;
-		};
-
-		static Entity undefined()
-		{
-			return Entity(0);
-		}
-	};
-
-	struct IComponent
-	{
-		IComponent() = default;
-		IComponent(const IComponent& other) = default;
-		IComponent(IComponent&& other) noexcept = default;
-		IComponent& operator=(const IComponent& other) = default;
-		IComponent& operator=(IComponent&& other) noexcept = default;
-		virtual ~IComponent() = default;
-	};
-
-	struct ISharedComponent : IComponent
-	{
-	};
-
-	struct ISingletonComponent : IComponent
-	{
-	};
-
-	struct IEventComponent : IComponent
-	{
-	};
-
-	//components in general
-	template <typename TComponent> concept t_component = std::is_base_of_v<IComponent, TComponent>
-		&& std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
-		std::is_move_constructible_v<TComponent>;
-
-	//specificly only IComponent
-	template <typename TComponent> concept t_plain_component = std::is_base_of_v<
-			IComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> && !
-		std::is_base_of_v<ISingletonComponent, TComponent> && !std::is_base_of_v<
-			IEventComponent, TComponent> && std::is_default_constructible_v<TComponent> &&
-		std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<TComponent>;
-
-	//specificly ISharedComponent
-	template <typename TComponent> concept t_shared_component = std::is_base_of_v<
-			ISharedComponent, TComponent> && !std::is_base_of_v<ISingletonComponent, TComponent> &&
-		std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
-		std::is_move_constructible_v<TComponent>;
-
-	//specificly ISingletonComponent
-	template <typename TComponent> concept t_singleton_component = std::is_base_of_v<
-			ISingletonComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> &&
-		std::is_default_constructible_v<TComponent> && std::is_move_assignable_v<TComponent> &&
-		std::is_move_constructible_v<TComponent>;
-
-	//specificly IEventComponent
-	template <typename TComponent> concept t_event_component = std::is_base_of_v<
-			IEventComponent, TComponent> && !std::is_base_of_v<ISharedComponent, TComponent> && !
-		std::is_base_of_v<ISingletonComponent, TComponent> && std::is_default_constructible_v<
-			TComponent> && std::is_move_assignable_v<TComponent> && std::is_move_constructible_v<
-			TComponent>;
 
 	//interface for component vector usage when type is resolved in runtime
 	//any casting should be avoided whenever possible

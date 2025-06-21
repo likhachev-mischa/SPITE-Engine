@@ -1,8 +1,11 @@
 #pragma once
-#include "base/memory/HeapAllocator.hpp"
-#include <EASTL/hash_map.h>
-#include "ecs/Core.hpp"
 #include <typeindex>
+
+#include <EASTL/hash_map.h>
+
+#include "IComponent.hpp"
+
+#include "base/memory/HeapAllocator.hpp"
 
 namespace spite
 {
