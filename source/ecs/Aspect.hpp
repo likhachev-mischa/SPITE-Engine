@@ -51,6 +51,9 @@ namespace spite
 		// Check if this aspect intersects with another (has common types)
 		bool intersects(const Aspect& other) const;
 
+		// get all common types
+		sbo_vector<std::type_index> getIntersection(const Aspect& other) const;
+
 		size_t size() const;
 
 		bool empty() const;

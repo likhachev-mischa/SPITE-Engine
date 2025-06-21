@@ -94,4 +94,130 @@ namespace spite
 		SASSERTM(false, "Entity %llu is not located in Archetype\n", entity.id())
 		return {nullptr, static_cast<sizet>(-1)};
 	}
+
+	Archetype* ArchetypeManager::getOrCreateArchetype(const Aspect& aspect)
+	{
+		auto it = m_archetypes.find(aspect);
+		if (it != m_archetypes.end())
+		{
+			return it->second.get();
+		}
+
+		// Create new archetype
+		auto newArchetype = std::make_unique<Archetype>(&aspect, m_metadataRegistry, m_allocator);
+		Archetype* result = newArchetype.get();
+		m_archetypes[aspect] = std::move(newArchetype);
+		return result;
+	}
+
+	Archetype* ArchetypeManager::findArchetype(const Aspect& aspect) const
+	{
+		auto it = m_archetypes.find(aspect);
+		if (it != m_archetypes.end())
+		{
+			return it->second.get();
+		}
+		return nullptr;
+	}
+
+	const heap_unordered_map<Aspect, std::unique_ptr<Archetype>>&
+	ArchetypeManager::getArchetypes() const
+	{
+		return m_archetypes;
+	}
+
+	void ArchetypeManager::moveEntity(Entity entity,
+	                                  const Aspect& fromAspect,
+	                                  const Aspect& toAspect)
+	{
+		SASSERT(isEntityTracked(entity))
+		Archetype* fromArchetype = findArchetype(fromAspect);
+		Archetype* toArchetype = getOrCreateArchetype(toAspect);
+
+		SASSERT(fromArchetype)
+		SASSERT(toArchetype)
+
+		// Get entity's current location
+		auto [fromChunk, fromIndex] = fromArchetype->getEntityLocation(entity);
+
+		// Add to new archetype
+		auto [toChunk, toIndex] = toArchetype->addEntity(entity);
+
+		// Copy compatible components between chunks
+		copyCompatibleComponents(fromChunk, fromIndex, toChunk, toIndex, fromAspect, toAspect);
+
+		// Remove from old archetype
+		fromArchetype->removeEntity(entity);
+
+		m_entityToArchetype[entity] = toArchetype;
+	}
+
+	void ArchetypeManager::removeEntity(Entity entity, const Aspect& aspect)
+	{
+		SASSERT(isEntityTracked(entity))
+		Archetype* archetype = findArchetype(aspect);
+		SASSERT(archetype)
+		archetype->removeEntity(entity);
+
+		m_entityToArchetype.erase(entity);
+	}
+
+	Archetype* ArchetypeManager::getEntityArchetype(Entity entity) const
+	{
+		SASSERT(isEntityTracked(entity))
+		return m_entityToArchetype.at(entity);
+	}
+
+	heap_vector<Archetype*> ArchetypeManager::queryArchetypes(const Aspect& includeAspect,
+	                                                          const Aspect& excludeAspect) const
+	{
+		heap_vector<Archetype*> result;
+
+		for (const auto& [aspect, archetype] : m_archetypes)
+		{
+			if (aspect.contains(includeAspect) && !aspect.intersects(excludeAspect))
+			{
+				result.push_back(archetype.get());
+			}
+		}
+
+		return result;
+	}
+
+	bool ArchetypeManager::isEntityTracked(Entity entity) const
+	{
+		return m_entityToArchetype.find(entity) != m_entityToArchetype.end();
+	}
+
+	void ArchetypeManager::copyCompatibleComponents(Chunk* fromChunk,
+	                                                sizet fromIndex,
+	                                                Chunk* toChunk,
+	                                                sizet toIndex,
+	                                                const Aspect& fromAspect,
+	                                                const Aspect& toAspect)
+	{
+		const auto& commonTypes = fromAspect.getIntersection(toAspect);
+
+		for (const auto& componentType : commonTypes)
+		{
+			// Only copy if the component exists in both aspects
+			const auto& metadata = m_metadataRegistry->getMetadata(componentType);
+
+			// Get source and destination pointers
+			void* srcPtr = fromChunk->getComponentDataPtr(fromIndex, componentType);
+			void* dstPtr = toChunk->getComponentDataPtr(toIndex, componentType);
+
+			if (srcPtr && dstPtr)
+			{
+				if (metadata.isTriviallyRelocatable)
+				{
+					std::memcpy(dstPtr, srcPtr, metadata.size);
+				}
+				else
+				{
+					metadata.moveAndDestroy(dstPtr, srcPtr);
+				}
+			}
+		}
+	}
 }

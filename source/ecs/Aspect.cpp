@@ -10,13 +10,16 @@ namespace spite
 
 		// Manual unique removal
 		auto writeIt = m_types.begin();
-		for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt) {
-			if (writeIt == m_types.begin() || *readIt != *(writeIt - 1)) {
+		for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt)
+		{
+			if (writeIt == m_types.begin() || *readIt != *(writeIt - 1))
+			{
 				*writeIt = *readIt;
 				++writeIt;
 			}
 		}
-		while (m_types.end() != writeIt) {
+		while (m_types.end() != writeIt)
+		{
 			m_types.pop_back();
 		}
 	}
@@ -72,19 +75,25 @@ namespace spite
 		// Manual implementation of subset check for sorted vectors
 		auto it1 = m_types.begin();
 		auto it2 = other.m_types.begin();
-			
-		while (it1 != m_types.end() && it2 != other.m_types.end()) {
-			if (*it1 < *it2) {
+
+		while (it1 != m_types.end() && it2 != other.m_types.end())
+		{
+			if (*it1 < *it2)
+			{
 				++it1;
-			} else if (*it1 == *it2) {
+			}
+			else if (*it1 == *it2)
+			{
 				++it1;
 				++it2;
-			} else {
+			}
+			else
+			{
 				// *it1 > *it2, meaning other has a type that this doesn't have
 				return false;
 			}
 		}
-			
+
 		// If we've processed all of other's types, then this contains other
 		return it2 == other.m_types.end();
 	}
@@ -99,18 +108,47 @@ namespace spite
 		// Use two-pointer technique for sorted vectors
 		auto it1 = m_types.begin();
 		auto it2 = other.m_types.begin();
-			
-		while (it1 != m_types.end() && it2 != other.m_types.end()) {
-			if (*it1 == *it2) {
+
+		while (it1 != m_types.end() && it2 != other.m_types.end())
+		{
+			if (*it1 == *it2)
+			{
 				return true;
 			}
-			if (*it1 < *it2) {
+			if (*it1 < *it2)
+			{
 				++it1;
-			} else {
+			}
+			else
+			{
 				++it2;
 			}
 		}
 		return false;
+	}
+
+	sbo_vector<std::type_index> Aspect::getIntersection(const Aspect& other) const
+	{
+		sbo_vector<std::type_index> result;
+		auto it1 = m_types.begin();
+		auto it2 = other.m_types.begin();
+
+		while (it1 != m_types.end() && it2 != other.m_types.end())
+		{
+			if (*it1 == *it2)
+			{
+				result.push_back(*it1);
+			}
+			if (*it1 < *it2)
+			{
+				++it1;
+			}
+			else
+			{
+				++it2;
+			}
+		}
+		return result;
 	}
 
 	size_t Aspect::size() const
@@ -126,7 +164,8 @@ namespace spite
 	size_t Aspect::hash::operator()(const Aspect& aspect) const
 	{
 		size_t seed = 0;
-		for (const auto& type : aspect.m_types) {
+		for (const auto& type : aspect.m_types)
+		{
 			// Combine hashes using a simple hash combination method
 			seed ^= std::hash<std::type_index>{}(type) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		}
@@ -135,7 +174,8 @@ namespace spite
 
 	Aspect::~Aspect() = default;
 
-	AspectRegistry::AspectNode::AspectNode(const Aspect* asp, AspectNode* par): aspect(asp), parent(par)
+	AspectRegistry::AspectNode::AspectNode(const Aspect* asp, AspectNode* par): aspect(asp),
+		parent(par)
 	{
 	}
 
@@ -155,16 +195,17 @@ namespace spite
 	{
 		// Check if aspect already exists
 		auto it = m_aspectToNode.find(aspect);
-		if (it != m_aspectToNode.end()) {
+		if (it != m_aspectToNode.end())
+		{
 			return it->second;
 		}
 
 		AspectNode* bestParent = findBestParent(aspect);
-			
+
 		auto [mapIt, inserted] = m_aspectToNode.emplace(aspect, nullptr);
 
 		AspectNode* newNode = new AspectNode(&mapIt->first, bestParent);
-		mapIt->second = newNode;  
+		mapIt->second = newNode;
 
 		bestParent->children.push_back(newNode);
 
@@ -197,7 +238,8 @@ namespace spite
 	{
 		glheap_vector<AspectNode*> descendants;
 		AspectNode* node = getNode(aspect);
-		if (node) {
+		if (node)
+		{
 			collectDescendants(node, descendants);
 		}
 		return descendants;
@@ -208,7 +250,8 @@ namespace spite
 	{
 		glheap_vector<AspectNode*> ancestors;
 		AspectNode* node = getNode(aspect);
-		while (node && node->parent) {
+		while (node && node->parent)
+		{
 			ancestors.push_back(node->parent);
 			node = node->parent;
 		}
@@ -217,27 +260,32 @@ namespace spite
 
 	bool AspectRegistry::removeAspect(const Aspect& aspect)
 	{
-		if (aspect.empty()) {
+		if (aspect.empty())
+		{
 			return false; // Cannot remove root
 		}
 
 		AspectNode* node = getNode(aspect);
-		if (!node) {
+		if (!node)
+		{
 			return false;
 		}
 
 		// Reparent children to this node's parent
-		for (AspectNode* child : node->children) {
+		for (AspectNode* child : node->children)
+		{
 			child->parent = node->parent;
-			if (node->parent) {
+			if (node->parent)
+			{
 				node->parent->children.push_back(child);
 			}
 		}
 
 		// Remove from parent's children list
-		if (node->parent) {
+		if (node->parent)
+		{
 			auto& parentChildren = node->parent->children;
-			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), node), 
+			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), node),
 			                     parentChildren.end());
 		}
 
@@ -266,8 +314,10 @@ namespace spite
 		const Aspect& aspect) const
 	{
 		glheap_vector<AspectNode*> intersecting;
-		for (const auto& [storedAspect, node] : m_aspectToNode) {
-			if (storedAspect.intersects(aspect) && storedAspect != aspect) {
+		for (const auto& [storedAspect, node] : m_aspectToNode)
+		{
+			if (storedAspect.intersects(aspect) && storedAspect != aspect)
+			{
 				intersecting.push_back(node);
 			}
 		}
@@ -278,7 +328,8 @@ namespace spite
 	{
 		glheap_vector<AspectNode*> allAspects;
 		allAspects.reserve(m_aspectToNode.size());
-		for (const auto& [aspect, node] : m_aspectToNode) {
+		for (const auto& [aspect, node] : m_aspectToNode)
+		{
 			allAspects.push_back(node);
 		}
 		return allAspects;
@@ -287,17 +338,20 @@ namespace spite
 	AspectRegistry::AspectNode* AspectRegistry::findBestParent(const Aspect& newAspect)
 	{
 		AspectNode* bestParent = m_root;
-			
+
 		// Search for the most specific aspect that contains newAspect
-		for (const auto& [aspect, node] : m_aspectToNode) {
-			if (aspect.contains(newAspect) && aspect != newAspect) {
+		for (const auto& [aspect, node] : m_aspectToNode)
+		{
+			if (aspect.contains(newAspect) && aspect != newAspect)
+			{
 				// This aspect contains the new one, check if it's more specific than current best
-				if (bestParent->aspect->empty() || bestParent->aspect->contains(aspect)) {
+				if (bestParent->aspect->empty() || bestParent->aspect->contains(aspect))
+				{
 					bestParent = node;
 				}
 			}
 		}
-			
+
 		return bestParent;
 	}
 
@@ -309,18 +363,21 @@ namespace spite
 		glheap_vector<AspectNode*> toReparent;
 
 		// Find children that should be reparented to the new node
-		for (AspectNode* child : parentChildren) {
-			if (child != newNode && newNode->aspect->contains(*child->aspect)) {
+		for (AspectNode* child : parentChildren)
+		{
+			if (child != newNode && newNode->aspect->contains(*child->aspect))
+			{
 				toReparent.push_back(child);
 			}
 		}
 
 		// Reparent the children
-		for (AspectNode* child : toReparent) {
+		for (AspectNode* child : toReparent)
+		{
 			// Remove from current parent
-			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), child), 
+			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), child),
 			                     parentChildren.end());
-				
+
 			// Add to new parent
 			child->parent = newNode;
 			newNode->children.push_back(child);
@@ -328,9 +385,10 @@ namespace spite
 	}
 
 	void AspectRegistry::collectDescendants(AspectNode* node,
-		glheap_vector<AspectNode*>& descendants) const
+	                                        glheap_vector<AspectNode*>& descendants) const
 	{
-		for (AspectNode* child : node->children) {
+		for (AspectNode* child : node->children)
+		{
 			descendants.push_back(child);
 			collectDescendants(child, descendants);
 		}
@@ -339,8 +397,9 @@ namespace spite
 	void AspectRegistry::destroyNode(AspectNode* node)
 	{
 		if (!node) return;
-			
-		for (AspectNode* child : node->children) {
+
+		for (AspectNode* child : node->children)
+		{
 			destroyNode(child);
 		}
 		delete node;

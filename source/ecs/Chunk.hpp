@@ -10,7 +10,7 @@ namespace spite
 {
 	struct Entity;
 	class ComponentMetadataRegistry;
-	constexpr sizet DEFAULT_CHUNK_CAPACITY = 128;
+	constexpr sizet DEFAULT_CHUNK_CAPACITY = 64;
 
 	class Chunk
 	{
