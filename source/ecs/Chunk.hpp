@@ -1,6 +1,10 @@
 #pragma once
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <bitset>
+
+#include <EASTL/array.h>
+#include <EASTL/span.h>
+
+#include "Entity.hpp"
 
 #include "base/memory/HeapAllocator.hpp"
 
@@ -8,47 +12,54 @@
 
 namespace spite
 {
-	struct Entity;
 	class ComponentMetadataRegistry;
 	constexpr sizet DEFAULT_CHUNK_CAPACITY = 64;
+	constexpr sizet MAX_COMPONENTS_IN_ASPECT = 32;
+
 
 	class Chunk
 	{
+		static constexpr sizet CAPACITY = DEFAULT_CHUNK_CAPACITY;
+		static constexpr sizet MAX_COMPONENT_TYPES = MAX_COMPONENTS_IN_ASPECT;
+
 	private:
-		const Aspect* m_aspect; // The set of component types this chunk stores.
-		// Stores the actual Entity IDs.
-		heap_vector<Entity> m_entities;
-		// Stores pointers to the beginning of each component array.
-		// The order matches the order of type_index in m_aspect.getTypes().
-		heap_vector<std::byte*> m_componentDataStarts;
-
-		// Raw block of memory holding all component arrays contiguously.
-		heap_vector<std::byte*> m_componentArraysStorage;
-
-		sizet m_count; // Current number of active entities in this chunk.
-		sizet m_capacity; // Maximum number of entities this chunk can hold.
-		HeapAllocator m_allocator;
-
+		Aspect m_aspect;
+		sizet m_count;
 		const ComponentMetadataRegistry* m_metadataRegistry;
+		HeapAllocator& m_allocator;
+
+		// A single block of memory for all component arrays.
+		std::byte* m_storageBlock;
+
+		eastl::array<Entity, CAPACITY> m_entities;
+		eastl::array<std::byte*, MAX_COMPONENT_TYPES> m_componentDataStarts{};
+
+		// Per-component modification tracking bitsets.
+		eastl::array<std::bitset<CAPACITY>, MAX_COMPONENT_TYPES> m_modifiedBitsets;
 
 	public:
-		Chunk(const Aspect* aspect,
-		      sizet capacity,
+		Chunk(Aspect aspect,
 		      const ComponentMetadataRegistry* metadataRegistry,
-		      const HeapAllocator& allocator);
+		      HeapAllocator& allocator);
 
 		~Chunk();
 
 		Chunk(const Chunk&) = delete;
 		Chunk& operator=(const Chunk&) = delete;
-		Chunk(Chunk&&) = delete;
-		Chunk& operator=(Chunk&&) = delete;
 
-		bool isFull() const;
-		bool isEmpty() const;
-		sizet getCount() const;
-		sizet getCapacity() const;
-		const Aspect& getAspect() const;
+		Chunk(Chunk&& other) noexcept;
+
+		Chunk& operator=(Chunk&& other) noexcept;
+
+		[[nodiscard]] bool full() const;
+
+		[[nodiscard]] bool empty() const;
+
+		[[nodiscard]] sizet count() const;
+
+		[[nodiscard]] sizet capacity() const;
+
+		[[nodiscard]] const Aspect& aspect() const;
 
 		// Adds an entity ID and returns the index within the chunk where its components will be stored.
 		// The caller is responsible for constructing/placing the component data.
@@ -60,43 +71,53 @@ namespace spite
 		// Destructors for removedEntity should be called in Archetype
 		Entity removeEntityAndSwap(const sizet entityChunkIndex);
 
-		// Get a raw uncasted ptr to the component data for a specific entity and component type.
-		void* getComponentDataPtr(const sizet entityChunkIdx, const std::type_index targetType);
 
-		// Get a pointer to the component data for a specific entity and component type.
+		// marks component as modified
 		template <typename TComponent>
-		TComponent* getComponent(const sizet entityChunkIndex);
+		TComponent& component(const sizet entityChunkIdx);
+
+		// does not mark component as modified
+		template <typename TComponent>
+		const TComponent& component(const sizet entityChunkIndex) const;
 
 		// Get a raw pointer to the array of components of a specific type.
 		// The array contains `m_count` valid components.
 		template <typename TComponent>
-		TComponent* getComponentArray();
+		TComponent* componentArray();
 
-		Entity getEntity(const sizet entityChunkIndex) const;
+		template <typename TComponent>
+		const TComponent* componentArray() const;
 
-		const heap_vector<Entity>& getEntities() const;
+		[[nodiscard]] Entity entity(const sizet entityChunkIndex) const;
+
+		[[nodiscard]] eastl::span<const Entity> entities() const;
+
+		template <typename TComponent>
+		[[nodiscard]] bool wasModifiedLastFrame(const sizet entityChunkIndex) const;
+
+		[[nodiscard]] bool wasModifiedLastFrame(const sizet entityChunkIndex,
+		                                        const std::type_index targetType) const;
+
+		const std::bitset<CAPACITY>* getModifiedBitset(std::type_index type) const;
+
+		void resetModificationTracking();
+
+		// Get a raw uncasted ptr to the component data for a specific entity and component type.
+		// Marks component as modified
+		[[nodiscard]] void* componentDataPtr(const sizet entityChunkIdx,
+		                                     const std::type_index targetType);
+
+		// Get a raw uncasted ptr to the component data for a specific entity and component type.
+		// Does not mark component as modified
+		[[nodiscard]] const void* componentDataPtr(const sizet entityChunkIdx,
+		                                           const std::type_index targetType) const;
+
+		// Gets a raw pointer to an entity's component data using a pre-calculated index. (O(1) access)
+		void* getComponentDataPtrByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk);
+
+		const void* getComponentDataPtrByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk) const;
+
+		// Marks a component as modified using a pre-calculated index. (O(1) access)
+		void markModifiedByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk);
 	};
-
-	template <typename TComponent>
-	TComponent* Chunk::getComponent(const sizet entityChunkIndex)
-	{
-		std::type_index targetType = typeid(TComponent);
-		return static_cast<TComponent*>(getComponentDataPtr(entityChunkIndex, targetType));
-	}
-
-	template <typename TComponent>
-	TComponent* Chunk::getComponentArray()
-	{
-		std::type_index targetType = typeid(TComponent);
-		const auto& componentTypes = m_aspect->getTypes();
-		for (size_t i = 0; i < componentTypes.size(); ++i)
-		{
-			if (componentTypes[i] == targetType)
-			{
-				return reinterpret_cast<TComponent*>(m_componentDataStarts[i]);
-			}
-		}
-		SASSERTM(false, "Component type %s is not in chunk's aspect\n", targetType.name())
-		return nullptr;
-	}
 }

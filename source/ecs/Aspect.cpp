@@ -174,16 +174,15 @@ namespace spite
 
 	Aspect::~Aspect() = default;
 
-	AspectRegistry::AspectNode::AspectNode(const Aspect* asp, AspectNode* par): aspect(asp),
+	AspectRegistry::AspectNode::AspectNode(Aspect asp, AspectNode* par): aspect(std::move(asp)),
 		parent(par)
 	{
 	}
 
 	AspectRegistry::AspectRegistry()
 	{
-		auto [it, inserted] = m_aspectToNode.emplace(Aspect(), nullptr);
-		m_root = new AspectNode(&it->first);
-		it->second = m_root;
+		m_root = new AspectNode(Aspect());
+		m_aspectToNode.emplace(Aspect(), m_root);
 	}
 
 	AspectRegistry::~AspectRegistry()
@@ -202,10 +201,8 @@ namespace spite
 
 		AspectNode* bestParent = findBestParent(aspect);
 
-		auto [mapIt, inserted] = m_aspectToNode.emplace(aspect, nullptr);
-
-		AspectNode* newNode = new AspectNode(&mapIt->first, bestParent);
-		mapIt->second = newNode;
+		auto newNode = new AspectNode(aspect, bestParent);
+		m_aspectToNode.emplace(aspect, newNode);
 
 		bestParent->children.push_back(newNode);
 
@@ -345,7 +342,7 @@ namespace spite
 			if (aspect.contains(newAspect) && aspect != newAspect)
 			{
 				// This aspect contains the new one, check if it's more specific than current best
-				if (bestParent->aspect->empty() || bestParent->aspect->contains(aspect))
+				if (bestParent->aspect.empty() || bestParent->aspect.contains(aspect))
 				{
 					bestParent = node;
 				}
@@ -365,7 +362,7 @@ namespace spite
 		// Find children that should be reparented to the new node
 		for (AspectNode* child : parentChildren)
 		{
-			if (child != newNode && newNode->aspect->contains(*child->aspect))
+			if (child != newNode && newNode->aspect.contains(child->aspect))
 			{
 				toReparent.push_back(child);
 			}

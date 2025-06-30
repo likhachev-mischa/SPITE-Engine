@@ -4,22 +4,27 @@
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
 
+#include "IComponent.hpp"
+
 #include "base/Collections.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
 namespace spite
-{	
+{
 	struct Aspect
 	{
 	private:
 		sbo_vector<std::type_index> m_types;
 
-	public:		
+	public:
+		Aspect();
+
+		template <t_component... ComponentTypes>
 		Aspect();
 
 		Aspect(std::initializer_list<std::type_index> typeList);
 
-		template<typename Iterator>
+		template <typename Iterator>
 		Aspect(Iterator begin, Iterator end);
 
 		explicit Aspect(std::type_index type);
@@ -58,30 +63,41 @@ namespace spite
 
 		bool empty() const;
 
-		struct hash {
+		struct hash
+		{
 			size_t operator()(const Aspect& aspect) const;
 		};
 
 		~Aspect();
 	};
 
+	template <t_component... ComponentTypes>
+	Aspect::Aspect()
+	{
+		Aspect({std::type_index(typeid(ComponentTypes))...});
+	}
+
 	template <typename Iterator>
 	Aspect::Aspect(Iterator begin, Iterator end)
 	{
 		m_types.reserve(eastl::distance(begin, end));
-		for (auto it = begin; it != end; ++it) {
+		for (auto it = begin; it != end; ++it)
+		{
 			m_types.push_back(*it);
 		}
 		eastl::sort(m_types.begin(), m_types.end());
 		// Manual unique removal
 		auto writeIt = m_types.begin();
-		for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt) {
-			if (writeIt == m_types.begin() || *readIt != *(writeIt - 1)) {
+		for (auto readIt = m_types.begin(); readIt != m_types.end(); ++readIt)
+		{
+			if (writeIt == m_types.begin() || *readIt != *(writeIt - 1))
+			{
 				*writeIt = *readIt;
 				++writeIt;
 			}
 		}
-		while (m_types.end() != writeIt) {
+		while (m_types.end() != writeIt)
+		{
 			m_types.pop_back();
 		}
 	}
@@ -91,14 +107,15 @@ namespace spite
 	private:
 		struct AspectNode
 		{
-			const Aspect* aspect;
+			const Aspect aspect;
 			glheap_vector<AspectNode*> children;
 			AspectNode* parent;
 
-			explicit AspectNode(const Aspect* asp, AspectNode* par = nullptr);
+			explicit AspectNode(Aspect asp, AspectNode* par = nullptr);
 		};
 
 		AspectNode* m_root;
+
 		glheap_unordered_map<Aspect, AspectNode*, Aspect::hash> m_aspectToNode;
 
 	public:
