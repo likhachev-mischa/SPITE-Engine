@@ -3,16 +3,20 @@
 #include "ComponentMetadata.hpp"
 
 #include "base/memory/ScratchAllocator.hpp"
+#include "base/CollectionUtilities.hpp"
 
 namespace spite
 {
 	Archetype::Archetype(Aspect aspect,
 	                     const ComponentMetadataRegistry* registry,
 	                     HeapAllocator& allocator): m_aspect(std::move(aspect)),
-	                                                m_componentIndexMap(allocator),
+	                                                m_componentIndexMap(
+		                                                makeHeapMap<
+			                                                std::type_index, int>(allocator)),
 	                                                m_metadataRegistry(registry),
-	                                                m_freeChunks(allocator),
-	                                                m_firstNonFullChunkIdx(0),
+	                                                m_freeChunks(
+		                                                makeHeapVector<std::unique_ptr<Chunk>>(
+			                                                allocator)), m_firstNonFullChunkIdx(0),
 	                                                m_allocator(allocator)
 	{
 		const auto& types = m_aspect.getTypes();
@@ -80,7 +84,8 @@ namespace spite
 	{
 		if (entities.empty()) return {};
 
-		auto locations = FrameScratchAllocator::makeVector<eastl::pair<Chunk*,sizet>>();
+		auto locations = makeScratchVector<eastl::pair<
+			Chunk*, sizet>>(FrameScratchAllocator::get());
 		locations.reserve(entities.size());
 		m_entityLocations.reserve(m_entityLocations.size() + entities.size());
 
@@ -213,8 +218,10 @@ namespace spite
 	{
 		if (entities.empty()) return;
 
-		auto toRemoveByChunk= FrameScratchAllocator::makeMap<Chunk*,
-			scratch_vector<sizet>>();
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
+
+		auto toRemoveByChunk = makeScratchMap<Chunk*, scratch_vector<sizet>>(
+			FrameScratchAllocator::get());
 
 		// Group entities by chunk
 		for (const auto& entity : entities)
@@ -225,7 +232,8 @@ namespace spite
 				Chunk* chunk = m_chunks[it->second.first].get();
 				if (toRemoveByChunk.find(chunk) == toRemoveByChunk.end())
 				{
-					toRemoveByChunk.emplace(chunk, FrameScratchAllocator::makeVector<sizet>());
+					toRemoveByChunk.emplace(chunk,
+					                        makeScratchVector<sizet>(FrameScratchAllocator::get()));
 				}
 				toRemoveByChunk[m_chunks[it->second.first].get()].push_back(it->second.second);
 			}
@@ -312,7 +320,8 @@ namespace spite
 
 	ArchetypeManager::ArchetypeManager(const ComponentMetadataRegistry* registry,
 	                                   const HeapAllocator& allocator): m_aspectRegistry(),
-		m_metadataRegistry(registry), m_allocator(allocator), m_entityToArchetype(allocator)
+		m_metadataRegistry(registry), m_allocator(allocator),
+		m_entityToArchetype(makeHeapMap<Entity, Archetype*, Entity::hash>(allocator))
 	{
 	}
 
@@ -380,8 +389,9 @@ namespace spite
 		if (entities.empty()) return;
 
 		Archetype* toArchetype = getOrCreateArchetype(toAspect);
-		auto groups = FrameScratchAllocator::makeMap<Archetype*,
-			scratch_vector<Entity>>();
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
+		auto groups = makeScratchMap<Archetype*, scratch_vector<Entity>>(
+			FrameScratchAllocator::get());
 
 		for (const auto& entity : entities)
 		{
@@ -417,8 +427,9 @@ namespace spite
 	{
 		if (entities.empty()) return;
 
-		auto groups = FrameScratchAllocator::makeMap<Archetype*,
-			scratch_vector<Entity>>();
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
+		auto groups = makeScratchMap<Archetype*, scratch_vector<Entity>>(
+			FrameScratchAllocator::get());
 		for (const auto& entity : entities)
 		{
 			auto it = m_entityToArchetype.find(entity);
@@ -526,9 +537,10 @@ namespace spite
 	                                                     Archetype* to,
 	                                                     eastl::span<const Entity> entities)
 	{
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
 		auto newLocations = to->addEntities(entities);
-		auto newLocationMap = FrameScratchAllocator::makeMap<Entity,
-			eastl::pair<Chunk*, sizet>>();
+		auto newLocationMap = makeScratchMap<Entity, eastl::pair<Chunk*, sizet>>(
+			FrameScratchAllocator::get());
 		for (size_t i = 0; i < entities.size(); ++i)
 		{
 			newLocationMap[entities[i]] = newLocations[i];
