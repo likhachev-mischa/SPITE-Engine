@@ -4,32 +4,10 @@
 
 namespace spite
 {
-	void* GlobalScratchBackingAllocator::allocate(sizet size)
-	{
-		return getGlobalAllocator().allocate(size);
-	}
-
-	void GlobalScratchBackingAllocator::deallocate(void* p, sizet n)
-	{
-		getGlobalAllocator().deallocate(p, n);
-	}
-
-	void* FrameScratchBackingAllocator::allocate(sizet size)
-	{
-		return FrameScratchAllocator::get().allocate(size);
-	}
-
-	void FrameScratchBackingAllocator::deallocate(void* p, sizet n)
-	{
-		//noop
-	}
-
-	ScratchAllocator::ScratchAllocator(sizet bufferSize,
-	                                   const char* name,
-	                                   ScratchAllocatorType type): m_type(type), m_size(bufferSize),
+	ScratchAllocator::ScratchAllocator(sizet bufferSize, const char* name): m_size(bufferSize),
 		m_name(name)
 	{
-		m_buffer = static_cast<char*>(internalAllocate(bufferSize));
+		m_buffer = static_cast<char*>(getGlobalAllocator().allocate(bufferSize));
 
 
 		m_current = m_buffer;
@@ -40,11 +18,11 @@ namespace spite
 	{
 		if (m_buffer)
 		{
-			internalDeallocate(m_buffer, m_size);
+			getGlobalAllocator().deallocate(m_buffer, m_size);
 		}
 	}
 
-	ScratchAllocator::ScratchAllocator(ScratchAllocator&& other) noexcept: m_type(other.m_type),
+	ScratchAllocator::ScratchAllocator(ScratchAllocator&& other) noexcept:
 		m_buffer(other.m_buffer), m_current(other.m_current), m_end(other.m_end),
 		m_size(other.m_size), m_name(other.m_name), m_highWaterMark(other.m_highWaterMark)
 	{
@@ -59,9 +37,8 @@ namespace spite
 		{
 			if (m_buffer)
 			{
-				internalDeallocate(m_buffer, m_size);
+			getGlobalAllocator().deallocate(m_buffer, m_size);
 			}
-			m_type = other.m_type;
 			m_buffer = other.m_buffer;
 			m_current = other.m_current;
 			m_end = other.m_end;
@@ -83,22 +60,25 @@ namespace spite
 
 	void* ScratchAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
 	{
-		// Align current pointer
-		char* aligned = reinterpret_cast<char*>((reinterpret_cast<uintptr_t>(m_current) + alignment
-			- 1) & ~(alignment - 1));
+		void* ptr = m_current;
+		size_t space = m_end - m_current;
 
-		SASSERTM(aligned + size <= m_end, "Scratch alloc %s out of memory\n", get_name())
-
-		m_current = aligned + size;
-
-		// Update high water mark
-		size_t used = m_current - m_buffer;
-		if (used > m_highWaterMark)
+		if (std::align(alignment, size, ptr, space))
 		{
-			m_highWaterMark = used;
-		}
+			m_current = static_cast<char*>(ptr) + size;
+			
+			// Update high water mark
+			size_t used = m_current - m_buffer;
+			if (used > m_highWaterMark)
+			{
+				m_highWaterMark = used;
+			}
 
-		return aligned;
+			return ptr;
+		}
+		
+		SASSERTM(false, "Scratch alloc %s out of memory\n", get_name())
+		return nullptr;
 	}
 
 	void ScratchAllocator::deallocate(void*, size_t) noexcept
@@ -109,6 +89,51 @@ namespace spite
 	void ScratchAllocator::reset() noexcept
 	{
 		m_current = m_buffer;
+	}
+
+	ScratchAllocator::ScopedMarker::~ScopedMarker()
+	{
+		if (m_allocator)
+		{
+			m_allocator->reset_to(m_position);
+		}
+	}
+
+	ScratchAllocator::ScopedMarker::ScopedMarker(ScopedMarker&& other) noexcept: m_allocator(other.m_allocator),
+		m_position(other.m_position)
+	{
+		other.m_allocator = nullptr; // Prevent double-reset
+	}
+
+	ScratchAllocator::ScopedMarker& ScratchAllocator::ScopedMarker::operator=(
+		ScopedMarker&& other) noexcept
+	{
+		if (this != &other)
+		{
+			if (m_allocator)
+			{
+				m_allocator->reset_to(m_position);
+			}
+			m_allocator = other.m_allocator;
+			m_position = other.m_position;
+			other.m_allocator = nullptr;
+		}
+		return *this;
+	}
+
+	ScratchAllocator::ScopedMarker::ScopedMarker(ScratchAllocator* allocator, char* position): m_allocator(allocator),
+		m_position(position)
+	{
+	}
+
+	ScratchAllocator::ScopedMarker ScratchAllocator::get_scoped_marker()
+	{ return ScopedMarker(this, m_current); }
+
+	void ScratchAllocator::reset_to(char* position) noexcept
+	{
+		SASSERTM(position >= m_buffer && position < m_end,
+		         "Position is out of bounds of scratch allocator")
+		m_current = position;
 	}
 
 	sizet ScratchAllocator::bytes_used() const noexcept
@@ -150,51 +175,30 @@ namespace spite
 		return ptr >= m_buffer && ptr < m_end;
 	}
 
-	void* ScratchAllocator::internalAllocate(sizet size) const
-	{
-		switch (m_type)
-		{
-		case ScratchAllocatorType_Global:
-			{
-				return GlobalScratchBackingAllocator::allocate(size);
-			}
-		case ScratchAllocatorType_Frame:
-			{
-				return FrameScratchBackingAllocator::allocate(size);
-			}
-		}
-		SASSERTM(false, "Scratch allocator allocation error\n")
-		return nullptr;
-	}
-
-	void ScratchAllocator::internalDeallocate(void* buffer, sizet size)
-	{
-		switch (m_type)
-		{
-		case ScratchAllocatorType_Global:
-			{
-				return GlobalScratchBackingAllocator::deallocate(buffer, size);
-			}
-		case ScratchAllocatorType_Frame:
-			{
-				return FrameScratchBackingAllocator::deallocate(buffer, size);
-			}
-		}
-	}
-
 	thread_local ScratchAllocator* FrameScratchAllocator::m_frameAllocator = nullptr;
 
 	void FrameScratchAllocator::init()
 	{
 		SASSERTM(!m_frameAllocator, "Trying to initialize frame scratch allocator more than once\n")
-		m_frameAllocator = new ScratchAllocator(DEFAULT_FRAME_SIZE,
-		                                        "FrameScratch",
-		                                        ScratchAllocatorType_Global);
+			m_frameAllocator = new ScratchAllocator(DEFAULT_FRAME_SIZE,
+				"FrameScratch");
 	}
 
 	void FrameScratchAllocator::shutdown()
 	{
 		SASSERTM(m_frameAllocator, "Frame scratch allocator is not initialized\n")
 		delete m_frameAllocator;
+	}
+
+	ScratchAllocator& FrameScratchAllocator::get()
+	{
+		SASSERTM(m_frameAllocator, "Frame scratch allocator is not initialized\n")
+		return *m_frameAllocator;
+	}
+
+	void FrameScratchAllocator::resetFrame()
+	{
+		SASSERTM(m_frameAllocator, "Frame scratch allocator is not initialized\n")
+		m_frameAllocator->reset();
 	}
 }
