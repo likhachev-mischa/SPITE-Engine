@@ -56,28 +56,38 @@ namespace spite
 		sizet m_maxSize;
 	};
 
-	//Type aliases for heap allocated collections
-	template <typename T>
-	using heap_vector = eastl::vector<T, HeapAllocator>;
-
-	template <typename T>
-	using heap_string = eastl::basic_string<T, HeapAllocator>;
-
-	using heap_string8 = heap_string<char>;
-	using heap_string16 = heap_string<char16_t>;
-	using heap_string32 = heap_string<char32_t>;
-
-	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
-	using heap_unordered_map = eastl::unordered_map<Key, Value,
-	                                                Hash, eastl::equal_to<Key>,
-	                                                HeapAllocator>;
-
 	void initGlobalAllocator();
-	spite::HeapAllocator& getGlobalAllocator();
+	HeapAllocator& getGlobalAllocator();
 
 	// Optional: Global allocator lifecycle management
 	void shutdownGlobalAllocator(bool forceDealloc = false);
 	const char* getGlobalAllocatorName();
+
+	//lightweight adaper for HeapAllocator that actually should be passed to collections
+	template <typename T>
+	class HeapAllocatorAdapter
+	{
+	private:
+		const HeapAllocator* m_allocator;
+
+	public:
+		using value_type = T;
+
+		template <typename U>
+		struct rebind
+		{
+			using other = HeapAllocatorAdapter<U>;
+		};
+
+		explicit HeapAllocatorAdapter(const HeapAllocator& allocator) noexcept;
+
+		template <typename U>
+		explicit HeapAllocatorAdapter(const HeapAllocatorAdapter<U>& other) noexcept;
+
+		T* allocate(size_t n);
+
+		void deallocate(T* p, size_t n);
+	};
 
 	// Stateless allocator that always uses the global allocator
 	// This eliminates per-container allocator storage overhead
@@ -121,7 +131,7 @@ namespace spite
 		};
 
 		// For EASTL compatibility
-		void* allocate(size_t n,int flags);
+		void* allocate(size_t n, int flags);
 
 		void* allocate(size_t n, size_t alignment, size_t offset = 0, int flags = 0);
 
@@ -136,27 +146,13 @@ namespace spite
 		bool operator!=(const GlobalHeapAllocator&) const noexcept;
 	};
 
-	//Type aliases for global heap allocated collections
-	template <typename T>
-	using glheap_vector = eastl::vector<T, GlobalHeapAllocator<T>>;
-
-	template <typename T>
-	using glheap_string = eastl::basic_string<T, GlobalHeapAllocator<T>>;
-
-	using glheap_string8 = glheap_string<char>;
-	using glheap_string16 = glheap_string<char16_t>;
-	using glheap_string32 = glheap_string<char32_t>;
-
-	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
-	using glheap_unordered_map = eastl::unordered_map<Key, Value,
-	                                                  Hash, eastl::equal_to<Key>,
-	                                                  GlobalHeapAllocator<eastl::pair<
-		                                                  const Key, Value>>>;
-
 	template <typename T>
 	constexpr GlobalHeapAllocator<T>::GlobalHeapAllocator() noexcept = default;
+
 	template <typename T>
-	constexpr GlobalHeapAllocator<T>::GlobalHeapAllocator(cstring name) noexcept {};
+	constexpr GlobalHeapAllocator<T>::GlobalHeapAllocator(cstring name) noexcept
+	{
+	};
 	template <typename T>
 	constexpr GlobalHeapAllocator<T>::GlobalHeapAllocator(const GlobalHeapAllocator&) noexcept
 	= default;
@@ -170,11 +166,36 @@ namespace spite
 	}
 
 	template <typename T>
+	HeapAllocatorAdapter<T>::HeapAllocatorAdapter(const HeapAllocator& allocator) noexcept: m_allocator(&allocator)
+	{
+	}
+
+	template <typename T>
+	template <typename U>
+	HeapAllocatorAdapter<T>::HeapAllocatorAdapter(const HeapAllocatorAdapter<U>& other) noexcept: m_allocator(
+		other.m_allocator)
+	{
+	}
+
+	template <typename T>
+	T* HeapAllocatorAdapter<T>::allocate(size_t n)
+	{
+		return static_cast<T*>(m_allocator->allocate(n * sizeof(T), alignof(T)));
+	}
+
+	template <typename T>
+	void HeapAllocatorAdapter<T>::deallocate(T* p, size_t n)
+	{
+		m_allocator->deallocate(p, n * sizeof(T));
+	}
+
+	template <typename T>
 	GlobalHeapAllocator<T>::~GlobalHeapAllocator() = default;
 	template <typename T>
 	GlobalHeapAllocator<T>& GlobalHeapAllocator<T>::operator=(const GlobalHeapAllocator&) = default;
 	template <typename T>
-	GlobalHeapAllocator<T>& GlobalHeapAllocator<T>::operator=(GlobalHeapAllocator&&) noexcept = default;
+	GlobalHeapAllocator<T>& GlobalHeapAllocator<T>::operator=(GlobalHeapAllocator&&) noexcept
+	= default;
 
 	template <typename T>
 	T* GlobalHeapAllocator<T>::allocate(size_t n)
