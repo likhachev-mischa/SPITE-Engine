@@ -2,6 +2,7 @@
 
 #include "Archetype.hpp"
 #include "IComponent.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 namespace spite
 {
@@ -10,13 +11,17 @@ namespace spite
 	private:
 		Aspect m_includeAspect;
 		Aspect m_excludeAspect;
+		Aspect m_mustBeEnabledAspect;
+		Aspect m_mustBeModifiedAspect;
 		heap_vector<Archetype*> m_archetypes;
 		mutable bool m_wasModified = false;
 
 	public:
 		Query(const ArchetypeManager& archetypeManager,
 		      Aspect includeAspect,
-		      Aspect excludeAspect = Aspect());
+		      Aspect excludeAspect = Aspect(),
+		      Aspect mustBeEnabledAspect = Aspect(),
+		      Aspect mustBeModifiedAspect = Aspect());
 
 		void rebuild(const ArchetypeManager& archetypeManager);
 
@@ -35,7 +40,8 @@ namespace spite
 			}
 		}
 
-		template <t_component... TComponent, bool IsConst = false>
+		template <t_component... TComponent,
+			bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false>
 		class Iterator
 		{
 		private:
@@ -51,23 +57,79 @@ namespace spite
 			Archetype* m_currentArchetype = nullptr;
 			eastl::array<int, sizeof...(TComponent)> m_componentIndicesInChunk;
 
+			ScratchAllocator::ScopedMarker m_marker;
+
+			scratch_vector<int> m_enabledIndicesInChunk;
+			scratch_vector<int> m_modifiedIndicesInChunk;
+
 			using single_component_type = std::tuple_element_t<0, std::tuple<TComponent...>>;
+
+			void findNextValidEntity()
+			{
+				while (m_currentChunk)
+				{
+					while (m_entityIndexInChunk < m_currentChunk->count())
+					{
+						bool passedFilters = true;
+						if constexpr (FilterEnabled)
+						{
+							for (const int componentIndex : m_enabledIndicesInChunk)
+							{
+								if (!m_currentChunk->isComponentEnabledByIndex(
+									componentIndex,
+									m_entityIndexInChunk))
+								{
+									passedFilters = false;
+									break;
+								}
+							}
+						}
+
+						if (passedFilters)
+						{
+							if constexpr (FilterModified)
+							{
+								for (const int componentIndex : m_modifiedIndicesInChunk)
+								{
+									if (!m_currentChunk->wasModifiedLastFrameByIndex(
+										componentIndex,
+										m_entityIndexInChunk))
+									{
+										passedFilters = false;
+										break;
+									}
+								}
+							}
+						}
+
+						if (passedFilters)
+						{
+							return; // Found a valid entity
+						}
+
+						m_entityIndexInChunk++;
+					}
+
+					// Move to the next chunk
+					++m_chunkIt;
+					findNextValidChunk();
+				}
+			}
 
 			void findNextValidChunk()
 			{
 				while (m_archetypeIt != m_query->m_archetypes.end())
 				{
-					//transition to a new archetype
 					if (*m_archetypeIt != m_currentArchetype)
 					{
 						m_currentArchetype = *m_archetypeIt;
 						updateChunkCache();
+						m_chunkIt = m_currentArchetype->getChunks().begin();
 					}
 
 					auto& chunks = m_currentArchetype->getChunks();
 					while (m_chunkIt != chunks.end())
 					{
-						//transition to a new chunk
 						if (!(*m_chunkIt)->empty())
 						{
 							m_currentChunk = m_chunkIt->get();
@@ -77,13 +139,10 @@ namespace spite
 						++m_chunkIt;
 					}
 					++m_archetypeIt;
-					if (m_archetypeIt != m_query->m_archetypes.end())
-					{
-						m_chunkIt = (*m_archetypeIt)->getChunks().begin();
-					}
 				}
 				m_currentChunk = nullptr; // End of iteration
 			}
+
 
 			void updateChunkCache()
 			{
@@ -91,6 +150,42 @@ namespace spite
 				for (size_t i = 0; i < sizeof...(TComponent); ++i)
 				{
 					m_componentIndicesInChunk[i] = m_currentArchetype->getComponentIndex(types[i]);
+				}
+
+				if constexpr (FilterEnabled)
+				{
+					m_enabledIndicesInChunk.clear();
+					const auto& enabledTypes = m_query->m_mustBeEnabledAspect.getTypes();
+					if (!enabledTypes.empty())
+					{
+						m_enabledIndicesInChunk.reserve(enabledTypes.size());
+						for (const auto& type : enabledTypes)
+						{
+							const int index = m_currentArchetype->getComponentIndex(type);
+							if (index != -1)
+							{
+								m_enabledIndicesInChunk.push_back(index);
+							}
+						}
+					}
+				}
+
+				if constexpr (FilterModified)
+				{
+					m_modifiedIndicesInChunk.clear();
+					const auto& modifiedTypes = m_query->m_mustBeModifiedAspect.getTypes();
+					if (!modifiedTypes.empty())
+					{
+						m_modifiedIndicesInChunk.reserve(modifiedTypes.size());
+						for (const auto& type : modifiedTypes)
+						{
+							const int index = m_currentArchetype->getComponentIndex(type);
+							if (index != -1)
+							{
+								m_modifiedIndicesInChunk.push_back(index);
+							}
+						}
+					}
 				}
 			}
 
@@ -121,36 +216,34 @@ namespace spite
 					std::conditional_t<IsConst, const TComponent&, TComponent&>...>>;
 
 			Iterator(query_ptr_t query, bool isEnd = false) : m_query(query),
-			                                                  m_entityIndexInChunk(0)
+			                                                  m_entityIndexInChunk(0),
+			                                                  m_marker(
+				                                                  FrameScratchAllocator::get().
+				                                                  get_scoped_marker()),
+			                                                  m_enabledIndicesInChunk(
+				                                                  FrameScratchAllocator::makeVector<
+					                                                  int>()),
+			                                                  m_modifiedIndicesInChunk(
+				                                                  FrameScratchAllocator::makeVector<
+					                                                  int>())
 			{
 				m_archetypeIt = m_query->m_archetypes.begin();
-				if (isEnd)
+				if (isEnd || m_archetypeIt == m_query->m_archetypes.end())
 				{
 					m_archetypeIt = m_query->m_archetypes.end();
 					m_currentChunk = nullptr;
 				}
 				else
 				{
-					if (m_archetypeIt != m_query->m_archetypes.end())
-					{
-						m_chunkIt = (*m_archetypeIt)->getChunks().begin();
-						findNextValidChunk();
-					}
-					else
-					{
-						m_currentChunk = nullptr;
-					}
+					findNextValidChunk();
+					findNextValidEntity();
 				}
 			}
 
 			Iterator& operator++()
 			{
 				m_entityIndexInChunk++;
-				if (m_currentChunk && m_entityIndexInChunk >= m_currentChunk->count())
-				{
-					++m_chunkIt;
-					findNextValidChunk();
-				}
+				findNextValidEntity();
 				return *this;
 			}
 
@@ -263,5 +356,202 @@ namespace spite
 
 		template <t_component... TComponent>
 		ConstView<TComponent...> cview() const { return ConstView<TComponent...>(this); }
+
+		template <t_component... TComponent>
+		using EnabledIterator = Iterator<TComponent..., false, true, false>;
+		template <t_component... TComponent>
+		using ConstEnabledIterator = Iterator<TComponent..., true, true, false>;
+
+		template <t_component... TComponent>
+		EnabledIterator<TComponent...> enabled_begin()
+		{
+			return EnabledIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		EnabledIterator<TComponent...> enabled_end()
+		{
+			return EnabledIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		ConstEnabledIterator<TComponent...> cenabled_begin() const
+		{
+			return ConstEnabledIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		ConstEnabledIterator<TComponent...> cenabled_end() const
+		{
+			return ConstEnabledIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		struct EnabledView
+		{
+			Query* m_query;
+
+			EnabledView(Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() { return m_query->enabled_begin<TComponent...>(); }
+			auto end() { return m_query->enabled_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		struct ConstEnabledView
+		{
+			const Query* m_query;
+
+			ConstEnabledView(const Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() const { return m_query->cenabled_begin<TComponent...>(); }
+			auto end() const { return m_query->cenabled_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		EnabledView<TComponent...> enabled_view() { return EnabledView<TComponent...>(this); }
+
+		template <t_component... TComponent>
+		ConstEnabledView<TComponent...> cenabled_view() const
+		{
+			return ConstEnabledView<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		using ModifiedIterator = Iterator<TComponent..., false, false, true>;
+
+		template <t_component... TComponent>
+		using ConstModifiedIterator = Iterator<TComponent..., true, false, true>;
+
+		template <t_component... TComponent>
+		ModifiedIterator<TComponent...> modified_begin()
+		{
+			return ModifiedIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		ModifiedIterator<TComponent...> modified_end()
+		{
+			return ModifiedIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		ConstModifiedIterator<TComponent...> cmodified_begin() const
+		{
+			return ConstModifiedIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		ConstModifiedIterator<TComponent...> cmodified_end() const
+		{
+			return ConstModifiedIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		struct ModifiedView
+		{
+			Query* m_query;
+
+			ModifiedView(Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() { return m_query->modified_begin<TComponent...>(); }
+			auto end() { return m_query->modified_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		struct ConstModifiedView
+		{
+			const Query* m_query;
+
+			ConstModifiedView(const Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() const { return m_query->cmodified_begin<TComponent...>(); }
+			auto end() const { return m_query->cmodified_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		ModifiedView<TComponent...> modified_view() { return ModifiedView<TComponent...>(this); }
+
+		template <t_component... TComponent>
+		ConstModifiedView<TComponent...> cmodified_view() const
+		{
+			return ConstModifiedView<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		using EnabledModifiedIterator = Iterator<TComponent..., false, true, true>;
+
+		template <t_component... TComponent>
+		using ConstEnabledModifiedIterator = Iterator<TComponent..., true, true, true>;
+
+		template <t_component... TComponent>
+		EnabledModifiedIterator<TComponent...> enabled_modified_begin()
+		{
+			return EnabledModifiedIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		EnabledModifiedIterator<TComponent...> enabled_modified_end()
+		{
+			return EnabledModifiedIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		ConstEnabledModifiedIterator<TComponent...> cenabled_modified_begin() const
+		{
+			return ConstEnabledModifiedIterator<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		ConstEnabledModifiedIterator<TComponent...> cenabled_modified_end() const
+		{
+			return ConstEnabledModifiedIterator<TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		struct EnabledModifiedView
+		{
+			Query* m_query;
+
+			EnabledModifiedView(Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() { return m_query->enabled_modified_begin<TComponent...>(); }
+			auto end() { return m_query->enabled_modified_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		struct ConstEnabledModifiedView
+		{
+			const Query* m_query;
+
+			ConstEnabledModifiedView(const Query* query) : m_query(query)
+			{
+			}
+
+			auto begin() const { return m_query->cenabled_modified_begin<TComponent...>(); }
+			auto end() const { return m_query->cenabled_modified_end<TComponent...>(); }
+		};
+
+		template <t_component... TComponent>
+		EnabledModifiedView<TComponent...> enabled_modified_view()
+		{
+			return EnabledModifiedView<TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		ConstEnabledModifiedView<TComponent...> cenabled_modified_view() const
+		{
+			return ConstEnabledModifiedView<TComponent...>(this);
+		}
 	};
 }

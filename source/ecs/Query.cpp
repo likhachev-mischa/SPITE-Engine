@@ -3,9 +3,11 @@
 
 namespace spite
 {
-	Query::Query(const ArchetypeManager& archetypeManager, Aspect includeAspect, Aspect excludeAspect)
+	Query::Query(const ArchetypeManager& archetypeManager, Aspect includeAspect, Aspect excludeAspect, Aspect mustBeEnabledAspect, Aspect mustBeModifiedAspect)
 		: m_includeAspect(std::move(includeAspect)),
-		  m_excludeAspect(std::move(excludeAspect))
+		  m_excludeAspect(std::move(excludeAspect)),
+		  m_mustBeEnabledAspect(std::move(mustBeEnabledAspect)),
+		  m_mustBeModifiedAspect(std::move(mustBeModifiedAspect))
 	{
 		SASSERTM(!m_includeAspect.intersects(m_excludeAspect), "Included aspect intersects with excluded aspect!\n")
 			m_archetypes = archetypeManager.queryNonEmptyArchetypes(m_includeAspect, m_excludeAspect);
@@ -26,3 +28,4 @@ namespace spite
 		m_wasModified = false;
 	}
 }
+
