@@ -145,13 +145,13 @@ def main():
     parser.add_argument(
         "--pipeline",
         type=Path,
-        default=script_dir / "../source/ecs/SystemPipeline.hpp",
+        default=script_dir / "../source/ecs/config/SystemPipeline.hpp",
         help="The path to the C++ header file defining the system pipelines."
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=script_dir / "../source/ecs/GeneratedSystemManager.hpp",
+        default=script_dir / "../source/ecs/generated/GeneratedSystemManager.hpp",
         help="The path to the output C++ header file to be generated."
     )
     args = parser.parse_args()

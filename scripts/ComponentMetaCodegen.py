@@ -22,7 +22,7 @@ CPP_TEMPLATE = """//
 //
 
 #pragma once
-#include "ecs/ComponentMetadataRegistry.hpp"
+#include "ecs/core/ComponentMetadataRegistry.hpp"
 
 // Discovered component headers:
 {includes}
@@ -47,7 +47,7 @@ HPP_TEMPLATE = """//
 //
 
 #pragma once
-#include "ecs/ComponentMetadata.hpp"
+#include "ecs/core/ComponentMetadata.hpp"
 
 namespace spite
 {{
@@ -171,13 +171,13 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=script_dir / "../source/ecs/GeneratedComponentRegistration.hpp",
+        default=script_dir / "../source/ecs/generated/GeneratedComponentRegistration.hpp",
         help="The path to the output C++ header file to be generated."
     )
     parser.add_argument(
         "--output-header",
         type=Path,
-        default=script_dir / "../source/ecs/GeneratedComponentCount.hpp",
+        default=script_dir / "../source/ecs/generated/GeneratedComponentCount.hpp",
         help="The path to the output C++ header file to be generated."
     )
     args = parser.parse_args()
