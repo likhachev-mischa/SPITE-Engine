@@ -6,6 +6,7 @@
 #include "VulkanDebug.hpp"
 
 #include "Base/Assert.hpp"
+#include "base/CollectionUtilities.hpp"
 #include "Base/Logging.hpp"
 #include "base/memory/ScratchAllocator.hpp"
 
@@ -92,7 +93,9 @@ namespace spite
 			indices.transferFamily.value()
 		};
 
-		auto queueCreateInfos = FrameScratchAllocator::makeVector<vk::DeviceQueueCreateInfo>();
+		auto allocMarker = FrameScratchAllocator::get().get_scoped_marker();
+
+		auto queueCreateInfos = makeScratchVector<vk::DeviceQueueCreateInfo>(FrameScratchAllocator::get());
 
 		queueCreateInfos.reserve(uniqueQueueFamilies.size());
 
@@ -356,7 +359,8 @@ namespace spite
 	                                                  pAllocationCallbacks,
 	                                                  const u32 count)
 	{
-		auto layoutBindings = FrameScratchAllocator::makeVector<vk::DescriptorSetLayoutBinding>();
+		auto allocMarker = FrameScratchAllocator::get().get_scoped_marker();
+		auto layoutBindings = makeScratchVector<vk::DescriptorSetLayoutBinding>(FrameScratchAllocator::get());
 		layoutBindings.reserve(descriptorData.size());
 		for (const auto& data : descriptorData)
 		{
