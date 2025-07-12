@@ -103,34 +103,13 @@
     <ClInclude Include="source\engine\VulkanAllocator.hpp">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\Core.hpp">
-      <Filter>ecs</Filter>
-    </ClInclude>
     <ClInclude Include="source\base\Event.hpp">
       <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="source\ecs\Queries.hpp">
-      <Filter>ecs</Filter>
-    </ClInclude>
-    <ClInclude Include="source\ecs\World.hpp">
-      <Filter>ecs</Filter>
     </ClInclude>
     <ClInclude Include="source\base\LoggingTestStrings.hpp">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\components\VulkanComponents.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\systems\core\CoreSystems.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\components\CoreComponents.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\base\Math.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\components\InputEventComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\application\input\InputActionMap.hpp">
@@ -139,16 +118,10 @@
     <ClInclude Include="source\application\Time.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\engine\systems\MovementSystems.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\application\input\Keycodes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\VulkanImages.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\engine\components\FrameGraphComponents.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\engine\VulkanLighting.hpp">
@@ -163,7 +136,7 @@
     <ClInclude Include="source\engine\VulkanBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\Aspect.hpp">
+    <ClInclude Include="source\ecs\storage\Aspect.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\base\memory\MemoryStats.hpp">
@@ -193,10 +166,67 @@
     <ClInclude Include="source\external\tlsf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\Chunk.hpp">
+    <ClInclude Include="source\ecs\storage\Chunk.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ecs\ComponentMetadata.hpp">
+    <ClInclude Include="source\ecs\core\ComponentMetadata.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\storage\Archetype.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\core\Entity.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\core\IComponent.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\query\Query.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\CollectionAliases.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\base\CollectionUtilities.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\query\QueryBuilder.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\query\QueryRegistry.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\cbuffer\CommandBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\core\EntityManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\generated\GeneratedComponentCount.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\core\ComponentMetadataRegistry.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\generated\GeneratedComponentRegistration.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\storage\SharedComponentManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\core\EntityWorld.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\config\SystemPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\generated\GeneratedSystemManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\systems\SystemBase.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ecs\storage\VersionManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -243,45 +273,6 @@
     <ClCompile Include="source\application\Time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\GeometryPipelineCreateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\PresentationSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\engine\VulkanImages.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -300,25 +291,7 @@
     <ClCompile Include="source\engine\VulkanLighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\engine\systems\core\GeometryPassSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\LightPassSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\LightUboCreateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\LightUboUpdateSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\base\StbUsage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\engine\systems\core\TextureLoadSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\base\Collections.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\base\memory\HeapAllocator.cpp">
@@ -339,7 +312,37 @@
     <ClCompile Include="source\external\tracy\TracyClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\ecs\GeneratedComponentRegistration.cpp">
+    <ClCompile Include="source\ecs\storage\Chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\storage\Aspect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\storage\Archetype.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\query\Query.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\core\ComponentMetadata.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\query\QueryBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\query\QueryRegistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\core\EntityManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\cbuffer\CommandBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\core\ComponentMetadataRegistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ecs\storage\VersionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

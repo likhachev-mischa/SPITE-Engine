@@ -41,13 +41,13 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -126,7 +126,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;TRACY_ENABLE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;TRACY_ENABLE;SPITE_TEST</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./source/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -190,7 +190,9 @@
     <ClInclude Include="source\application\WindowManager.hpp" />
     <ClInclude Include="source\base\Assert.hpp" />
     <ClInclude Include="source\base\CallstackDebug.hpp" />
+    <ClInclude Include="source\base\CollectionAliases.hpp" />
     <ClInclude Include="source\base\Collections.hpp" />
+    <ClInclude Include="source\base\CollectionUtilities.hpp" />
     <ClInclude Include="source\base\Common.hpp" />
     <ClInclude Include="source\base\Event.hpp" />
     <ClInclude Include="source\base\File.hpp" />
@@ -207,20 +209,29 @@
     <ClInclude Include="source\base\Service.hpp" />
     <ClInclude Include="source\base\VmaUsage.hpp" />
     <ClInclude Include="source\base\VulkanUsage.hpp" />
-    <ClInclude Include="source\ecs\Aspect.hpp" />
-    <ClInclude Include="source\ecs\Chunk.hpp" />
-    <ClInclude Include="source\ecs\ComponentMetadata.hpp" />
-    <ClInclude Include="source\ecs\Core.hpp" />
-    <ClInclude Include="source\engine\components\FrameGraphComponents.hpp" />
-    <ClInclude Include="source\engine\components\InputEventComponents.hpp" />
-    <ClInclude Include="source\ecs\Queries.hpp" />
-    <ClInclude Include="source\ecs\World.hpp" />
+    <ClInclude Include="source\ecs\storage\Archetype.hpp" />
+    <ClInclude Include="source\ecs\storage\Aspect.hpp" />
+    <ClInclude Include="source\ecs\storage\Chunk.hpp" />
+    <ClInclude Include="source\ecs\cbuffer\CommandBuffer.hpp" />
+    <ClInclude Include="source\ecs\core\ComponentMetadata.hpp" />
+    <ClInclude Include="source\ecs\core\ComponentMetadataRegistry.hpp" />
+    <ClInclude Include="source\ecs\core\Entity.hpp" />
+    <ClInclude Include="source\ecs\core\EntityManager.hpp" />
+    <ClInclude Include="source\ecs\core\EntityWorld.hpp" />
+    <ClInclude Include="source\ecs\generated\GeneratedComponentCount.hpp" />
+    <ClInclude Include="source\ecs\generated\GeneratedComponentRegistration.hpp" />
+    <ClInclude Include="source\ecs\generated\GeneratedSystemManager.hpp" />
+    <ClInclude Include="source\ecs\core\IComponent.hpp" />
+    <ClInclude Include="source\ecs\query\Query.hpp" />
+    <ClInclude Include="source\ecs\query\QueryBuilder.hpp" />
+    <ClInclude Include="source\ecs\query\QueryRegistry.hpp" />
+    <ClInclude Include="source\ecs\storage\SharedComponentManager.hpp" />
+    <ClInclude Include="source\ecs\systems\SystemBase.hpp" />
+    <ClInclude Include="source\ecs\config\SystemPipeline.hpp" />
+    <ClInclude Include="source\ecs\storage\VersionManager.hpp" />
     <ClInclude Include="source\engine\Common.hpp" />
-    <ClInclude Include="source\engine\components\CoreComponents.hpp" />
-    <ClInclude Include="source\engine\systems\MovementSystems.hpp" />
     <ClInclude Include="source\engine\VulkanBuffer.hpp" />
     <ClInclude Include="source\engine\VulkanDebug.hpp" />
-    <ClInclude Include="source\engine\components\VulkanComponents.hpp" />
     <ClInclude Include="source\engine\VulkanDepth.hpp" />
     <ClInclude Include="source\engine\VulkanGeometry.hpp" />
     <ClInclude Include="source\engine\VulkanImages.hpp" />
@@ -228,7 +239,6 @@
     <ClInclude Include="source\engine\VulkanRendering.hpp" />
     <ClInclude Include="source\engine\VulkanResources.hpp" />
     <ClInclude Include="source\engine\VulkanAllocator.hpp" />
-    <ClInclude Include="source\engine\systems\core\CoreSystems.hpp" />
     <ClInclude Include="source\external\StackWalker.h" />
     <ClInclude Include="source\external\tlsf.h" />
   </ItemGroup>
@@ -239,7 +249,6 @@
     <ClCompile Include="source\application\Time.cpp" />
     <ClCompile Include="source\application\WindowManager.cpp" />
     <ClCompile Include="source\base\CallstackDebug.cpp" />
-    <ClCompile Include="source\base\Collections.cpp" />
     <ClCompile Include="source\base\File.cpp" />
     <ClCompile Include="source\base\Logging.cpp" />
     <ClCompile Include="source\base\memory\AllocatorRegistry.cpp" />
@@ -248,26 +257,18 @@
     <ClCompile Include="source\base\memory\ScratchAllocator.cpp" />
     <ClCompile Include="source\base\StbUsage.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
-    <ClCompile Include="source\ecs\GeneratedComponentRegistration.cpp" />
+    <ClCompile Include="source\ecs\storage\Archetype.cpp" />
+    <ClCompile Include="source\ecs\storage\Aspect.cpp" />
+    <ClCompile Include="source\ecs\storage\Chunk.cpp" />
+    <ClCompile Include="source\ecs\cbuffer\CommandBuffer.cpp" />
+    <ClCompile Include="source\ecs\core\ComponentMetadata.cpp" />
+    <ClCompile Include="source\ecs\core\ComponentMetadataRegistry.cpp" />
+    <ClCompile Include="source\ecs\core\EntityManager.cpp" />
+    <ClCompile Include="source\ecs\query\Query.cpp" />
+    <ClCompile Include="source\ecs\query\QueryBuilder.cpp" />
+    <ClCompile Include="source\ecs\query\QueryRegistry.cpp" />
+    <ClCompile Include="source\ecs\storage\VersionManager.cpp" />
     <ClCompile Include="source\engine\Common.cpp" />
-    <ClCompile Include="source\engine\systems\core\CameraCreateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\CameraMatricesUpdateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\CameraUboUpdateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\CleanupSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\GeometryPassSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\DepthPassSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\DescriptorUpdateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\LightUboUpdateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\LightUboCreateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\LightPassSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\ModelLoadSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\GeometryPipelineCreateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\PresentationSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\ShaderCreateSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\TextureLoadSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\TransformationMatrixSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\VulkanInitSystem.cpp" />
-    <ClCompile Include="source\engine\systems\core\WaitForFrameSystem.cpp" />
     <ClCompile Include="source\engine\VulkanBuffer.cpp" />
     <ClCompile Include="source\engine\VulkanDebug.cpp" />
     <ClCompile Include="source\engine\VulkanDepth.cpp" />
