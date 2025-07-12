@@ -4,30 +4,60 @@
     <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\AllocatorTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsTests.cpp">
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsCommandBufferTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\Tests.cpp">
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsCoreTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsTests.hpp">
-      <Filter>Header Files\source</Filter>
-    </ClInclude>
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsCreationTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsModificationTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsQueryTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsSharedComponentTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\source\EcsSystemTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\GlobalTestEnvironment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\TestMain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\EcsAspectRegistryTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\EcsVersionManagerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\EcsLifecycleTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\EcsQueryFilterTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\SboVectorTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Computer Graphics\Vulkan\Projects\SPITE\tests\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{DDF64A13-AA3E-3659-8ED3-AFD310CB74F8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\source">
-      <UniqueIdentifier>{514064D3-75E2-3058-B82A-AC103BBB66D8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files">
       <UniqueIdentifier>{BEE4AFBA-4B4F-32E7-BEF0-FF4075A884D8}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\source\GlobalTestEnvironment.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
