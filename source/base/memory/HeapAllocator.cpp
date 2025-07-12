@@ -13,9 +13,12 @@
 
 namespace spite
 {
-	constexpr size_t GLOBAL_ALLOCATOR_SIZE = 64 * MB;
+	constexpr sizet GLOBAL_ALLOCATOR_SIZE = 64 * MB;
 
-	static spite::HeapAllocator* s_globalAllocator = nullptr;
+	namespace
+	{
+		spite::HeapAllocator* s_globalAllocator = nullptr;
+	}
 
 	void initGlobalAllocator()
 	{
@@ -34,6 +37,7 @@ namespace spite
 		SASSERTM(s_globalAllocator, "Global allocator is not initialized\n")
 		s_globalAllocator->shutdown(forceDealloc);
 		delete s_globalAllocator;
+		s_globalAllocator = nullptr;
 	}
 
 	const char* getGlobalAllocatorName()
@@ -61,14 +65,17 @@ namespace spite
 		}
 	}
 
-	void exitWalker(void* ptr, sizet size, int used, void* user)
+	namespace
 	{
-		auto* stats = static_cast<MemoryStatistics*>(user);
-		stats->add(used ? size : 0);
-
-		if (used)
+		void exitWalker(void* ptr, sizet size, int used, void* user)
 		{
-			SDEBUG_LOG("Found active allocation %p, %llu\n", ptr, size)
+			auto* stats = static_cast<MemoryStatistics*>(user);
+			stats->add(used ? size : 0);
+
+			if (used)
+			{
+				SDEBUG_LOG("Found active allocation %p, %llu\n", ptr, size)
+			}
 		}
 	}
 
@@ -90,12 +97,14 @@ namespace spite
 	}
 
 	HeapAllocator::HeapAllocator(const HeapAllocator& x, const char* pName) : m_name(pName),
-		m_tlsfHandle(x.m_tlsfHandle), m_memory(x.m_memory), m_maxSize(x.m_maxSize)
+	                                                                          m_tlsfHandle(x.m_tlsfHandle),
+	                                                                          m_memory(x.m_memory),
+	                                                                          m_maxSize(x.m_maxSize)
 
 	{
 	}
 
-	void* HeapAllocator::allocate(sizet size, int flags)
+	void* HeapAllocator::allocate(sizet size, int flags) const
 	{
 		void* mem = tlsf_malloc(m_tlsfHandle, size);
 		//SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
@@ -103,7 +112,7 @@ namespace spite
 		return mem;
 	}
 
-	void* HeapAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags)
+	void* HeapAllocator::allocate(sizet size, sizet alignment, sizet offset, int flags) const
 	{
 		void* mem = tlsf_memalign(m_tlsfHandle, alignment, size);
 		//SDEBUG_LOG("HeapAllocator %s memory allocation: %p size %llu \n", m_name, mem, size)
@@ -111,12 +120,12 @@ namespace spite
 		return mem;
 	}
 
-	void* HeapAllocator::reallocate(void* original, sizet size)
+	void* HeapAllocator::reallocate(void* original, sizet size) const
 	{
 		return tlsf_realloc(m_tlsfHandle, original, size);
 	}
 
-	void HeapAllocator::deallocate(void* p, sizet n)
+	void HeapAllocator::deallocate(void* p, sizet n) const
 	{
 		tlsf_free(m_tlsfHandle, p);
 	}
@@ -139,7 +148,7 @@ namespace spite
 		SDEBUG_LOG("HeapAllocator %s of size %llu created\n", m_name, size)
 	}
 
-	void HeapAllocator::shutdown(bool forceDealloc)
+	void HeapAllocator::shutdown(bool forceDealloc) const
 	{
 		if (forceDealloc)
 		{
@@ -148,7 +157,7 @@ namespace spite
 			return;
 		}
 
-		MemoryStatistics stats{0, m_maxSize, 0};
+		MemoryStatistics stats{.allocatedBytes = 0, .totalBytes = m_maxSize, .allocationCount = 0};
 		pool_t pool = tlsf_get_pool(m_tlsfHandle);
 		tlsf_walk_pool(pool, exitWalker, &stats);
 
@@ -169,18 +178,18 @@ namespace spite
 		{
 			SDEBUG_LOG("Allocations still present\n")
 		}
-		//SASSERTM(stats.allocatedBytes == 0, "Allocations still present\n")
+		SASSERTM(stats.allocatedBytes == 0, "Allocations still present\n")
 
 		tlsf_destroy(m_tlsfHandle);
 		free(m_memory);
 	}
 
-	bool HeapAllocator::operator==(const HeapAllocator& b)
+	bool HeapAllocator::operator==(const HeapAllocator& b) const
 	{
 		return (m_memory == b.m_memory);
 	}
 
-	bool HeapAllocator::operator!=(const HeapAllocator& b)
+	bool HeapAllocator::operator!=(const HeapAllocator& b) const
 	{
 		return (m_memory != b.m_memory);
 	}

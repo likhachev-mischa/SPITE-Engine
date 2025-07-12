@@ -52,7 +52,8 @@ namespace spite
 	{
 		SDEBUG_LOG("AllocatorRegistry: Shutting down %zu subsystem allocators\n", m_allocators.size())
         
-		for (auto& [name, allocator] : m_allocators) {
+		for (auto& [name, allocator] : m_allocators) 
+		{
 			SDEBUG_LOG("Shutting down allocator: %s\n", name.c_str())
 			allocator->shutdown(false);
 		}

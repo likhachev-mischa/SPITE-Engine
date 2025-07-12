@@ -1,5 +1,7 @@
 #include "ScratchAllocator.hpp"
 
+#include <algorithm>
+
 #include "base/memory/HeapAllocator.hpp"
 
 namespace spite
@@ -22,7 +24,7 @@ namespace spite
 		}
 	}
 
-	ScratchAllocator::ScratchAllocator(ScratchAllocator&& other) noexcept:
+	ScratchAllocator::ScratchAllocator(ScratchAllocator&& other) :
 		m_buffer(other.m_buffer), m_current(other.m_current), m_end(other.m_end),
 		m_size(other.m_size), m_name(other.m_name), m_highWaterMark(other.m_highWaterMark)
 	{
@@ -31,7 +33,7 @@ namespace spite
 		other.m_end = nullptr;
 	}
 
-	ScratchAllocator& ScratchAllocator::operator=(ScratchAllocator&& other) noexcept
+	ScratchAllocator& ScratchAllocator::operator=(ScratchAllocator&& other) 
 	{
 		if (this != &other)
 		{
@@ -69,10 +71,7 @@ namespace spite
 			
 			// Update high water mark
 			size_t used = m_current - m_buffer;
-			if (used > m_highWaterMark)
-			{
-				m_highWaterMark = used;
-			}
+			m_highWaterMark = std::max(used, m_highWaterMark);
 
 			return ptr;
 		}
@@ -129,7 +128,7 @@ namespace spite
 	ScratchAllocator::ScopedMarker ScratchAllocator::get_scoped_marker()
 	{ return ScopedMarker(this, m_current); }
 
-	void ScratchAllocator::reset_to(char* position) noexcept
+	void ScratchAllocator::reset_to(char* position) 
 	{
 		SASSERTM(position >= m_buffer && position < m_end,
 		         "Position is out of bounds of scratch allocator")

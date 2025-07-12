@@ -1,5 +1,6 @@
 #pragma once
 #include "HeapAllocator.hpp"
+#include "base/CollectionAliases.hpp"
 
 namespace spite
 {

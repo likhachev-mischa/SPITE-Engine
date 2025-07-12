@@ -37,15 +37,21 @@ namespace spite
 		ScratchAllocator(const ScratchAllocator&) = delete;
 		ScratchAllocator& operator=(const ScratchAllocator&) = delete;
 
-		ScratchAllocator(ScratchAllocator&& other) noexcept;
+		ScratchAllocator(ScratchAllocator&& other) ;
 
-		ScratchAllocator& operator=(ScratchAllocator&& other) noexcept;
+		ScratchAllocator& operator=(ScratchAllocator&& other);
 
 		//alignment is 16 by default
 		void* allocate(sizet size, int flags = 0);
 
 		// Fast pointer-bump allocation
 		void* allocate(sizet size, sizet alignment, sizet offset = 0, int flags = 0);
+
+		template <typename T, typename... Args>
+		T* new_object(Args&&... args);
+
+		template <typename T>
+		void delete_object(T* obj);
 
 		// Individual deallocation is a no-op (linear allocator characteristic)
 		void deallocate(void* /*ptr*/, size_t /*size*/) noexcept;
@@ -103,7 +109,7 @@ namespace spite
 		bool owns(const void* ptr) const noexcept;
 
 	private:
-		void reset_to(char* position) noexcept;
+		void reset_to(char* position) ;
 	};
 
 	// EASTL-compatible wrapper for ScratchAllocator
@@ -169,6 +175,22 @@ namespace spite
 
 		static void resetFrame();
 	};
+
+	template <typename T, typename ... Args>
+	T* ScratchAllocator::new_object(Args&&... args)
+	{
+		void* ptr = allocate(sizeof(T), alignof(T));
+		return new(ptr) T(std::forward<Args>(args)...);
+	}
+
+	template <typename T>
+	void ScratchAllocator::delete_object(T* obj)
+	{
+		if (obj)
+		{
+			obj->~T();
+		}
+	}
 
 	template <typename T>
 	ScratchAllocatorAdapter<

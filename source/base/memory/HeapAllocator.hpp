@@ -27,25 +27,31 @@ namespace spite
 		HeapAllocator(const HeapAllocator& x);
 		HeapAllocator(const HeapAllocator& x, const char* pName);
 
+		void* allocate(sizet size, int flags = 0) const;
+		void* allocate(sizet size, sizet alignment, sizet offset = 0, int flags = 0) const;
 
-		void* allocate(sizet size, int flags = 0);
-		void* allocate(sizet size, sizet alignment, sizet offset = 0, int flags = 0);
-		void* reallocate(void* original, sizet size);
-		void deallocate(void* p, sizet n = 0);
+		template <typename T, typename... Args>
+		T* new_object(Args&&... args);
+
+		void* reallocate(void* original, sizet size) const;
+
+		template <typename T>
+		void delete_object(T* obj);
+
+		void deallocate(void* p, sizet n = 0) const;
 
 		const char* get_name() const;
 		void set_name(cstring name);
-
 
 		/**
 		 * \brief disposes of allocations
 		 * \param forceDealloc if true, does not check if any allocations remain and silently deallocates anything 
 		 */
-		void shutdown(bool forceDealloc = false);
+		void shutdown(bool forceDealloc = false) const;
 
 	protected:
-		bool operator==(const HeapAllocator& b);
-		bool operator!=(const HeapAllocator& b);
+		bool operator==(const HeapAllocator& b) const;
+		bool operator!=(const HeapAllocator& b) const;
 
 	private:
 		void init(sizet size);
@@ -84,9 +90,11 @@ namespace spite
 		template <typename U>
 		explicit HeapAllocatorAdapter(const HeapAllocatorAdapter<U>& other) noexcept;
 
-		T* allocate(size_t n);
+		T* allocate(sizet size, sizet alignment, sizet offset = 0, int flags = 0) const;
+		T* allocate(sizet n);
 
-		void deallocate(T* p, size_t n);
+		void deallocate(T* p, sizet n);
+		void deallocate(void* p, sizet n);
 	};
 
 	// Stateless allocator that always uses the global allocator
@@ -100,7 +108,7 @@ namespace spite
 		using const_pointer = const T*;
 		using reference = T&;
 		using const_reference = const T&;
-		using size_type = size_t;
+		using sizetype = sizet;
 		using difference_type = ptrdiff_t;
 
 		// Stateless - no data members
@@ -117,11 +125,11 @@ namespace spite
 		GlobalHeapAllocator& operator=(GlobalHeapAllocator&&) noexcept;
 
 		// Allocator interface
-		[[nodiscard]] T* allocate(size_t n);
+		[[nodiscard]] T* allocate(sizet n);
 
-		void deallocate(T* p, size_t n) noexcept;
+		void deallocate(T* p, sizet n) noexcept;
 
-		constexpr size_t max_size() const noexcept;
+		constexpr sizet max_size() const noexcept;
 
 		// EASTL specific requirements
 		template <typename U>
@@ -131,11 +139,11 @@ namespace spite
 		};
 
 		// For EASTL compatibility
-		void* allocate(size_t n, int flags);
+		void* allocate(sizet n, int flags);
 
-		void* allocate(size_t n, size_t alignment, size_t offset = 0, int flags = 0);
+		void* allocate(sizet n, sizet alignment, size_t offset = 0, int flags = 0);
 
-		void deallocate(void* p, size_t n);
+		void deallocate(void* p, sizet n);
 
 		const char* get_name() const;
 
@@ -165,6 +173,23 @@ namespace spite
 	{
 	}
 
+	template <typename T, typename... Args>
+	T* HeapAllocator::new_object(Args&&... args)
+	{
+		void* ptr = allocate(sizeof(T), alignof(T));
+		return new(ptr) T(std::forward<Args>(args)...);
+	}
+
+	template <typename T>
+	void HeapAllocator::delete_object(T* obj)
+	{
+		if (obj)
+		{
+			obj->~T();
+			deallocate(obj, sizeof(T));
+		}
+	}
+
 	template <typename T>
 	HeapAllocatorAdapter<T>::HeapAllocatorAdapter(const HeapAllocator& allocator) noexcept: m_allocator(&allocator)
 	{
@@ -178,15 +203,27 @@ namespace spite
 	}
 
 	template <typename T>
-	T* HeapAllocatorAdapter<T>::allocate(size_t n)
+	T* HeapAllocatorAdapter<T>::allocate(sizet size, sizet alignment, sizet offset, int flags) const
+	{
+		return static_cast<T*>(m_allocator->allocate(size, alignment, offset, flags));
+	}
+
+	template <typename T>
+	T* HeapAllocatorAdapter<T>::allocate(sizet n)
 	{
 		return static_cast<T*>(m_allocator->allocate(n * sizeof(T), alignof(T)));
 	}
 
 	template <typename T>
-	void HeapAllocatorAdapter<T>::deallocate(T* p, size_t n)
+	void HeapAllocatorAdapter<T>::deallocate(T* p, sizet n)
 	{
 		m_allocator->deallocate(p, n * sizeof(T));
+	}
+
+	template <typename T>
+	void HeapAllocatorAdapter<T>::deallocate(void* p, sizet n)
+	{
+		m_allocator->deallocate(p, n);
 	}
 
 	template <typename T>
@@ -198,38 +235,38 @@ namespace spite
 	= default;
 
 	template <typename T>
-	T* GlobalHeapAllocator<T>::allocate(size_t n)
+	T* GlobalHeapAllocator<T>::allocate(sizet n)
 	{
-		SASSERTM(n <= max_size(), "Trying to allocate more mem that GlobalAllocator has\n")
+		SASSERTM(n <= max_size(), "Trying to allocate more mem that Global Allocator has\n")
 		return static_cast<T*>(getGlobalAllocator().allocate(n * sizeof(T), alignof(T)));
 	}
 
 	template <typename T>
-	void GlobalHeapAllocator<T>::deallocate(T* p, size_t n) noexcept
+	void GlobalHeapAllocator<T>::deallocate(T* p, sizet n) noexcept
 	{
 		getGlobalAllocator().deallocate(p, n * sizeof(T));
 	}
 
 	template <typename T>
-	constexpr size_t GlobalHeapAllocator<T>::max_size() const noexcept
+	constexpr sizet GlobalHeapAllocator<T>::max_size() const noexcept
 	{
-		return std::numeric_limits<size_t>::max() / sizeof(T);
+		return std::numeric_limits<sizet>::max() / sizeof(T);
 	}
 
 	template <typename T>
-	void* GlobalHeapAllocator<T>::allocate(size_t n, int flags)
+	void* GlobalHeapAllocator<T>::allocate(sizet n, int flags)
 	{
 		return allocate(n);
 	}
 
 	template <typename T>
-	void* GlobalHeapAllocator<T>::allocate(size_t n, size_t alignment, size_t offset, int flags)
+	void* GlobalHeapAllocator<T>::allocate(sizet n, sizet alignment, size_t offset, int flags)
 	{
 		return getGlobalAllocator().allocate(n, alignment, offset, flags);
 	}
 
 	template <typename T>
-	void GlobalHeapAllocator<T>::deallocate(void* p, size_t n)
+	void GlobalHeapAllocator<T>::deallocate(void* p, sizet n)
 	{
 		getGlobalAllocator().deallocate(p, n);
 	}
