@@ -7,6 +7,7 @@
 
 #include <glm/vec3.hpp>
 
+#include "CollectionAliases.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Common.hpp"
 #include "Base/Logging.hpp"

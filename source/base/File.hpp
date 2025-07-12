@@ -14,7 +14,7 @@
 #include "base/Common.hpp"
 #include "Base/Assert.hpp"
 #include "Base/Platform.hpp"
-#include "base/memory/ScratchAllocator.hpp"
+#include "CollectionAliases.hpp"
 
 namespace spite
 {
