@@ -441,3 +441,8 @@ FodyWeavers.xsd
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,c++
 
 *.vscode
+
+# Test build artifacts                                                
+tests/build/                                                          
+tests/out/                                                            
+tests/.vs/ 
