@@ -1,28 +1,33 @@
 #include "Archetype.hpp"
 
-#include "ComponentMetadata.hpp"
+#include "ecs/core/ComponentMetadataRegistry.hpp"
+#include "VersionManager.hpp"
 
-#include "base/memory/ScratchAllocator.hpp"
 #include "base/CollectionUtilities.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 namespace spite
 {
-	Archetype::Archetype(Aspect aspect,
+	Archetype::Archetype(const Aspect* aspect,
 	                     const ComponentMetadataRegistry* registry,
-	                     HeapAllocator& allocator): m_aspect(std::move(aspect)),
-	                                                m_componentIndexMap(
+	                     HeapAllocator& allocator): m_aspect(aspect),
+	                                                m_componentIdToIndexMap(
 		                                                makeHeapMap<
-			                                                std::type_index, int>(allocator)),
+			                                                ComponentID, int>(allocator)),
 	                                                m_metadataRegistry(registry),
+	                                                m_chunks(makeHeapVector<std::unique_ptr<Chunk>>(allocator)),
 	                                                m_freeChunks(
 		                                                makeHeapVector<std::unique_ptr<Chunk>>(
 			                                                allocator)), m_firstNonFullChunkIdx(0),
-	                                                m_allocator(allocator)
+	                                                m_allocator(allocator),
+	                                                m_entityLocations(
+		                                                makeHeapMap<Entity, eastl::pair<sizet, sizet>, Entity::hash>(
+			                                                allocator))
 	{
-		const auto& types = m_aspect.getTypes();
-		for (int i = 0, size = static_cast<int>(types.size()); i < size; ++i)
+		const auto& ids = m_aspect->getComponentIds();
+		for (int i = 0, size = static_cast<int>(ids.size()); i < size; ++i)
 		{
-			m_componentIndexMap[types[i]] = i;
+			m_componentIdToIndexMap[ids[i]] = i;
 		}
 	}
 
@@ -82,10 +87,10 @@ namespace spite
 	scratch_vector<eastl::pair<Chunk*, sizet>> Archetype::addEntities(
 		eastl::span<const Entity> entities)
 	{
-		if (entities.empty()) return {};
-
 		auto locations = makeScratchVector<eastl::pair<
 			Chunk*, sizet>>(FrameScratchAllocator::get());
+		if (entities.empty()) return locations;
+
 		locations.reserve(entities.size());
 		m_entityLocations.reserve(m_entityLocations.size() + entities.size());
 
@@ -153,18 +158,18 @@ namespace spite
 
 		Chunk* chunk = m_chunks[chunkIdx].get();
 
-		const auto& componentTypes = m_aspect.getTypes();
+		const auto& componentIds = m_aspect->getComponentIds();
 
 		// Before swapping, call destructors for components of the entity being removed
-		for (const auto& componentType : componentTypes)
+		for (const auto& componentId : componentIds)
 		{
-			const auto& meta = m_metadataRegistry->getMetadata(componentType);
+			const auto& meta = m_metadataRegistry->getMetadata(componentId);
 			if (meta.destructor)
 			{
 				void* componentPtr = chunk->getComponentDataPtrByIndex(
-					getComponentIndex(componentType),
+					getComponentIndex(componentId),
 					entityIdxInChunk);
-				meta.destructor(componentPtr);
+				meta.destructor(componentPtr, meta.destructorUserData);
 			}
 		}
 
@@ -214,7 +219,7 @@ namespace spite
 		}
 	}
 
-	void Archetype::removeEntities(eastl::span<const Entity> entities)
+	void Archetype::removeEntities(eastl::span<const Entity> entities, const Aspect* skipDestructionAspect)
 	{
 		if (entities.empty()) return;
 
@@ -230,12 +235,13 @@ namespace spite
 			if (it != m_entityLocations.end())
 			{
 				Chunk* chunk = m_chunks[it->second.first].get();
-				if (toRemoveByChunk.find(chunk) == toRemoveByChunk.end())
+				auto groupIt = toRemoveByChunk.find(chunk);
+				if (groupIt == toRemoveByChunk.end())
 				{
-					toRemoveByChunk.emplace(chunk,
-					                        makeScratchVector<sizet>(FrameScratchAllocator::get()));
+					groupIt = toRemoveByChunk.emplace(chunk, makeScratchVector<sizet>(FrameScratchAllocator::get())).
+					                          first;
 				}
-				toRemoveByChunk[m_chunks[it->second.first].get()].push_back(it->second.second);
+				groupIt->second.push_back(it->second.second);
 			}
 		}
 
@@ -247,19 +253,21 @@ namespace spite
 			// Sort indices descending to safely use swap-and-pop
 			eastl::sort(indices.begin(), indices.end(), eastl::greater<sizet>());
 
-			const auto& componentTypes = m_aspect.getTypes();
+			const auto& componentIds = m_aspect->getComponentIds();
 			for (sizet indexToRemove : indices)
 			{
 				// Call destructors
-				for (const auto& componentType : componentTypes)
+				for (const auto& componentId : componentIds)
 				{
-					const auto& meta = m_metadataRegistry->getMetadata(componentType);
+					if (skipDestructionAspect && skipDestructionAspect->contains(componentId)) continue;
+
+					const auto& meta = m_metadataRegistry->getMetadata(componentId);
 					if (meta.destructor)
 					{
 						void* componentPtr = chunk->getComponentDataPtrByIndex(
-							getComponentIndex(componentType),
+							getComponentIndex(componentId),
 							indexToRemove);
-						meta.destructor(componentPtr);
+						meta.destructor(componentPtr, meta.destructorUserData);
 					}
 				}
 
@@ -280,15 +288,15 @@ namespace spite
 		return m_chunks;
 	}
 
-	const Aspect& Archetype::getAspect() const
+	const Aspect& Archetype::aspect() const
 	{
-		return m_aspect;
+		return *m_aspect;
 	}
 
-	int Archetype::getComponentIndex(const std::type_index& type) const
+	int Archetype::getComponentIndex(ComponentID id) const
 	{
-		auto it = m_componentIndexMap.find(type);
-		if (it != m_componentIndexMap.end())
+		auto it = m_componentIdToIndexMap.find(id);
+		if (it != m_componentIdToIndexMap.end())
 		{
 			return it->second;
 		}
@@ -308,6 +316,8 @@ namespace spite
 
 	bool Archetype::isEmpty() const
 	{
+		// An archetype is empty if it has no chunks, or if all of its chunks are empty.
+		if (m_chunks.empty()) return true;
 		for (const auto& chunk : m_chunks)
 		{
 			if (!chunk->empty())
@@ -319,9 +329,19 @@ namespace spite
 	}
 
 	ArchetypeManager::ArchetypeManager(const ComponentMetadataRegistry* registry,
-	                                   const HeapAllocator& allocator): m_aspectRegistry(),
-		m_metadataRegistry(registry), m_allocator(allocator),
-		m_entityToArchetype(makeHeapMap<Entity, Archetype*, Entity::hash>(allocator))
+	                                   const HeapAllocator& allocator, AspectRegistry* aspectRegistry,
+	                                   VersionManager* versionManager): m_archetypes(
+		                                                                    makeHeapMap<
+			                                                                    Aspect, std::unique_ptr<Archetype>,
+			                                                                    Aspect::hash>(allocator)),
+	                                                                    m_aspectRegistry(aspectRegistry),
+	                                                                    m_metadataRegistry(registry),
+	                                                                    m_allocator(allocator),
+	                                                                    m_versionManager(versionManager),
+	                                                                    m_entityToArchetype(
+		                                                                    makeHeapMap<
+			                                                                    Entity, Archetype*, Entity::hash>(
+			                                                                    allocator))
 	{
 	}
 
@@ -333,10 +353,16 @@ namespace spite
 			return it->second.get();
 		}
 
-		m_aspectRegistry.addAspect(aspect);
-		auto newArchetype = std::make_unique<Archetype>(aspect, m_metadataRegistry, m_allocator);
+		const Aspect* registeredAspect = m_aspectRegistry->addOrGetAspect(aspect);
+		auto newArchetype = std::make_unique<Archetype>(registeredAspect,
+		                                                m_metadataRegistry,
+		                                                m_allocator);
 		Archetype* result = newArchetype.get();
 		m_archetypes[aspect] = std::move(newArchetype);
+
+		// A new archetype is created, which is a structural change.
+		m_versionManager->makeDirty(*registeredAspect);
+
 		return result;
 	}
 
@@ -354,34 +380,53 @@ namespace spite
 	{
 		if (entities.empty()) return;
 		Archetype* archetype = getOrCreateArchetype(aspect);
+
+		const bool wasEmpty = archetype->isEmpty();
 		archetype->addEntities(entities);
+		if (wasEmpty)
+		{
+			m_versionManager->makeDirty(archetype->aspect());
+		}
+
 		for (const auto& entity : entities)
 		{
 			m_entityToArchetype[entity] = archetype;
 		}
 	}
 
+	void ArchetypeManager::addComponent(const Entity entity, eastl::span<const ComponentID> componentsToAdd)
+	{
+		modifyComponent<false>(entity, componentsToAdd);
+	}
+
+	void ArchetypeManager::addComponents(eastl::span<const Entity> entities,
+	                                     eastl::span<const ComponentID> componentsToAdd)
+	{
+		modifyComponents<false>(entities, componentsToAdd);
+	}
+
+	void ArchetypeManager::removeComponent(const Entity entity, eastl::span<const ComponentID> componentsToRemove)
+	{
+		modifyComponent<true>(entity, componentsToRemove);
+	}
+
+	void ArchetypeManager::removeComponents(eastl::span<const Entity> entities,
+	                                        eastl::span<const ComponentID> componentsToRemove)
+	{
+		modifyComponents<true>(entities, componentsToRemove);
+	}
+
 	void ArchetypeManager::moveEntity(Entity entity,
-	                                  const Aspect& fromAspect,
 	                                  const Aspect& toAspect)
 	{
 		SASSERT(isEntityTracked(entity))
-		Archetype* fromArchetype = findArchetype(fromAspect);
+		Archetype* fromArchetype = m_entityToArchetype.at(entity);
 		Archetype* toArchetype = getOrCreateArchetype(toAspect);
 
 		SASSERT(fromArchetype)
 		SASSERT(toArchetype)
 
-		auto [fromChunk, fromIndex] = fromArchetype->getEntityLocation(entity);
-
-		//this marks the new entity's components as modified
-		auto [toChunk, toIndex] = toArchetype->addEntity(entity);
-		//so here it is safe to simply memcpy them
-		copyCompatibleComponents(fromChunk, fromIndex, toChunk, toIndex, fromAspect, toAspect);
-
-		fromArchetype->removeEntity(entity);
-
-		m_entityToArchetype[entity] = toArchetype;
+		moveEntitiesBetweenArchetypes(fromArchetype, toArchetype, {&entity, 1});
 	}
 
 	void ArchetypeManager::moveEntities(const Aspect& toAspect, eastl::span<const Entity> entities)
@@ -396,7 +441,13 @@ namespace spite
 		for (const auto& entity : entities)
 		{
 			SASSERT(isEntityTracked(entity))
-			groups[m_entityToArchetype.at(entity)].push_back(entity);
+			Archetype* archetype = m_entityToArchetype.at(entity);
+			auto it = groups.find(archetype);
+			if (it == groups.end())
+			{
+				it = groups.emplace(archetype, makeScratchVector<Entity>(FrameScratchAllocator::get())).first;
+			}
+			it->second.push_back(entity);
 		}
 
 		for (auto const& [fromArchetype, entityGroup] : groups)
@@ -413,12 +464,18 @@ namespace spite
 		}
 	}
 
-	void ArchetypeManager::removeEntity(Entity entity, const Aspect& aspect)
+	void ArchetypeManager::removeEntity(Entity entity)
 	{
-		SASSERT(isEntityTracked(entity))
-		Archetype* archetype = findArchetype(aspect);
-		SASSERT(archetype)
-		archetype->removeEntity(entity);
+		auto& archetype = getEntityArchetypeInternal(entity);
+
+		const bool wasEmpty = archetype.isEmpty();
+		archetype.removeEntity(entity);
+		const bool isNowEmpty = archetype.isEmpty();
+
+		if (!wasEmpty && isNowEmpty)
+		{
+			m_versionManager->makeDirty(archetype.aspect());
+		}
 
 		m_entityToArchetype.erase(entity);
 	}
@@ -435,19 +492,45 @@ namespace spite
 			auto it = m_entityToArchetype.find(entity);
 			if (it != m_entityToArchetype.end())
 			{
-				groups[it->second].push_back(entity);
+				auto groupIt = groups.find(it->second);
+				if (groupIt == groups.end())
+				{
+					groupIt = groups.emplace(it->second, makeScratchVector<Entity>(FrameScratchAllocator::get())).first;
+				}
+				groupIt->second.push_back(entity);
 			}
 		}
 
 		for (auto const& [archetype, entityGroup] : groups)
 		{
+			const bool wasEmpty = archetype->isEmpty();
 			archetype->removeEntities(entityGroup);
+			const bool isNowEmpty = archetype->isEmpty();
+
+			if (!wasEmpty && isNowEmpty)
+			{
+				m_versionManager->makeDirty(archetype->aspect());
+			}
 		}
 
 		for (const auto& entity : entities)
 		{
 			m_entityToArchetype.erase(entity);
 		}
+	}
+
+	void ArchetypeManager::addEntity(const Aspect& aspect, const Entity& entity)
+	{
+		Archetype* archetype = getOrCreateArchetype(aspect);
+
+		const bool wasEmpty = archetype->isEmpty();
+		archetype->addEntity(entity);
+		if (wasEmpty)
+		{
+			m_versionManager->makeDirty(archetype->aspect());
+		}
+
+		m_entityToArchetype[entity] = archetype;
 	}
 
 	const Archetype& ArchetypeManager::getEntityArchetype(Entity entity) const
@@ -458,27 +541,27 @@ namespace spite
 
 	const Aspect& ArchetypeManager::getEntityAspect(Entity entity) const
 	{
-		return getEntityArchetype(entity).getAspect();
+		return getEntityArchetype(entity).aspect();
 	}
 
 	heap_vector<Archetype*> ArchetypeManager::queryArchetypes(const Aspect& includeAspect,
 	                                                          const Aspect& excludeAspect) const
 	{
-		heap_vector<Archetype*> result;
-		auto* rootNode = m_aspectRegistry.getNode(includeAspect);
-		if (!rootNode)
+		auto result = makeHeapVector<Archetype*>(m_allocator);
+		auto* rootAspect = m_aspectRegistry->getAspect(includeAspect);
+		if (!rootAspect)
 		{
 			return result;
 		}
 
-		auto descendantNodes = m_aspectRegistry.getDescendants(includeAspect);
-		descendantNodes.push_back(rootNode);
+		auto descendants = m_aspectRegistry->getDescendantAspects(includeAspect);
+		descendants.push_back(rootAspect);
 
-		for (auto* node : descendantNodes)
+		for (auto* aspect : descendants)
 		{
-			if (!node->aspect.intersects(excludeAspect))
+			if (!aspect->intersects(excludeAspect))
 			{
-				auto* archetype = findArchetype(node->aspect);
+				auto* archetype = findArchetype(*aspect);
 				if (archetype)
 				{
 					result.push_back(archetype);
@@ -490,23 +573,24 @@ namespace spite
 	}
 
 	heap_vector<Archetype*> ArchetypeManager::queryNonEmptyArchetypes(const Aspect& includeAspect,
-		const Aspect& excludeAspect) const
+	                                                                  const Aspect& excludeAspect) const
 	{
-		heap_vector<Archetype*> result;
-		auto* rootNode = m_aspectRegistry.getNode(includeAspect);
-		if (!rootNode)
+		auto result = makeHeapVector<Archetype*>(m_allocator);
+		auto* rootAspect = m_aspectRegistry->getAspect(includeAspect);
+		if (!rootAspect)
 		{
 			return result;
 		}
 
-		auto descendantNodes = m_aspectRegistry.getDescendants(includeAspect);
-		descendantNodes.push_back(rootNode);
+		auto allocMarker = FrameScratchAllocator::get().get_scoped_marker();
+		auto descendants = m_aspectRegistry->getDescendantAspects(includeAspect);
+		descendants.push_back(rootAspect);
 
-		for (auto* node : descendantNodes)
+		for (auto* aspect : descendants)
 		{
-			if (!node->aspect.intersects(excludeAspect))
+			if (!aspect->intersects(excludeAspect))
 			{
-				auto* archetype = findArchetype(node->aspect);
+				auto* archetype = findArchetype(*aspect);
 				if (archetype && !archetype->isEmpty())
 				{
 					result.push_back(archetype);
@@ -528,6 +612,12 @@ namespace spite
 		}
 	}
 
+	Archetype& ArchetypeManager::getEntityArchetypeInternal(Entity entity)
+	{
+		SASSERT(isEntityTracked(entity))
+		return *m_entityToArchetype.at(entity);
+	}
+
 	bool ArchetypeManager::isEntityTracked(Entity entity) const
 	{
 		return m_entityToArchetype.find(entity) != m_entityToArchetype.end();
@@ -537,11 +627,14 @@ namespace spite
 	                                                     Archetype* to,
 	                                                     eastl::span<const Entity> entities)
 	{
+		const bool fromWasEmpty = from->isEmpty();
+		const bool toWasEmpty = to->isEmpty();
+
 		auto marker = FrameScratchAllocator::get().get_scoped_marker();
 		auto newLocations = to->addEntities(entities);
-		auto newLocationMap = makeScratchMap<Entity, eastl::pair<Chunk*, sizet>>(
+		auto newLocationMap = makeScratchMap<Entity, eastl::pair<Chunk*, sizet>, Entity::hash>(
 			FrameScratchAllocator::get());
-		for (size_t i = 0; i < entities.size(); ++i)
+		for (sizet i = 0; i < entities.size(); ++i)
 		{
 			newLocationMap[entities[i]] = newLocations[i];
 		}
@@ -554,30 +647,48 @@ namespace spite
 			                         fromIndex,
 			                         toChunk,
 			                         toIndex,
-			                         from->getAspect(),
-			                         to->getAspect());
+			                         from,
+			                         to);
 		}
 
-		from->removeEntities(entities);
+		from->removeEntities(entities, &to->aspect());
+
+		for (auto entity : entities)
+		{
+			m_entityToArchetype[entity] = to;
+		}
+
+		const bool fromIsNowEmpty = from->isEmpty();
+		const bool toIsNowEmpty = to->isEmpty();
+
+		if (!fromWasEmpty && fromIsNowEmpty)
+		{
+			m_versionManager->makeDirty(from->aspect());
+		}
+		if (toWasEmpty && !toIsNowEmpty)
+		{
+			m_versionManager->makeDirty(to->aspect());
+		}
 	}
 
 	void ArchetypeManager::copyCompatibleComponents(Chunk* fromChunk,
 	                                                sizet fromIndex,
 	                                                Chunk* toChunk,
 	                                                sizet toIndex,
-	                                                const Aspect& fromAspect,
-	                                                const Aspect& toAspect)
+	                                                const Archetype* fromArchetype,
+	                                                const Archetype* toArchetype) const
 	{
-		const auto& commonTypes = fromAspect.getIntersection(toAspect);
+		const auto& commonIds = fromArchetype->aspect().getIntersection(toArchetype->aspect());
 
-		for (const auto& componentType : commonTypes)
+		for (const auto& componentId : commonIds)
 		{
-			// Only copy if the component exists in both aspects
-			const auto& metadata = m_metadataRegistry->getMetadata(componentType);
+			const auto& metadata = m_metadataRegistry->getMetadata(componentId);
 
-			// Get source and destination pointers
-			void* srcPtr = fromChunk->componentDataPtr(fromIndex, componentType);
-			void* dstPtr = toChunk->componentDataPtr(toIndex, componentType);
+			const int fromComponentIndex = fromArchetype->getComponentIndex(componentId);
+			const int toComponentIndex = toArchetype->getComponentIndex(componentId);
+
+			void* srcPtr = fromChunk->getComponentDataPtrByIndex(fromComponentIndex, fromIndex);
+			void* dstPtr = toChunk->getComponentDataPtrByIndex(toComponentIndex, toIndex);
 
 			if (srcPtr && dstPtr)
 			{

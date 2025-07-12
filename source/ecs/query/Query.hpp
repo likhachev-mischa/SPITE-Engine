@@ -1,27 +1,47 @@
 #pragma once
 
-#include "Archetype.hpp"
-#include "IComponent.hpp"
-#include "base/memory/ScratchAllocator.hpp"
+#include "ecs/storage/Archetype.hpp"
+#include "ecs/core/IComponent.hpp"
+
+#include "base/CollectionUtilities.hpp"
 
 namespace spite
 {
 	class Query
 	{
 	private:
-		Aspect m_includeAspect;
-		Aspect m_excludeAspect;
-		Aspect m_mustBeEnabledAspect;
-		Aspect m_mustBeModifiedAspect;
+		const ComponentMetadataRegistry* m_metadataRegistry;
+		const Aspect* m_includeAspect;
+		const Aspect* m_excludeAspect;
+		const Aspect* m_mustBeEnabledAspect;
+		const Aspect* m_mustBeModifiedAspect;
 		heap_vector<Archetype*> m_archetypes;
 		mutable bool m_wasModified = false;
+		u64 m_includeVersion = 0;
+
+		friend class QueryRegistry;
 
 	public:
-		Query(const ArchetypeManager& archetypeManager,
-		      Aspect includeAspect,
-		      Aspect excludeAspect = Aspect(),
-		      Aspect mustBeEnabledAspect = Aspect(),
-		      Aspect mustBeModifiedAspect = Aspect());
+		Query(const ArchetypeManager& archetypeManager, const ComponentMetadataRegistry* registry,
+		      const Aspect* includeAspect,
+		      const Aspect* excludeAspect = nullptr,
+		      const Aspect* mustBeEnabledAspect = nullptr,
+		      const Aspect* mustBeModifiedAspect = nullptr) : m_metadataRegistry(registry),
+		                                                      m_includeAspect(includeAspect),
+		                                                      m_excludeAspect(excludeAspect),
+		                                                      m_mustBeEnabledAspect(
+			                                                      mustBeEnabledAspect),
+		                                                      m_mustBeModifiedAspect(
+			                                                      mustBeModifiedAspect)
+		{
+			SASSERTM(!m_includeAspect->intersects(*m_excludeAspect),
+			         "Included aspect intersects with excluded aspect!\n")
+			m_archetypes = archetypeManager.queryNonEmptyArchetypes(
+				*m_includeAspect,
+				*m_excludeAspect);
+		}
+
+		sizet getEntityCount();
 
 		void rebuild(const ArchetypeManager& archetypeManager);
 
@@ -29,7 +49,7 @@ namespace spite
 		void resetModificationStatus() const;
 
 		template <typename TFunc>
-		void forEachChunk(TFunc&& func)
+		void forEachChunk(TFunc& func)
 		{
 			for (Archetype* archetype : m_archetypes)
 			{
@@ -40,8 +60,9 @@ namespace spite
 			}
 		}
 
-		template <t_component... TComponent,
-			bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false>
+		template <bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false, t_component...
+		          TComponent
+		>
 		class Iterator
 		{
 		private:
@@ -146,7 +167,7 @@ namespace spite
 
 			void updateChunkCache()
 			{
-				const std::type_index types[] = {typeid(TComponent)...};
+				const ComponentID types[] = {m_query->m_metadataRegistry->getComponentId(typeid(TComponent))...};
 				for (size_t i = 0; i < sizeof...(TComponent); ++i)
 				{
 					m_componentIndicesInChunk[i] = m_currentArchetype->getComponentIndex(types[i]);
@@ -154,35 +175,40 @@ namespace spite
 
 				if constexpr (FilterEnabled)
 				{
-					m_enabledIndicesInChunk.clear();
-					const auto& enabledTypes = m_query->m_mustBeEnabledAspect.getTypes();
-					if (!enabledTypes.empty())
+					if (m_query->m_mustBeEnabledAspect)
 					{
-						m_enabledIndicesInChunk.reserve(enabledTypes.size());
-						for (const auto& type : enabledTypes)
+						m_enabledIndicesInChunk.clear();
+						const auto& enabledTypes = m_query->m_mustBeEnabledAspect->getComponentIds();
+						if (!enabledTypes.empty())
 						{
-							const int index = m_currentArchetype->getComponentIndex(type);
-							if (index != -1)
+							m_enabledIndicesInChunk.reserve(enabledTypes.size());
+							for (const auto& type : enabledTypes)
 							{
-								m_enabledIndicesInChunk.push_back(index);
+								const int index = m_currentArchetype->getComponentIndex(type);
+								if (index != -1)
+								{
+									m_enabledIndicesInChunk.push_back(index);
+								}
 							}
 						}
 					}
 				}
-
 				if constexpr (FilterModified)
 				{
-					m_modifiedIndicesInChunk.clear();
-					const auto& modifiedTypes = m_query->m_mustBeModifiedAspect.getTypes();
-					if (!modifiedTypes.empty())
+					if (m_query->m_mustBeModifiedAspect)
 					{
-						m_modifiedIndicesInChunk.reserve(modifiedTypes.size());
-						for (const auto& type : modifiedTypes)
+						m_modifiedIndicesInChunk.clear();
+						const auto& modifiedTypes = m_query->m_mustBeModifiedAspect->getComponentIds();
+						if (!modifiedTypes.empty())
 						{
-							const int index = m_currentArchetype->getComponentIndex(type);
-							if (index != -1)
+							m_modifiedIndicesInChunk.reserve(modifiedTypes.size());
+							for (const auto& type : modifiedTypes)
 							{
-								m_modifiedIndicesInChunk.push_back(index);
+								const int index = m_currentArchetype->getComponentIndex(type);
+								if (index != -1)
+								{
+									m_modifiedIndicesInChunk.push_back(index);
+								}
 							}
 						}
 					}
@@ -194,7 +220,7 @@ namespace spite
 				std::index_sequence<I...>) -> eastl::tuple<std::conditional_t<
 				IsConst, const TComponent&, TComponent&>...>
 			{
-				return eastl::make_tuple(
+				return eastl::forward_as_tuple(
 					*static_cast<std::conditional_t<IsConst, const TComponent*, TComponent*>>(
 						m_currentChunk->getComponentDataPtrByIndex(
 							m_componentIndicesInChunk[I],
@@ -221,11 +247,11 @@ namespace spite
 				                                                  FrameScratchAllocator::get().
 				                                                  get_scoped_marker()),
 			                                                  m_enabledIndicesInChunk(
-				                                                  FrameScratchAllocator::makeVector<
-					                                                  int>()),
+				                                                  makeScratchVector<int>(
+					                                                  FrameScratchAllocator::get())),
 			                                                  m_modifiedIndicesInChunk(
-				                                                  FrameScratchAllocator::makeVector<
-					                                                  int>())
+				                                                  makeScratchVector<int>(
+					                                                  FrameScratchAllocator::get()))
 			{
 				m_archetypeIt = m_query->m_archetypes.begin();
 				if (isEnd || m_archetypeIt == m_query->m_archetypes.end())
@@ -308,18 +334,27 @@ namespace spite
 		};
 
 		template <t_component... TComponent>
-		Iterator<TComponent...> begin() { return Iterator<TComponent...>(this); }
-
-		template <t_component... TComponent>
-		Iterator<TComponent...> end() { return Iterator<TComponent...>(this, true); }
-
-		template <t_component... TComponent>
-		Iterator<TComponent..., true> cbegin() const { return Iterator<TComponent..., true>(this); }
-
-		template <t_component... TComponent>
-		Iterator<TComponent..., true> cend() const
+		Iterator<false, false, false, TComponent...> begin()
 		{
-			return Iterator<TComponent..., true>(this, true);
+			return Iterator<false, false, false, TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		Iterator<false, false, false, TComponent...> end()
+		{
+			return Iterator<false, false, false, TComponent...>(this, true);
+		}
+
+		template <t_component... TComponent>
+		Iterator<true, false, false, TComponent...> cbegin() const
+		{
+			return Iterator<true, false, false, TComponent...>(this);
+		}
+
+		template <t_component... TComponent>
+		Iterator<true, false, false, TComponent...> cend() const
+		{
+			return Iterator<true, false, false, TComponent...>(this, true);
 		}
 
 		template <t_component... TComponent>
@@ -331,8 +366,8 @@ namespace spite
 			{
 			}
 
-			auto begin() { return m_query->begin<TComponent...>(); }
-			auto end() { return m_query->end<TComponent...>(); }
+			auto begin() const { return m_query->begin<TComponent...>(); }
+			auto end() const { return m_query->end<TComponent...>(); }
 		};
 
 		template <t_component... TComponent>
@@ -358,9 +393,9 @@ namespace spite
 		ConstView<TComponent...> cview() const { return ConstView<TComponent...>(this); }
 
 		template <t_component... TComponent>
-		using EnabledIterator = Iterator<TComponent..., false, true, false>;
+		using EnabledIterator = Iterator<false, true, false, TComponent...>;
 		template <t_component... TComponent>
-		using ConstEnabledIterator = Iterator<TComponent..., true, true, false>;
+		using ConstEnabledIterator = Iterator<true, true, false, TComponent...>;
 
 		template <t_component... TComponent>
 		EnabledIterator<TComponent...> enabled_begin()
@@ -395,8 +430,8 @@ namespace spite
 			{
 			}
 
-			auto begin() { return m_query->enabled_begin<TComponent...>(); }
-			auto end() { return m_query->enabled_end<TComponent...>(); }
+			auto begin() const { return m_query->enabled_begin<TComponent...>(); }
+			auto end() const { return m_query->enabled_end<TComponent...>(); }
 		};
 
 		template <t_component... TComponent>
@@ -422,10 +457,10 @@ namespace spite
 		}
 
 		template <t_component... TComponent>
-		using ModifiedIterator = Iterator<TComponent..., false, false, true>;
+		using ModifiedIterator = Iterator<false, false, true, TComponent...>;
 
 		template <t_component... TComponent>
-		using ConstModifiedIterator = Iterator<TComponent..., true, false, true>;
+		using ConstModifiedIterator = Iterator<true, false, true, TComponent...>;
 
 		template <t_component... TComponent>
 		ModifiedIterator<TComponent...> modified_begin()
@@ -460,8 +495,8 @@ namespace spite
 			{
 			}
 
-			auto begin() { return m_query->modified_begin<TComponent...>(); }
-			auto end() { return m_query->modified_end<TComponent...>(); }
+			auto begin() const { return m_query->modified_begin<TComponent...>(); }
+			auto end() const { return m_query->modified_end<TComponent...>(); }
 		};
 
 		template <t_component... TComponent>
@@ -487,10 +522,10 @@ namespace spite
 		}
 
 		template <t_component... TComponent>
-		using EnabledModifiedIterator = Iterator<TComponent..., false, true, true>;
+		using EnabledModifiedIterator = Iterator<false, true, true, TComponent...>;
 
 		template <t_component... TComponent>
-		using ConstEnabledModifiedIterator = Iterator<TComponent..., true, true, true>;
+		using ConstEnabledModifiedIterator = Iterator<true, true, true, TComponent...>;
 
 		template <t_component... TComponent>
 		EnabledModifiedIterator<TComponent...> enabled_modified_begin()
@@ -525,8 +560,8 @@ namespace spite
 			{
 			}
 
-			auto begin() { return m_query->enabled_modified_begin<TComponent...>(); }
-			auto end() { return m_query->enabled_modified_end<TComponent...>(); }
+			auto begin() const { return m_query->enabled_modified_begin<TComponent...>(); }
+			auto end() const { return m_query->enabled_modified_end<TComponent...>(); }
 		};
 
 		template <t_component... TComponent>

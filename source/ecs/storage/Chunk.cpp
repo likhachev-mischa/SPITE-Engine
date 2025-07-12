@@ -1,15 +1,17 @@
 #include "Chunk.hpp"
 
-#include "ComponentMetadata.hpp"
-#include "Entity.hpp"
+#include <algorithm>
+
+#include "ecs/core/ComponentMetadataRegistry.hpp"
+#include "ecs/core/Entity.hpp"
 
 #include "base/CollectionUtilities.hpp"
 
 namespace spite
 {
-	Chunk::Chunk(Aspect aspect,
+	Chunk::Chunk(const Aspect* aspect,
 	             const ComponentMetadataRegistry* metadataRegistry,
-	             HeapAllocator& allocator): m_aspect(std::move(aspect)), m_count(0),
+	             HeapAllocator& allocator): m_aspect(aspect), m_count(0),
 	                                        m_metadataRegistry(metadataRegistry),
 	                                        m_allocator(allocator), m_storageBlock(nullptr),
 	                                        m_componentDataStarts(
@@ -27,24 +29,21 @@ namespace spite
 			                                        DEFAULT_COMPONENTS_INLINE_CAPACITY>(
 			                                        m_allocator))
 	{
-		const auto& componentTypes = m_aspect.getTypes();
-		const auto numComponentTypes = componentTypes.size();
+		const auto& componentIds = m_aspect->getComponentIds();
+		const auto numComponentTypes = componentIds.size();
 		m_componentDataStarts.resize(numComponentTypes);
 		m_modifiedBitsets.resize(numComponentTypes);
 		m_enabledBitsets.resize(numComponentTypes);
 
 		// Calculate total size, offsets, and max alignment
 		sizet totalSize = 0;
-		sizet maxAlignment = alignof(std::max_align_t); 
+		sizet maxAlignment = alignof(std::max_align_t);
 		sbo_vector<sizet> offsets;
 		offsets.resize(numComponentTypes);
-		for (sizet i = 0; i < componentTypes.size(); ++i)
+		for (sizet i = 0; i < componentIds.size(); ++i)
 		{
-			const auto& meta = m_metadataRegistry->getMetadata(componentTypes[i]);
-			if (meta.alignment > maxAlignment)
-			{
-				maxAlignment = meta.alignment;
-			}
+			const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
+			maxAlignment = std::max(meta.alignment, maxAlignment);
 			// Align the current offset
 			if (totalSize % meta.alignment != 0)
 			{
@@ -58,7 +57,7 @@ namespace spite
 		m_storageBlock = static_cast<std::byte*>(m_allocator.allocate(totalSize, maxAlignment));
 
 		// Set component start pointers
-		for (sizet i = 0; i < componentTypes.size(); ++i)
+		for (sizet i = 0; i < componentIds.size(); ++i)
 		{
 			m_componentDataStarts[i] = m_storageBlock + offsets[i];
 		}
@@ -74,18 +73,18 @@ namespace spite
 		if (m_storageBlock)
 		{
 			// Call destructors for all non-trivial components before freeing the memory block.
-			const auto& componentTypes = m_aspect.getTypes();
+			const auto& componentIds = m_aspect->getComponentIds();
 			for (sizet entityIdx = 0; entityIdx < m_count; ++entityIdx)
 			{
-				for (size_t i = 0; i < componentTypes.size(); ++i)
+				for (size_t i = 0; i < componentIds.size(); ++i)
 				{
-					const auto& meta = m_metadataRegistry->getMetadata(componentTypes[i]);
+					const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
 					if (!meta.isTriviallyRelocatable)
 					{
 						const sizet componentSize = meta.size;
 						std::byte* componentArray = m_componentDataStarts[i];
 						std::byte* componentPtr = componentArray + (entityIdx * componentSize);
-						meta.destructor(componentPtr);
+						meta.destructor(componentPtr, nullptr);
 					}
 				}
 			}
@@ -93,7 +92,7 @@ namespace spite
 		}
 	}
 
-	Chunk::Chunk(Chunk&& other) noexcept: m_aspect(std::move(other.m_aspect)),
+	Chunk::Chunk(Chunk&& other) noexcept: m_aspect(other.m_aspect),
 	                                      m_count(other.m_count),
 	                                      m_metadataRegistry(other.m_metadataRegistry),
 	                                      m_allocator(other.m_allocator),
@@ -117,7 +116,7 @@ namespace spite
 				m_allocator.deallocate(m_storageBlock, 0);
 			}
 
-			m_aspect = std::move(other.m_aspect);
+			m_aspect = other.m_aspect;
 			m_count = other.m_count;
 			m_metadataRegistry = other.m_metadataRegistry;
 			m_allocator = other.m_allocator;
@@ -155,7 +154,7 @@ namespace spite
 
 	const Aspect& Chunk::aspect() const
 	{
-		return m_aspect;
+		return *m_aspect;
 	}
 
 	sizet Chunk::addEntity(const Entity entity)
@@ -165,7 +164,7 @@ namespace spite
 		const sizet newEntityIndex = m_count;
 		m_entities[newEntityIndex] = entity;
 		// A new entity's components are considered modified for the current frame.
-		const sizet numComponentTypes = m_aspect.getTypes().size();
+		const sizet numComponentTypes = m_aspect->getComponentIds().size();
 		for (sizet i = 0; i < numComponentTypes; ++i)
 		{
 			m_modifiedBitsets[i].set(newEntityIndex);
@@ -187,10 +186,10 @@ namespace spite
 			m_entities[entityChunkIndex] = m_entities[lastEntityIndex];
 			swappedEntity = m_entities[entityChunkIndex];
 
-			const auto& componentTypes = m_aspect.getTypes();
-			for (size_t i = 0; i < componentTypes.size(); ++i)
+			const auto& componentIds = m_aspect->getComponentIds();
+			for (size_t i = 0; i < componentIds.size(); ++i)
 			{
-				const auto& meta = m_metadataRegistry->getMetadata(componentTypes[i]);
+				const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
 				const sizet componentSize = meta.size;
 				std::byte* componentArray = m_componentDataStarts[i];
 
@@ -228,34 +227,6 @@ namespace spite
 		return {m_entities.data(), m_count};
 	}
 
-	bool Chunk::wasModifiedLastFrame(const sizet entityChunkIndex,
-	                                 const std::type_index targetType) const
-	{
-		SASSERT(entityChunkIndex < m_count)
-		const auto& componentTypes = m_aspect.getTypes();
-		for (size_t i = 0; i < componentTypes.size(); ++i)
-		{
-			if (componentTypes[i] == targetType)
-			{
-				return m_modifiedBitsets[i].test(entityChunkIndex);
-			}
-		}
-		return false;
-	}
-
-	const std::bitset<Chunk::CAPACITY>* Chunk::getModifiedBitset(std::type_index type) const
-	{
-		const auto& componentTypes = m_aspect.getTypes();
-		for (size_t i = 0; i < componentTypes.size(); ++i)
-		{
-			if (componentTypes[i] == type)
-			{
-				return &m_modifiedBitsets[i];
-			}
-		}
-		return nullptr;
-	}
-
 	void Chunk::resetModificationTracking()
 	{
 		for (auto& bitset : m_modifiedBitsets)
@@ -264,50 +235,13 @@ namespace spite
 		}
 	}
 
-	void* Chunk::componentDataPtr(const sizet entityChunkIdx, const std::type_index targetType)
-	{
-		SASSERT(entityChunkIdx < m_count)
-
-		const auto& componentTypes = m_aspect.getTypes();
-		for (size_t i = 0; i < componentTypes.size(); ++i)
-		{
-			if (componentTypes[i] == targetType)
-			{
-				m_modifiedBitsets[i].set(entityChunkIdx);
-				const auto& meta = m_metadataRegistry->getMetadata(targetType);
-				std::byte* componentArrayStart = m_componentDataStarts[i];
-				return componentArrayStart + (entityChunkIdx * meta.size);
-			}
-		}
-		SASSERTM(false, "Component type %s is not in chunk's aspect\n", targetType.name())
-		return nullptr;
-	}
-
-	const void* Chunk::componentDataPtr(const sizet entityChunkIdx,
-	                                    const std::type_index targetType) const
-	{
-		SASSERT(entityChunkIdx < m_count)
-
-		const auto& componentTypes = m_aspect.getTypes();
-		for (sizet i = 0; i < componentTypes.size(); ++i)
-		{
-			if (componentTypes[i] == targetType)
-			{
-				const auto& meta = m_metadataRegistry->getMetadata(targetType);
-				std::byte* componentArrayStart = m_componentDataStarts[i];
-				return componentArrayStart + (entityChunkIdx * meta.size);
-			}
-		}
-		SASSERTM(false, "Component type %s is not in chunk's aspect\n", targetType.name())
-		return nullptr;
-	}
-
 	void* Chunk::getComponentDataPtrByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk)
 	{
-		SASSERT(componentIndexInChunk < m_aspect.getTypes().size())
+		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
+		markModifiedByIndex(componentIndexInChunk, entityIndexInChunk);
 		const auto& meta = m_metadataRegistry->getMetadata(
-			m_aspect.getTypes()[componentIndexInChunk]);
+			m_aspect->getComponentIds()[componentIndexInChunk]);
 		std::byte* componentArrayStart = m_componentDataStarts[componentIndexInChunk];
 		return componentArrayStart + (entityIndexInChunk * meta.size);
 	}
@@ -315,17 +249,17 @@ namespace spite
 	const void* Chunk::getComponentDataPtrByIndex(sizet componentIndexInChunk,
 	                                              sizet entityIndexInChunk) const
 	{
-		SASSERT(componentIndexInChunk < m_aspect.getTypes().size())
+		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
 		const auto& meta = m_metadataRegistry->getMetadata(
-			m_aspect.getTypes()[componentIndexInChunk]);
+			m_aspect->getComponentIds()[componentIndexInChunk]);
 		const std::byte* componentArrayStart = m_componentDataStarts[componentIndexInChunk];
 		return componentArrayStart + (entityIndexInChunk * meta.size);
 	}
 
 	void Chunk::markModifiedByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk)
 	{
-		SASSERT(componentIndexInChunk < m_aspect.getTypes().size())
+		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
 		m_modifiedBitsets[componentIndexInChunk].set(entityIndexInChunk);
 	}
