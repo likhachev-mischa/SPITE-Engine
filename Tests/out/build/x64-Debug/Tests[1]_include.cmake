@@ -1,5 +1,0 @@
-if(EXISTS "C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug/Tests[1]_tests.cmake")
-  include("C:/Computer Graphics/Vulkan/Projects/SPITE/Tests/out/build/x64-Debug/Tests[1]_tests.cmake")
-else()
-  add_test(Tests_NOT_BUILT Tests_NOT_BUILT)
-endif()
