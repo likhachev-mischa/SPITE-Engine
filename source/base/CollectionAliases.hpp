@@ -1,5 +1,7 @@
 #pragma once
+#include <EASTL/set.h>
 #include <EASTL/vector.h>
+#include <EASTL/vector_set.h>
 
 #include "base/Collections.hpp"
 #include "base/memory/HeapAllocator.hpp"
@@ -22,6 +24,8 @@ namespace spite
 	using heap_unordered_map = eastl::unordered_map<Key, Value,
 	                                                Hash, eastl::equal_to<Key>, HeapAllocatorAdapter
 	                                                <eastl::pair<const Key, Value>>>;
+	template<typename T>
+	using heap_set = eastl::vector_set<T, eastl::less<T>, HeapAllocatorAdapter<T>>;
 
 	//Type aliases for global heap allocated collections
 	template <typename T>
@@ -54,9 +58,12 @@ namespace spite
 	using scratch_string16 = scratch_string<char16_t>;
 	using scratch_string32 = scratch_string<char32_t>;
 
-	template <typename Key, typename Value>
+	template<typename T>
+	using scratch_set = eastl::vector_set<T, eastl::less<T>, ScratchAllocatorAdapter<T>>;
+
+	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
 	using scratch_unordered_map = eastl::unordered_map<Key, Value,
-	                                                   eastl::hash<Key>, eastl::equal_to<Key>,
+	                                                   Hash, eastl::equal_to<Key>,
 	                                                   ScratchAllocatorAdapter<eastl::pair<
 		                                                   const Key, Value>>>;
 

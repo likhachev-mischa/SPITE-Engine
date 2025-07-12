@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <initializer_list>
 #include <utility>
 
@@ -23,17 +24,9 @@ namespace spite
 		bool m_isInline = true;
 		[[no_unique_address]] Allocator m_allocator;
 
-		T* data_ptr() noexcept
-		{
-			return m_isInline ? reinterpret_cast<T*>(m_storage.inlineBuffer) : m_storage.heapPtr;
-		}
+		T* data_ptr() noexcept;
 
-		const T* data_ptr() const noexcept
-		{
-			return m_isInline
-				       ? reinterpret_cast<const T*>(m_storage.inlineBuffer)
-				       : m_storage.heapPtr;
-		}
+		const T* data_ptr() const noexcept;
 
 		void grow_to_accommodate(sizet new_size);
 		void destroy_elements() noexcept;
@@ -45,7 +38,7 @@ namespace spite
 		using const_iterator = const T*;
 		using allocator_type = Allocator;
 
-		sbo_vector() noexcept(noexcept(Allocator()));
+		sbo_vector() = default;
 		explicit sbo_vector(const Allocator& alloc) noexcept;
 		sbo_vector(sizet count, const T& value, const Allocator& alloc = Allocator());
 		explicit sbo_vector(sizet count, const Allocator& alloc = Allocator());
@@ -79,15 +72,18 @@ namespace spite
 		template <typename... Args>
 		T& emplace_back(Args&&... args);
 		void pop_back() noexcept;
+		iterator erase(const_iterator pos);
+		iterator erase(const_iterator first, const_iterator last);
 		void resize(sizet new_size);
 		void resize(sizet new_size, const T& value);
+
+		bool operator==(const sbo_vector& other) const;
+		bool operator!=(const sbo_vector& other) const;
+		bool operator<(const sbo_vector& other) const;
+		bool operator<=(const sbo_vector& other) const;
+		bool operator>(const sbo_vector& other) const;
+		bool operator>=(const sbo_vector& other) const;
 	};
-
-
-	template <typename T, sizet C, typename A>
-	sbo_vector<T, C, A>::sbo_vector() noexcept(noexcept(A())) : m_allocator()
-	{
-	}
 
 	template <typename T, sizet C, typename A>
 	sbo_vector<T, C, A>::sbo_vector(const A& alloc) noexcept : m_allocator(alloc)
@@ -128,13 +124,27 @@ namespace spite
 		}
 	}
 
+	template <typename T, sizet InlineCapacity, typename Allocator>
+	T* sbo_vector<T, InlineCapacity, Allocator>::data_ptr() noexcept
+	{
+		return m_isInline ? reinterpret_cast<T*>(m_storage.inlineBuffer) : m_storage.heapPtr;
+	}
+
+	template <typename T, sizet InlineCapacity, typename Allocator>
+	const T* sbo_vector<T, InlineCapacity, Allocator>::data_ptr() const noexcept
+	{
+		return m_isInline
+			       ? reinterpret_cast<const T*>(m_storage.inlineBuffer)
+			       : m_storage.heapPtr;
+	}
+
 	template <typename T, sizet C, typename A>
 	void sbo_vector<T, C, A>::grow_to_accommodate(sizet new_size)
 	{
 		if (new_size <= m_capacity) return;
 
 		sizet new_capacity = m_capacity * 2;
-		if (new_capacity < new_size) new_capacity = new_size;
+		new_capacity = std::max(new_capacity, new_size);
 
 		T* new_buffer = m_allocator.allocate(new_capacity);
 
@@ -175,8 +185,9 @@ namespace spite
 
 	template <typename T, sizet C, typename A>
 	sbo_vector<T, C, A>::sbo_vector(sbo_vector&& other) noexcept : m_size(other.m_size),
-		m_capacity(other.m_capacity), m_isInline(other.m_isInline),
-		m_allocator(std::move(other.m_allocator))
+	                                                               m_capacity(other.m_capacity),
+	                                                               m_isInline(other.m_isInline),
+	                                                               m_allocator(std::move(other.m_allocator))
 	{
 		if (m_isInline)
 		{
@@ -396,4 +407,76 @@ namespace spite
 		m_size = new_size;
 	}
 
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator==(const sbo_vector& other) const
+	{
+		if (m_size != other.m_size) return false;
+		for (sizet i = 0; i < m_size; ++i)
+		{
+			if (data_ptr()[i] != other.data_ptr()[i]) return false;
+		}
+		return true;
+	}
+
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator!=(const sbo_vector& other) const
+	{
+		return !(*this == other);
+	}
+
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator<(const sbo_vector& other) const
+	{
+		return std::lexicographical_compare(begin(), end(), other.begin(), other.end());
+	}
+
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator<=(const sbo_vector& other) const
+	{
+		return !(other < *this);
+	}
+
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator>(const sbo_vector& other) const
+	{
+		return other < *this;
+	}
+
+	template <typename T, sizet C, typename A>
+	bool sbo_vector<T, C, A>::operator>=(const sbo_vector& other) const
+	{
+		return !(*this < other);
+	}
+
+	template <typename T, sizet C, typename A>
+	typename sbo_vector<T, C, A>::iterator sbo_vector<T, C, A>::erase(const_iterator pos)
+	{
+		const sizet index = pos - cbegin();
+		for (sizet i = index; i < m_size - 1; ++i)
+		{
+			data_ptr()[i] = std::move(data_ptr()[i + 1]);
+		}
+		pop_back();
+		return begin() + index;
+	}
+
+	template <typename T, sizet C, typename A>
+	typename sbo_vector<T, C, A>::iterator sbo_vector<T, C, A>::erase(const_iterator first, const_iterator last)
+	{
+		const sizet first_index = first - cbegin();
+		const sizet last_index = last - cbegin();
+		const sizet num_to_erase = last_index - first_index;
+
+		for (sizet i = first_index; i < m_size - num_to_erase; ++i)
+		{
+			data_ptr()[i] = std::move(data_ptr()[i + num_to_erase]);
+		}
+
+		for (sizet i = 0; i < num_to_erase; ++i)
+		{
+			pop_back();
+		}
+
+		return begin() + first_index;
+	}
 }

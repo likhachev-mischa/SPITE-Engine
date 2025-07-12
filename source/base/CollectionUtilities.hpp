@@ -10,9 +10,15 @@ namespace spite
 	}
 
 	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
-	heap_unordered_map<Key,Value, Hash> makeHeapMap(const HeapAllocator& allocator)
+	heap_unordered_map<Key, Value, Hash> makeHeapMap(const HeapAllocator& allocator)
 	{
 		return heap_unordered_map<Key, Value, Hash>(HeapAllocatorAdapter<eastl::pair<const Key, Value>>(allocator));
+	}
+
+	template <typename T>
+	heap_set<T> makeHeapSet(const HeapAllocator& allocator)
+	{
+		return heap_set<T>(HeapAllocatorAdapter<T>(allocator));
 	}
 
 	template <typename T, sizet C>
@@ -27,14 +33,17 @@ namespace spite
 		return scratch_vector<T>(ScratchAllocatorAdapter<T>(allocator));
 	}
 
-	template <typename Key, typename Value>
-	scratch_unordered_map<Key, Value> makeScratchMap(ScratchAllocator& allocator)
+	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
+	scratch_unordered_map<Key, Value, Hash> makeScratchMap(ScratchAllocator& allocator)
 	{
-		using PairType = eastl::pair<const Key, Value>;
-		return scratch_unordered_map<Key, Value>(0,
-		                                         eastl::hash<Key>(),
-		                                         eastl::equal_to<Key>(),
-		                                         ScratchAllocatorAdapter<PairType>(allocator));
+		return scratch_unordered_map<Key, Value, Hash>(
+			ScratchAllocatorAdapter<eastl::pair<const Key, Value>>(allocator));
+	}
+
+	template <typename T>
+	scratch_set<T> makeScratchSet(ScratchAllocator& allocator)
+	{
+		return scratch_set<T>(ScratchAllocatorAdapter<T>(allocator));
 	}
 
 	inline scratch_string8 makeScratchString(ScratchAllocator& allocator)
