@@ -4,10 +4,9 @@
 #include "ecs/query/QueryBuilder.hpp"
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
+#include "ecs/config/TestComponents.hpp"
+using namespace spite::test;
 
-// Test Components
-struct Transform : spite::IComponent { float x, y, z; };
-struct Renderable : spite::IComponent { int meshId; };
 
 class EcsCreationTest : public testing::Test {
 protected:
@@ -25,38 +24,34 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<Transform>();
-			componentInitializer.registerComponent<Renderable>();
 		}
 	};
+
 
 	Allocators* allocContainer = new Allocators;
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -64,7 +59,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsCreationTest()
@@ -87,7 +81,7 @@ TEST_F(EcsCreationTest, CreateSingleEntity) {
 }
 
 TEST_F(EcsCreationTest, CreateSingleEntityWithComponents) {
-    spite::Aspect aspect({metadataRegistry.getComponentId(typeid(Transform))});
+    spite::Aspect aspect({spite::ComponentMetadataRegistry::getComponentId<Transform>()});
     spite::Entity entity = entityManager.createEntity(aspect);
     ASSERT_TRUE(entityManager.hasComponent<Transform>(entity));
     ASSERT_FALSE(entityManager.hasComponent<Renderable>(entity));
@@ -105,7 +99,7 @@ TEST_F(EcsCreationTest, CreateMultipleEntities) {
 
 TEST_F(EcsCreationTest, CreateMultipleEntitiesWithComponents) {
     const size_t count = 50;
-    spite::Aspect aspect({metadataRegistry.getComponentId(typeid(Transform)), metadataRegistry.getComponentId(typeid(Renderable))});
+    spite::Aspect aspect({spite::ComponentMetadataRegistry::getComponentId<Transform>(), spite::ComponentMetadataRegistry::getComponentId<Renderable>()});
     auto entities = spite::makeHeapVector<spite::Entity>(allocator);
     entityManager.createEntities(count, entities, aspect);
     ASSERT_EQ(entities.size(), count);

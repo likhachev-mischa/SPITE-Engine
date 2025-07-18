@@ -10,9 +10,7 @@
 namespace spite
 {
 	Chunk::Chunk(const Aspect* aspect,
-	             const ComponentMetadataRegistry* metadataRegistry,
 	             HeapAllocator& allocator): m_aspect(aspect), m_count(0),
-	                                        m_metadataRegistry(metadataRegistry),
 	                                        m_allocator(allocator), m_storageBlock(nullptr),
 	                                        m_componentDataStarts(
 		                                        makeSboVector<
@@ -42,7 +40,7 @@ namespace spite
 		offsets.resize(numComponentTypes);
 		for (sizet i = 0; i < componentIds.size(); ++i)
 		{
-			const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
+			const auto& meta = ComponentMetadataRegistry::getMetadata(componentIds[i]);
 			maxAlignment = std::max(meta.alignment, maxAlignment);
 			// Align the current offset
 			if (totalSize % meta.alignment != 0)
@@ -70,31 +68,11 @@ namespace spite
 
 	Chunk::~Chunk()
 	{
-		if (m_storageBlock)
-		{
-			// Call destructors for all non-trivial components before freeing the memory block.
-			const auto& componentIds = m_aspect->getComponentIds();
-			for (sizet entityIdx = 0; entityIdx < m_count; ++entityIdx)
-			{
-				for (size_t i = 0; i < componentIds.size(); ++i)
-				{
-					const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
-					if (!meta.isTriviallyRelocatable)
-					{
-						const sizet componentSize = meta.size;
-						std::byte* componentArray = m_componentDataStarts[i];
-						std::byte* componentPtr = componentArray + (entityIdx * componentSize);
-						meta.destructor(componentPtr, nullptr);
-					}
-				}
-			}
-			m_allocator.deallocate(m_storageBlock, 0);
-		}
+		m_allocator.deallocate(m_storageBlock, 0);
 	}
 
 	Chunk::Chunk(Chunk&& other) noexcept: m_aspect(other.m_aspect),
 	                                      m_count(other.m_count),
-	                                      m_metadataRegistry(other.m_metadataRegistry),
 	                                      m_allocator(other.m_allocator),
 	                                      m_storageBlock(other.m_storageBlock),
 	                                      m_entities(other.m_entities),
@@ -118,7 +96,6 @@ namespace spite
 
 			m_aspect = other.m_aspect;
 			m_count = other.m_count;
-			m_metadataRegistry = other.m_metadataRegistry;
 			m_allocator = other.m_allocator;
 			m_storageBlock = other.m_storageBlock;
 			m_entities = other.m_entities;
@@ -189,21 +166,14 @@ namespace spite
 			const auto& componentIds = m_aspect->getComponentIds();
 			for (size_t i = 0; i < componentIds.size(); ++i)
 			{
-				const auto& meta = m_metadataRegistry->getMetadata(componentIds[i]);
+				const auto& meta = ComponentMetadataRegistry::getMetadata(componentIds[i]);
 				const sizet componentSize = meta.size;
 				std::byte* componentArray = m_componentDataStarts[i];
 
 				std::byte* dest = componentArray + (entityChunkIndex * componentSize);
 				std::byte* src = componentArray + (lastEntityIndex * componentSize);
 
-				if (meta.isTriviallyRelocatable)
-				{
-					memcpy(dest, src, componentSize);
-				}
-				else
-				{
-					meta.moveAndDestroy(dest, src);
-				}
+				meta.moveAndDestroy(dest, src);
 
 				// The modification and enabled statuses must also be swapped.
 				const bool wasLastModified = m_modifiedBitsets[i].test(lastEntityIndex);
@@ -240,7 +210,7 @@ namespace spite
 		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
 		markModifiedByIndex(componentIndexInChunk, entityIndexInChunk);
-		const auto& meta = m_metadataRegistry->getMetadata(
+		const auto& meta = ComponentMetadataRegistry::getMetadata(
 			m_aspect->getComponentIds()[componentIndexInChunk]);
 		std::byte* componentArrayStart = m_componentDataStarts[componentIndexInChunk];
 		return componentArrayStart + (entityIndexInChunk * meta.size);
@@ -251,7 +221,7 @@ namespace spite
 	{
 		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
-		const auto& meta = m_metadataRegistry->getMetadata(
+		const auto& meta = ComponentMetadataRegistry::getMetadata(
 			m_aspect->getComponentIds()[componentIndexInChunk]);
 		const std::byte* componentArrayStart = m_componentDataStarts[componentIndexInChunk];
 		return componentArrayStart + (entityIndexInChunk * meta.size);

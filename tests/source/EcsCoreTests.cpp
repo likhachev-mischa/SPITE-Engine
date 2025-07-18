@@ -4,25 +4,9 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-// Test Components
-struct Position : spite::IComponent
-{
-	float x, y, z;
-	Position() = default;
+#include "ecs/config/TestComponents.hpp"
 
-	Position(float x, float y, float z): x(x), y(y), z(z)
-	{
-	}
-};
-
-struct Velocity : spite::IComponent
-{
-	float x, y, z;
-};
-
-struct Tag : spite::IComponent
-{
-};
+using namespace spite::test;
 
 class EcsCoreTest : public testing::Test
 {
@@ -49,26 +33,26 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
+		spite::ScratchAllocator scratchAllocator;
+		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, nullptr)
-			, componentInitializer(&metadataRegistry, nullptr)
-
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<Position>();
-			componentInitializer.registerComponent<Velocity>();
-			componentInitializer.registerComponent<Tag>();
 		}
 	};
 
@@ -76,13 +60,11 @@ protected:
 
 	Container* container = allocator.new_object<Container>(allocator);
 
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
 	spite::SharedComponentManager& sharedComponentManager = container->sharedComponentManager;
 	spite::EntityManager& entityManager = container->entityManager;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsCoreTest()
@@ -157,18 +139,19 @@ TEST_F(EcsCoreTest, ArchetypeMovement)
 	entityManager.addComponent<Position>(entity);
 	const auto& aspectWithPos = archetypeManager.getEntityAspect(entity);
 	ASSERT_EQ(aspectWithPos.size(), 1);
-	ASSERT_TRUE(aspectWithPos.contains(metadataRegistry.getComponentId(typeid(Position))));
+	ASSERT_TRUE(aspectWithPos.contains(spite::ComponentMetadataRegistry::getComponentId<Position>()));
 
 	entityManager.addComponent<Velocity>(entity);
 	const auto& aspectWithPosVel = archetypeManager.getEntityAspect(entity);
 	ASSERT_EQ(aspectWithPosVel.size(), 2);
-	ASSERT_TRUE(aspectWithPosVel.contains(metadataRegistry.getComponentId(typeid(Position))));
-	ASSERT_TRUE(aspectWithPosVel.contains(metadataRegistry.getComponentId(typeid(Velocity))));
+	ASSERT_TRUE(aspectWithPosVel.contains(spite::ComponentMetadataRegistry::getComponentId<Position>()));
+	ASSERT_TRUE(aspectWithPosVel.contains(spite::ComponentMetadataRegistry::getComponentId<Velocity>()));
 
 	entityManager.removeComponent<Position>(entity);
 	const auto& aspectWithVel = archetypeManager.getEntityAspect(entity);
 	ASSERT_EQ(aspectWithVel.size(), 1);
-	ASSERT_TRUE(aspectWithVel.contains(metadataRegistry.getComponentId(typeid(Velocity))));
+	ASSERT_TRUE(aspectWithVel.contains(spite::ComponentMetadataRegistry::getComponentId<Velocity>()));
+	ASSERT_FALSE(aspectWithVel.contains(spite::ComponentMetadataRegistry::getComponentId<Position>()));
 }
 
 TEST_F(EcsCoreTest, InvalidEntity)

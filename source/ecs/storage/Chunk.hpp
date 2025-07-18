@@ -23,7 +23,6 @@ namespace spite
 	private:
 		const Aspect* m_aspect;
 		sizet m_count;
-		const ComponentMetadataRegistry* m_metadataRegistry;
 		HeapAllocator& m_allocator;
 
 		// A single block of memory for all component arrays.
@@ -39,7 +38,6 @@ namespace spite
 
 	public:
 		Chunk(const Aspect* aspect,
-		      const ComponentMetadataRegistry* metadataRegistry,
 		      HeapAllocator& allocator);
 
 		~Chunk();

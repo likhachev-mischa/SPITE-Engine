@@ -4,28 +4,7 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-// Test Components
-struct Position : spite::IComponent
-{
-	float x, y, z;
-	Position() = default;
-
-	Position(float x, float y, float z) : x(x), y(y), z(z)
-	{
-	}
-
-	bool operator==(const Position&) const = default;
-};
-
-struct Velocity : spite::IComponent
-{
-	float dx, dy, dz;
-};
-
-struct Rotator : spite::IComponent
-{
-	float pitch, yaw, roll;
-};
+using namespace spite::test;
 
 class EcsModificationTest : public testing::Test
 {
@@ -44,31 +23,26 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<Position>();
-			componentInitializer.registerComponent<Velocity>();
-			componentInitializer.registerComponent<Rotator>();
 		}
 	};
 
@@ -76,7 +50,6 @@ protected:
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -84,7 +57,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsModificationTest()
@@ -184,7 +156,7 @@ TEST_F(EcsModificationTest, BatchAddComponent)
 TEST_F(EcsModificationTest, BatchRemoveComponent)
 {
 	auto entities = spite::makeHeapVector<spite::Entity>(allocator);
-	spite::Aspect aspect({metadataRegistry.getComponentId(typeid(Position))});
+	spite::Aspect aspect({spite::ComponentMetadataRegistry::getComponentId<Position>()});
 	entityManager.createEntities(10, entities, aspect);
 	entityManager.removeComponents<Position>(entities);
 	for (const auto& entity : entities)
