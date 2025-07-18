@@ -8,6 +8,7 @@
 
 namespace spite
 {
+	class ArchetypeManager;
 	class EntityManager;
 
 	// A command buffer for recording entity and component operations to be executed later.
@@ -16,7 +17,6 @@ namespace spite
 	{
 	private:
 		ArchetypeManager& m_archetypeManager;
-		ComponentMetadataRegistry& m_metadataRegistry;
 
 		enum class CommandType : u8
 		{
@@ -69,7 +69,7 @@ namespace spite
 		static u32 getProxyId(Entity entity);
 
 	public:
-		CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager, ComponentMetadataRegistry& metadataRegistry);
+		CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager);
 
 		// Creates a proxy entity and records the creation command.
 		// Returns a temporary handle to be used in subsequent commands within this buffer.
@@ -93,7 +93,7 @@ namespace spite
 	template <t_component T>
 	void CommandBuffer::addComponent(Entity entity, T&& component)
 	{
-		const ComponentID componentId = m_metadataRegistry.getComponentId(typeid(T));
+		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		const u16 commandSize = sizeof(AddComponentCmd) + sizeof(T);
 
 		auto cmd = static_cast<AddComponentCmd*>(writeCommand(CommandType::eAddComponent, commandSize));
@@ -107,7 +107,7 @@ namespace spite
 	template <t_component T>
 	void CommandBuffer::removeComponent(Entity entity)
 	{
-		const ComponentID componentId = m_metadataRegistry.getComponentId(typeid(T));
+		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		const u16 commandSize = sizeof(RemoveComponentCmd);
 
 		auto cmd = static_cast<RemoveComponentCmd*>(writeCommand(CommandType::eRemoveComponent, commandSize));

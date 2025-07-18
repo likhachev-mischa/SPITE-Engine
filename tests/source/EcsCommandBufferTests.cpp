@@ -4,23 +4,9 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 #include "base/memory/ScratchAllocator.hpp"
+#include "ecs/config/TestComponents.hpp"
 
-// Test Components
-struct Position : spite::IComponent
-{
-	float x, y, z;
-	Position() = default;
-
-	Position(float x, float y, float z) : x(x), y(y), z(z)
-	{
-	}
-};
-
-struct Velocity : spite::IComponent
-{
-	float dx, dy, dz;
-};
-
+using namespace spite::test;
 class EcsCommandBufferTest : public testing::Test
 {
 protected:
@@ -38,30 +24,26 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<Position>();
-			componentInitializer.registerComponent<Velocity>();
 		}
 	};
 
@@ -69,7 +51,6 @@ protected:
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -77,8 +58,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
-
 
 	EcsCommandBufferTest()
 	{
@@ -93,13 +72,13 @@ protected:
 
 TEST_F(EcsCommandBufferTest, CreateEntity)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager, metadataRegistry);
+	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
 	auto e_proxy = cmd.createEntity();
 	cmd.commit(entityManager);
 
 	auto query = entityManager.getQueryBuilder().with<>().build();
 
-	ASSERT_EQ(query->getEntityCount(), 1);
+	ASSERT_EQ(query.getEntityCount(), 1);
 }
 
 TEST_F(EcsCommandBufferTest, DestroyEntity)
@@ -107,7 +86,7 @@ TEST_F(EcsCommandBufferTest, DestroyEntity)
 	auto e = entityManager.createEntity();
 	ASSERT_TRUE(archetypeManager.isEntityTracked(e));
 
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager, metadataRegistry);
+	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
 	cmd.destroyEntity(e);
 	cmd.commit(entityManager);
 
@@ -116,7 +95,7 @@ TEST_F(EcsCommandBufferTest, DestroyEntity)
 
 TEST_F(EcsCommandBufferTest, AddComponent)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager, metadataRegistry);
+	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
 	auto e_proxy = cmd.createEntity();
 	cmd.addComponent<Position>(e_proxy, {1, 2, 3});
 	cmd.commit(entityManager);
@@ -124,7 +103,7 @@ TEST_F(EcsCommandBufferTest, AddComponent)
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
 	int count = 0;
 	spite::Entity realEntity;
-	for (auto it = query->begin<Position>(); it != query->end<Position>(); ++it)
+	for (auto it = query.begin<Position>(); it != query.end<Position>(); ++it)
 	{
 		count++;
 		realEntity = it.getEntity();
@@ -140,7 +119,7 @@ TEST_F(EcsCommandBufferTest, RemoveComponent)
 	auto e = entityManager.createEntity();
 	entityManager.addComponent<Position>(e);
 
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager, metadataRegistry);
+	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
 	cmd.removeComponent<Position>(e);
 	cmd.commit(entityManager);
 
@@ -149,7 +128,7 @@ TEST_F(EcsCommandBufferTest, RemoveComponent)
 
 TEST_F(EcsCommandBufferTest, MixedCommands)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager, metadataRegistry);
+	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
 
 	auto e1_proxy = cmd.createEntity();
 	cmd.addComponent<Position>(e1_proxy, {1, 1, 1});
@@ -163,7 +142,7 @@ TEST_F(EcsCommandBufferTest, MixedCommands)
 
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
 	int count = 0;
-	for (auto it = query->begin<Position>(); it != query->end<Position>(); ++it)
+	for (auto it = query.begin<Position>(); it != query.end<Position>(); ++it)
 	{
 		count++;
 	}

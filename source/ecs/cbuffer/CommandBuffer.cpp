@@ -8,10 +8,8 @@ namespace spite
 	// A high bit to mark an entity as a proxy
 	constexpr u64 PROXY_FLAG = 1ull << 63;
 
-	CommandBuffer::CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager,
-	                             ComponentMetadataRegistry& metadataRegistry)
+	CommandBuffer::CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager)
 		: m_archetypeManager(archetypeManager),
-		  m_metadataRegistry(metadataRegistry),
 		  m_allocator(allocator), m_commandBuffer(makeScratchVector<std::byte>(allocator)), m_nextProxyId(0)
 	{
 		m_commandBuffer.reserve(1024);
@@ -116,7 +114,8 @@ namespace spite
 		auto moves = makeScratchMap<Aspect, scratch_vector<Entity>, Aspect::hash>(m_allocator);
 		scratch_vector<Entity> deletions = makeScratchVector<Entity>(m_allocator);
 
-		auto componentsToSet = makeScratchMap<Entity, scratch_vector<std::pair<ComponentID, void*>>, Entity::hash>(
+		//for convenient entities->components bulk sort
+		auto componentsToAdd = makeScratchMap<Entity, eastl::pair<scratch_vector<ComponentID>,scratch_vector<void*>>, Entity::hash>(
 			m_allocator);
 
 		for (sizet i = 0; i < decodedCmds.size();)
@@ -154,14 +153,15 @@ namespace spite
 				case CommandType::eAddComponent:
 					{
 						finalAspectIds.push_back(cmd.componentId);
-						auto it = componentsToSet.find(currentEntity);
-						if (it == componentsToSet.end())
+						auto it = componentsToAdd.find(currentEntity);
+						if (it == componentsToAdd.end())
 						{
-							it = componentsToSet.emplace(currentEntity,
-							                             makeScratchVector<std::pair<ComponentID, void*>>(m_allocator)).
-							                     first;
+							it = componentsToAdd.emplace(currentEntity,
+							                              eastl::make_pair(makeScratchVector<ComponentID>(m_allocator), makeScratchVector<void*>(m_allocator))).
+							                      first;
 						}
-						it->second.push_back({cmd.componentId, cmd.componentData});
+						it->second.first.push_back(cmd.componentId);
+						it->second.second.push_back(cmd.componentData);
 						break;
 					}
 				case CommandType::eRemoveComponent:
@@ -230,23 +230,58 @@ namespace spite
 			entityManager.moveEntities(aspect, entities);
 		}
 
+		struct VectorHasher
+		{
+			sizet operator()(const scratch_vector<ComponentID>& vector) const
+			{
+				sizet seed = 0;
+				for (const ComponentID& component : vector)
+				{
+					seed ^= component + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+				}
+				return seed;
+			}
+		};
+
+		//add components in bulk
+		auto bulkComponentAddMap = makeScratchMap<scratch_vector<ComponentID>, scratch_vector<Entity>, VectorHasher>(m_allocator);
+
+		//group entities and components in bulk
+		//in most CB cases a bunch of entities has the same components list to add
+		for (const auto& [proxyOrRealEntity, components] : componentsToAdd)
+		{
+			Entity realEntity = isProxy(proxyOrRealEntity)
+				                    ? proxyToRealEntity[getProxyId(proxyOrRealEntity)]
+				                    : proxyOrRealEntity;
+
+			auto it = bulkComponentAddMap.find(components.first);
+			if (it == bulkComponentAddMap.end())
+			{
+				it = bulkComponentAddMap.emplace(components.first , makeScratchVector<Entity>(m_allocator)).first;
+			}
+			it->second.push_back(realEntity);
+		}
+
+		//add grouped entities
+		for (const auto& [components,entities] : bulkComponentAddMap)
+		{
+			entityManager.addComponents(entities, components);
+		}
+
 		// Set component data for all entities that had components added
-		for (auto const& [proxyOrRealEntity, components] : componentsToSet)
+		for (auto const& [proxyOrRealEntity, components] : componentsToAdd)
 		{
 			Entity realEntity = isProxy(proxyOrRealEntity)
 				                    ? proxyToRealEntity[getProxyId(proxyOrRealEntity)]
 				                    : proxyOrRealEntity;
 			if (realEntity == Entity::undefined()) continue;
 
-			for (auto const& [componentId, data] : components)
+			auto& componentIds = components.first;
+			auto& componentDatas = components.second;
+			for (sizet i = 0; i< componentIds.size(); ++i)
 			{
-				//first add before writing
-				if (!entityManager.hasComponent(realEntity, componentId))
-				{
-					ComponentID id = componentId;
-					entityManager.addComponents({&realEntity, 1}, {&id, 1});
-				}
-				entityManager.setComponentData(realEntity, componentId, data);
+				
+				entityManager.setComponentData(realEntity, componentIds[i], componentDatas[i]);
 			}
 		}
 
