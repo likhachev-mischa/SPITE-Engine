@@ -6,7 +6,8 @@
 #include "base/CollectionAliases.hpp"
 #include "base/CollectionUtilities.hpp"
 #include "base/memory/HeapAllocator.hpp"
-#include "ComponentMetadataRegistry.hpp"
+#include "ecs/core/ComponentMetadata.hpp"
+#include "ecs/core/ComponentMetadataRegistry.hpp"
 #include "ecs/core/IComponent.hpp"
 
 namespace spite
@@ -18,14 +19,12 @@ namespace spite
 
 		SharedComponentHandle() = default;
 
-		SharedComponentHandle(ComponentID componentId, u32 dataIndex): componentId(componentId),
-		                                                               dataIndex(dataIndex)
-		{
-		}
+		SharedComponentHandle(ComponentID componentId, u32 dataIndex);
 
 		bool operator==(const SharedComponentHandle&) const = default;
 		bool operator!=(const SharedComponentHandle&) const = default;
 	};
+
 
 	struct ISharedComponentPool
 	{
@@ -49,8 +48,8 @@ namespace spite
 		{
 			using is_transparent = void;
 			const TypedSharedComponentPool* m_pool;
-			sizet operator()(u32 index) const { return typename T::Hash()(m_pool->m_data[index]); }
-			sizet operator()(const T& item) const { return typename T::Hash()(item); }
+			sizet operator()(u32 index) const;
+			sizet operator()(const T& item) const;
 		};
 
 		struct DataEqual
@@ -58,20 +57,11 @@ namespace spite
 			using is_transparent = void;
 			const TypedSharedComponentPool* m_pool;
 
-			bool operator()(u32 indexA, u32 indexB) const
-			{
-				return typename T::Equals()(m_pool->m_data[indexA], m_pool->m_data[indexB]);
-			}
+			bool operator()(u32 indexA, u32 indexB) const;
 
-			bool operator()(u32 indexA, const T& itemB) const
-			{
-				return typename T::Equals()(m_pool->m_data[indexA], itemB);
-			}
+			bool operator()(u32 indexA, const T& itemB) const;
 
-			bool operator()(const T& itemA, u32 indexB) const
-			{
-				return typename T::Equals()(itemA, m_pool->m_data[indexB]);
-			}
+			bool operator()(const T& itemA, u32 indexB) const;
 		};
 
 		heap_vector<T> m_data;
@@ -80,24 +70,7 @@ namespace spite
 		eastl::unordered_set<u32, DataHasher, DataEqual, HeapAllocatorAdapter<u32>> m_valueToIndexSet;
 
 	private:
-		u32 createUniqueInstance(const T& item)
-		{
-			u32 newIndex;
-			if (!m_freeList.empty())
-			{
-				newIndex = m_freeList.back();
-				m_freeList.pop_back();
-				new(&m_data[newIndex]) T(item);
-				m_refCounts[newIndex] = 0;
-			}
-			else
-			{
-				m_data.push_back(item);
-				newIndex = static_cast<u32>(m_data.size() - 1);
-				m_refCounts.push_back(0);
-			}
-			return newIndex;
-		}
+		u32 createUniqueInstance(const T& item);
 
 	public:
 		TypedSharedComponentPool(const HeapAllocator& allocator)
@@ -110,9 +83,6 @@ namespace spite
 
 		u32 findOrCreateIndex(const T& item)
 		{
-			//pog
-			//auto it = m_valueToIndexSet.find_as(item);
-
 			auto it = m_valueToIndexSet.find_as(item, 
 				        m_valueToIndexSet.hash_function(), 
 				        m_valueToIndexSet.key_eq());
@@ -187,20 +157,60 @@ namespace spite
 		}
 	};
 
+	template <t_shared_component T>
+	sizet TypedSharedComponentPool<T>::DataHasher::operator()(u32 index) const
+	{ return typename T::Hash()(m_pool->m_data[index]); }
+
+	template <t_shared_component T>
+	sizet TypedSharedComponentPool<T>::DataHasher::operator()(const T& item) const
+	{ return typename T::Hash()(item); }
+
+	template <t_shared_component T>
+	bool TypedSharedComponentPool<T>::DataEqual::operator()(u32 indexA, u32 indexB) const
+	{
+		return typename T::Equals()(m_pool->m_data[indexA], m_pool->m_data[indexB]);
+	}
+
+	template <t_shared_component T>
+	bool TypedSharedComponentPool<T>::DataEqual::operator()(u32 indexA, const T& itemB) const
+	{
+		return typename T::Equals()(m_pool->m_data[indexA], itemB);
+	}
+
+	template <t_shared_component T>
+	bool TypedSharedComponentPool<T>::DataEqual::operator()(const T& itemA, u32 indexB) const
+	{
+		return typename T::Equals()(itemA, m_pool->m_data[indexB]);
+	}
+
+	template <t_shared_component T>
+	u32 TypedSharedComponentPool<T>::createUniqueInstance(const T& item)
+	{
+		u32 newIndex;
+		if (!m_freeList.empty())
+		{
+			newIndex = m_freeList.back();
+			m_freeList.pop_back();
+			new(&m_data[newIndex]) T(item);
+			m_refCounts[newIndex] = 0;
+		}
+		else
+		{
+			m_data.push_back(item);
+			newIndex = static_cast<u32>(m_data.size() - 1);
+			m_refCounts.push_back(0);
+		}
+		return newIndex;
+	}
+
 	class SharedComponentManager
 	{
 	private:
 		HeapAllocator m_allocator;
-		const ComponentMetadataRegistry& m_metadataRegistry;
 		heap_unordered_map<ComponentID, ISharedComponentPool*> m_pools;
 
-
 	public:
-		SharedComponentManager(const ComponentMetadataRegistry& registry, const HeapAllocator& allocator)
-			: m_allocator(allocator), m_metadataRegistry(registry),
-			  m_pools(makeHeapMap<ComponentID, ISharedComponentPool*>(m_allocator))
-		{
-		}
+		SharedComponentManager(const HeapAllocator& allocator);
 
 		SharedComponentManager(const SharedComponentManager& other) = delete;
 		SharedComponentManager(SharedComponentManager&& other) noexcept = delete;
@@ -220,14 +230,14 @@ namespace spite
 		{
 			TypedSharedComponentPool<T>* pool = getOrCreatePool<T>();
 			u32 dataIndex = pool->findOrCreateIndex(item);
-			const ComponentID componentId = m_metadataRegistry.getComponentId(typeid(SharedComponent<T>));
+			constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
 			return {componentId, dataIndex};
 		}
 
 		template <t_shared_component T>
 		const T& get(SharedComponentHandle handle) const
 		{
-			SASSERT(handle.componentId == m_metadataRegistry.getComponentId(typeid(SharedComponent<T>)))
+			SASSERT(handle.componentId == ComponentMetadataRegistry::getComponentId<SharedComponent<T>>())
 			const auto* pool = static_cast<const TypedSharedComponentPool<T>*>(m_pools.at(handle.componentId));
 			return pool->getData(handle.dataIndex);
 		}
@@ -235,7 +245,7 @@ namespace spite
 		template <t_shared_component T>
 		T& getMutable(SharedComponentHandle& handle)
 		{
-			SASSERT(handle.componentId == m_metadataRegistry.getComponentId(typeid(SharedComponent<T>)))
+			SASSERT(handle.componentId == ComponentMetadataRegistry::getComponentId<SharedComponent<T>>())
 			auto* pool = static_cast<TypedSharedComponentPool<T>*>(m_pools.at(handle.componentId));
 			u32 newIndex = pool->getMutableDataIndex(handle.dataIndex);
 			handle.dataIndex = newIndex;
@@ -257,7 +267,7 @@ namespace spite
 		template <t_shared_component T>
 		TypedSharedComponentPool<T>* getOrCreatePool()
 		{
-			const ComponentID id = m_metadataRegistry.getComponentId(typeid(SharedComponent<T>));
+			constexpr ComponentID id = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
 			auto it = m_pools.find(id);
 			if (it != m_pools.end())
 			{
@@ -268,4 +278,5 @@ namespace spite
 			return newPool;
 		}
 	};
+
 }

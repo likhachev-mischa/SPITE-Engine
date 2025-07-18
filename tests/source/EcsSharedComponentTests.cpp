@@ -4,45 +4,9 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
+using namespace spite::test;
+
 // Test Shared Components
-struct Material : spite::ISharedComponent
-{
-	float r, g, b;
-	Material() = default;
-
-
-	Material(float r, float g, float b): r(r), g(g), b(b)
-	{
-	}
-
-	bool operator==(const Material& other) const
-	{
-		constexpr float epsilon = std::numeric_limits<float>::
-			epsilon();
-		return (std::abs(r - other.r) < epsilon) &&
-			(std::abs(g - other.g) < epsilon) &&
-			(std::abs(b - other.b) < epsilon);
-	}
-
-	struct Hash
-	{
-		size_t operator()(const Material& m) const
-		{
-			size_t hash = std::hash<float>()(m.r);
-			hash = hash_combine(hash, std::hash<float>()(m.g));
-			hash = hash_combine(hash, std::hash<float>()(m.b));
-			return hash;
-		}
-
-		template <class T>
-		static size_t hash_combine(size_t seed, const T& v)
-		{
-			return seed ^ (std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
-		}
-	};
-
-	    struct Equals { bool operator()(const Material& a, const Material& z) const { return a == z; } };
-};
 
 class EcsSharedComponentTest : public testing::Test
 {
@@ -61,37 +25,34 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<spite::SharedComponent<Material>>();
 		}
 	};
+
 
 	Allocators* allocContainer = new Allocators;
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -99,7 +60,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsSharedComponentTest()
