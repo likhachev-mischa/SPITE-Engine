@@ -1,10 +1,10 @@
 #include "VersionManager.hpp"
-#include "Aspect.hpp"
 #include "base/CollectionUtilities.hpp"
+#include "ecs/storage/AspectRegistry.hpp"
 
 namespace spite
 {
-	VersionManager::VersionManager(const HeapAllocator& allocator,const AspectRegistry* aspectRegistry) : m_versions(makeHeapMap<const Aspect*, u64>(allocator)),m_registry(aspectRegistry) {}
+	VersionManager::VersionManager(const HeapAllocator& allocator,const AspectRegistry* aspectRegistry) : m_registry(aspectRegistry),m_versions(makeHeapMap<const Aspect*, u64>(allocator)) {}
 
 	void VersionManager::makeDirty(const Aspect& aspect)
 	{
