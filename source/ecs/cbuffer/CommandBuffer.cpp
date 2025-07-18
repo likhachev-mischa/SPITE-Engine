@@ -115,8 +115,11 @@ namespace spite
 		scratch_vector<Entity> deletions = makeScratchVector<Entity>(m_allocator);
 
 		//for convenient entities->components bulk sort
-		auto componentsToAdd = makeScratchMap<Entity, eastl::pair<scratch_vector<ComponentID>,scratch_vector<void*>>, Entity::hash>(
+		auto componentsToAdd = makeScratchMap<Entity, eastl::pair<scratch_vector<ComponentID>, scratch_vector<void*>>,
+		                                      Entity::hash>(
 			m_allocator);
+
+		auto componentsToRemove = makeScratchVector<ComponentID>(m_allocator);
 
 		for (sizet i = 0; i < decodedCmds.size();)
 		{
@@ -133,11 +136,12 @@ namespace spite
 			bool isCreatedInThisBuffer = false;
 			bool isDestroyedInThisBuffer = false;
 
-			auto finalAspectIds = makeScratchVector<ComponentID>(FrameScratchAllocator::get());
+			auto finalAspectIds = makeScratchVector<ComponentID>(m_allocator);
 			Aspect finalAspect = isProxy(currentEntity) ? Aspect{} : m_archetypeManager.getEntityAspect(currentEntity);
 
 			finalAspectIds.assign(finalAspect.getComponentIds().begin(), finalAspect.getComponentIds().end());
 
+			componentsToRemove.clear();
 
 			for (sizet k = i; k < j; ++k)
 			{
@@ -152,13 +156,21 @@ namespace spite
 					break;
 				case CommandType::eAddComponent:
 					{
+						//if components was recorded for removal
+						if (std::ranges::find(componentsToRemove, cmd.componentId) != componentsToRemove.end())
+						{
+							break;
+						}
+
 						finalAspectIds.push_back(cmd.componentId);
 						auto it = componentsToAdd.find(currentEntity);
 						if (it == componentsToAdd.end())
 						{
 							it = componentsToAdd.emplace(currentEntity,
-							                              eastl::make_pair(makeScratchVector<ComponentID>(m_allocator), makeScratchVector<void*>(m_allocator))).
-							                      first;
+							                             eastl::make_pair(
+								                             makeScratchVector<ComponentID>(m_allocator),
+								                             makeScratchVector<void*>(m_allocator))).
+							                     first;
 						}
 						it->second.first.push_back(cmd.componentId);
 						it->second.second.push_back(cmd.componentData);
@@ -167,7 +179,22 @@ namespace spite
 				case CommandType::eRemoveComponent:
 					{
 						finalAspectIds.erase(std::ranges::remove(finalAspectIds,
-						                                         cmd.componentId).begin(), finalAspectIds.end());
+						                                         cmd.componentId).begin(),
+						                     finalAspectIds.end());
+						//if component is added+removed -> do nothing
+						auto it = componentsToAdd.find(currentEntity);
+						if (it != componentsToAdd.end())
+						{
+							auto& components = componentsToAdd.at(currentEntity).first;
+							//clean addition command for this component
+							if (components.erase_first(cmd.componentId) != components.end())
+							{
+								break;
+							}
+						}
+
+						componentsToRemove.push_back(cmd.componentId);
+
 						break;
 					}
 				}
@@ -178,6 +205,11 @@ namespace spite
 			{
 				if (!isCreatedInThisBuffer)
 				{
+					auto it = componentsToAdd.find(currentEntity);
+					if (it != componentsToAdd.end())
+					{
+						componentsToAdd.erase(currentEntity);
+					}
 					// Don't delete entities created and destroyed in the same buffer
 					deletions.push_back(currentEntity);
 				}
@@ -230,44 +262,6 @@ namespace spite
 			entityManager.moveEntities(aspect, entities);
 		}
 
-		struct VectorHasher
-		{
-			sizet operator()(const scratch_vector<ComponentID>& vector) const
-			{
-				sizet seed = 0;
-				for (const ComponentID& component : vector)
-				{
-					seed ^= component + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-				}
-				return seed;
-			}
-		};
-
-		//add components in bulk
-		auto bulkComponentAddMap = makeScratchMap<scratch_vector<ComponentID>, scratch_vector<Entity>, VectorHasher>(m_allocator);
-
-		//group entities and components in bulk
-		//in most CB cases a bunch of entities has the same components list to add
-		for (const auto& [proxyOrRealEntity, components] : componentsToAdd)
-		{
-			Entity realEntity = isProxy(proxyOrRealEntity)
-				                    ? proxyToRealEntity[getProxyId(proxyOrRealEntity)]
-				                    : proxyOrRealEntity;
-
-			auto it = bulkComponentAddMap.find(components.first);
-			if (it == bulkComponentAddMap.end())
-			{
-				it = bulkComponentAddMap.emplace(components.first , makeScratchVector<Entity>(m_allocator)).first;
-			}
-			it->second.push_back(realEntity);
-		}
-
-		//add grouped entities
-		for (const auto& [components,entities] : bulkComponentAddMap)
-		{
-			entityManager.addComponents(entities, components);
-		}
-
 		// Set component data for all entities that had components added
 		for (auto const& [proxyOrRealEntity, components] : componentsToAdd)
 		{
@@ -278,9 +272,8 @@ namespace spite
 
 			auto& componentIds = components.first;
 			auto& componentDatas = components.second;
-			for (sizet i = 0; i< componentIds.size(); ++i)
+			for (sizet i = 0; i < componentIds.size(); ++i)
 			{
-				
 				entityManager.setComponentData(realEntity, componentIds[i], componentDatas[i]);
 			}
 		}
