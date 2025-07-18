@@ -1,49 +1,30 @@
 #include "ComponentMetadataRegistry.hpp"
-#include "ecs/generated/GeneratedComponentRegistration.hpp"
+
 #include "ecs/storage/SharedComponentManager.hpp"
 
 namespace spite
 {
-	SharedComponentRegistryBridge::SharedComponentRegistryBridge(SharedComponentManager* sharedComponentManager):
-		m_sharedComponentManager(sharedComponentManager)
-	{
-	}
+	// Define the static members
+	eastl::array<ComponentMetadata, ComponentMetadataRegistry::MAX_COMPONENTS> ComponentMetadataRegistry::m_idToMetadata;
+	std::once_flag ComponentMetadataRegistry::m_onceFlag;
 
-	void SharedComponentRegistryBridge::destroyHandle(SharedComponentHandle handle) const
+	void ComponentMetadataRegistry::initialize()
 	{
-		m_sharedComponentManager->decrementRef(handle);
-	}
+		// Set the default metadata for ID 0
+		m_idToMetadata[0] = ComponentMetadata{};
 
-	ComponentID ComponentMetadataRegistry::getComponentId(const std::type_index& typeIndex) const
-	{
-		auto it = m_typeToId.find(typeIndex);
-		if (it != m_typeToId.end())
+		// Use a helper to iterate the ComponentList tuple and populate the metadata array.
+		auto populate_metadata = [&]<typename T>()
 		{
-			return it->second;
-		}
-		return INVALID_COMPONENT_ID;
+			constexpr ComponentID id = ComponentMetadataRegistry::getComponentId<T>();
+			m_idToMetadata[id] = detail::create_metadata_for<T>();
+		};
+
+		detail::for_each_in_tuple<ComponentList>(populate_metadata);
 	}
 
-	const ComponentMetadata& ComponentMetadataRegistry::getMetadata(
-		const std::type_index& typeIndex) const
+	void DestructionContext::destroySharedHandle(void* component) const
 	{
-		const ComponentID id = getComponentId(typeIndex);
-		SASSERTM(id != INVALID_COMPONENT_ID, "Component of type %s is not registered\n", typeIndex.name())
-		return getMetadata(id);
+		sharedManager->decrementRef(*static_cast<SharedComponentHandle*>(component));
 	}
-
-	const ComponentMetadata& ComponentMetadataRegistry::getMetadata(ComponentID id) const
-	{
-		SASSERTM(id < m_idToMetadata.size(), "Invalid ComponentID %u\n", id)
-		return m_idToMetadata[id];
-	}
-
-	ComponentMetadataInitializer::ComponentMetadataInitializer(ComponentMetadataRegistry* registry,
-	                                                           SharedComponentRegistryBridge* sharedManager):
-		m_registry(registry), m_sharedComponentManager(sharedManager)
-	{
-#ifndef SPITE_TEST
-		registerAllComponents(*this);
-#endif
-	}
-}
+} 

@@ -1,151 +1,168 @@
 #pragma once
-#include <typeindex>
-#include "base/Assert.hpp"
+
+#ifdef SPITE_TEST
+#include "ecs/config/TestComponents.hpp"
+#else
+#include "ecs/config/Components.hpp"
+#endif
+
+
 #include "ComponentMetadata.hpp"
 #include "IComponent.hpp"
-#include "EASTL/array.h"
-#include "EASTL/fixed_hash_map.h"
+#include "base/Platform.hpp"
+#include <EASTL/array.h>
+#include <utility>
+#include <type_traits>
+#include <mutex>
 
-#ifndef SPITE_TEST
-#include "GeneratedComponentCount.hpp"
-#endif
+#include "Base/Assert.hpp"
+
 
 namespace spite
 {
-#ifdef SPITE_TEST
-    constexpr ComponentID MAX_COMPONENTS = 100;
-#endif
-
-
 	class SharedComponentManager;
 
-	struct TEMPCOMPONENT: IComponent
+	// This context is passed to the policy function at runtime.
+	class DestructionContext
 	{
-	};
-
-	class SharedComponentRegistryBridge
-	{
-		SharedComponentManager* m_sharedComponentManager = nullptr;
+	private:
+		SharedComponentManager* sharedManager;
 
 	public:
-		explicit SharedComponentRegistryBridge(SharedComponentManager* sharedComponentManager);
+		DestructionContext(SharedComponentManager* sharedManager): sharedManager(sharedManager)
+		{
+		}
 
-		void destroyHandle(SharedComponentHandle handle) const;
+		void destroySharedHandle(void* component) const;
 	};
 
-	class ComponentMetadataInitializer;
+	namespace detail
+	{
+		// The default destruction policy: do nothing.
+		inline void empty_destruction_policy(void* /*componentPtr*/, const DestructionContext& /*context*/)
+		{
+		}
+
+		// Helper to find the compile-time index of a type T in a tuple.
+		template <typename T, typename Tuple>
+		struct TupleIndex;
+
+		template <typename T, typename... Types>
+		struct TupleIndex<T, std::tuple<T, Types...>>
+		{
+			static constexpr sizet value = 0;
+		};
+
+		template <typename T, typename U, typename... Types>
+		struct TupleIndex<T, std::tuple<U, Types...>>
+		{
+			static constexpr sizet value = 1 + TupleIndex<T, std::tuple<Types...>>::value;
+		};
+
+		template <typename T, typename Tuple>
+		constexpr sizet tuple_index_v = TupleIndex<T, Tuple>::value;
+
+		template <typename Tuple, typename Func, std::size_t... Is>
+		void for_each_in_tuple(Func&& func, std::index_sequence<Is...>)
+		{
+			(func.template operator()<std::tuple_element_t<Is, Tuple>>(), ...);
+		}
+
+		template <typename Tuple, typename Func>
+		void for_each_in_tuple(Func&& func)
+		{
+			for_each_in_tuple<Tuple>(std::forward<Func>(func), std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+		}
+
+		// Creates a single ComponentMetadata entry for a given component type.
+		template <t_component T>
+		constexpr ComponentMetadata create_metadata_for()
+		{
+			const ComponentID newId = static_cast<ComponentID>(detail::tuple_index_v<T, ComponentList> + 1);
+
+			// Start with the default no-op policy.
+			ComponentMetadata::DestructionPolicyFn policyFn = &empty_destruction_policy;
+			ComponentMetadata::MoveAndDestroyFn moveAndDestroyFn;
+
+			// --- Overwrite Destruction Policy for Special Cases ---
+			if constexpr (t_shared_handle<T>)
+			{
+				policyFn = [](void* c, const DestructionContext& ctx)
+				{
+					ctx.destroySharedHandle(c);
+				};
+			}
+			else if constexpr (!std::is_trivially_destructible_v<T>)
+			{
+				policyFn = [](void* c, const DestructionContext&) { static_cast<T*>(c)->~T(); };
+			}
+
+			// --- Select Move Policy ---
+			// This is the corrected condition for trivial relocatability in C++20
+			if constexpr (std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<T>)
+			{
+				// Most optimal path: raw memory copy.
+				moveAndDestroyFn = [](void* dest, void* src)
+				{
+					memcpy(dest, src, sizeof(T));
+				};
+			}
+			else
+			{
+				// Safe path for non-trivial types.
+				moveAndDestroyFn = [](void* dest, void* src)
+				{
+					new(dest) T(std::move(*static_cast<T*>(src)));
+					static_cast<T*>(src)->~T();
+				};
+			}
+
+			return ComponentMetadata(
+				newId,
+				sizeof(T),
+				alignof(T),
+				policyFn,
+				moveAndDestroyFn
+			);
+		}
+	}
 
 	class ComponentMetadataRegistry
 	{
 	private:
-		eastl::fixed_hash_map<std::type_index, ComponentID, MAX_COMPONENTS, MAX_COMPONENTS + 1, false,std::hash<std::type_index>> m_typeToId;
-		eastl::array<ComponentMetadata, MAX_COMPONENTS> m_idToMetadata;
-		ComponentID m_nextComponentId = 1;
+		static constexpr ComponentID MAX_COMPONENTS = std::tuple_size_v<ComponentList> + 1;
 
-		friend ComponentMetadataInitializer;
+		// The metadata table is now lazily initialized at runtime.
+		static eastl::array<ComponentMetadata, MAX_COMPONENTS> m_idToMetadata;
+		static std::once_flag m_onceFlag;
 
-	public:
-
-		ComponentID getComponentId(const std::type_index& typeIndex) const;
-		const ComponentMetadata& getMetadata(const std::type_index& typeIndex) const;
-		const ComponentMetadata& getMetadata(ComponentID id) const;
-	};
-
-	class ComponentMetadataInitializer
-	{
-		ComponentMetadataRegistry* m_registry;
-		SharedComponentRegistryBridge* m_sharedComponentManager;
-
-		template <typename T>
-		static void destructComponent(void* ptr, void* userData);
-
-		// Destructor for SharedComponent<T> handles
-		template <t_shared_handle T>
-		static void destructSharedHandle(void* ptr, void* userData);
-
-		// Move and destroy for regular components
-		template <typename T>
-		static void moveAndDestroyComponent(void* dest, void* src);
+		// The initialization function, to be called only once.
+		static void initialize();
 
 	public:
-		ComponentMetadataInitializer(ComponentMetadataRegistry* registry, SharedComponentRegistryBridge* sharedManager);
+		constexpr ComponentMetadataRegistry() = default;
 
+		// Returns the unique, compile-time ID for a component type.
 		template <t_component T>
-		void registerComponent();
+		static constexpr ComponentID getComponentId()
+		{
+			return static_cast<ComponentID>(detail::tuple_index_v<T, ComponentList> + 1);
+		}
+
+		// Retrieves the metadata for a given component ID.
+		static const ComponentMetadata& getMetadata(ComponentID id)
+		{
+			std::call_once(m_onceFlag, initialize);
+			SASSERT(id < MAX_COMPONENTS)
+			return m_idToMetadata[id];
+		}
+
+		// Retrieves the metadata for a given component type.
+		template <t_component T>
+		static const ComponentMetadata& getMetadata()
+		{
+			std::call_once(m_onceFlag, initialize);
+			return m_idToMetadata[getComponentId<T>()];
+		}
 	};
-
-	template <typename T>
-	void ComponentMetadataInitializer::destructComponent(void* ptr, void* userData)
-	{
-		static_cast<T*>(ptr)->~T();
-	}
-
-	template <t_shared_handle T>
-	void ComponentMetadataInitializer::destructSharedHandle(void* ptr, void* userData)
-	{
-		auto* handleComponent = static_cast<T*>(ptr);
-		auto* manager = static_cast<SharedComponentRegistryBridge*>(userData);
-		manager->destroyHandle(handleComponent->handle);
-	}
-
-	template <typename T>
-	void ComponentMetadataInitializer::moveAndDestroyComponent(void* dest, void* src)
-	{
-		new(dest) T(std::move(*static_cast<T*>(src)));
-		static_cast<T*>(src)->~T();
-	}
-
-	template <t_component T>
-	void ComponentMetadataInitializer::registerComponent()
-	{
-		std::type_index typeIndex(typeid(T));
-
-		ComponentID newId = m_registry->m_nextComponentId++;
-#ifndef SPITE_TEST
-		SASSERT(newId < MAX_COMPONENTS)
-#endif
-
-		ComponentMetadata::DestructorFn destructorFn = nullptr;
-		void* destructorUserData = nullptr;
-		ComponentMetadata::MoveAndDestroyFn moveAndDestroyFn = nullptr;
-		bool isTriviallyRelocatable;
-
-		if constexpr (t_shared_handle<T>)
-		{
-			// This is a SharedComponent<T> handle. Assign the special destructor and user data.
-			SASSERT(m_sharedComponentManager != nullptr)
-			destructorFn = &destructSharedHandle<T>;
-			destructorUserData = m_sharedComponentManager;
-			// Handles are always trivially relocatable (they are just a struct with a handle).
-			isTriviallyRelocatable = true;
-		}
-		else
-		{
-			// Regular component logic
-			isTriviallyRelocatable = std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<
-				T>;
-
-			if constexpr (!std::is_trivially_destructible_v<T>)
-			{
-				destructorFn = &destructComponent<T>;
-			}
-
-			if (!isTriviallyRelocatable)
-			{
-				moveAndDestroyFn = &moveAndDestroyComponent<T>;
-			}
-		}
-
-		ComponentMetadata meta(newId,
-		                       typeIndex,
-		                       sizeof(T),
-		                       alignof(T),
-		                       isTriviallyRelocatable,
-		                       destructorFn,
-		                       destructorUserData,
-		                       moveAndDestroyFn);
-
-		m_registry->m_typeToId[typeIndex] = newId;
-		m_registry->m_idToMetadata[newId] = meta;
-	}
 }

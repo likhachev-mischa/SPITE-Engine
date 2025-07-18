@@ -1,5 +1,8 @@
 #pragma once
 #include <type_traits>
+#include <utility>      
+
+#include "base/Platform.hpp"
 
 namespace spite
 {
@@ -15,15 +18,27 @@ namespace spite
 	{
 	};
 
+	struct ISingletonComponent
+	{
+	};
+
 	// --- Component Concepts ---
 
 	// A concept for any type that can be stored in a chunk.
 	template <typename T>
-	concept t_component = std::is_base_of_v<IComponent, T>;
+	concept t_component = std::is_base_of_v<IComponent, T> && std::is_move_constructible_v<T>;
 
 	// A concept for the user-defined shared data structs (e.g., Material, Texture).
+	// Enforces that the type has nested Hash and Equals structs.
 	template <typename T>
-	concept t_shared_component = std::is_base_of_v<ISharedComponent, T>;
+	concept t_shared_component = std::is_base_of_v<ISharedComponent, T> && std::is_copy_constructible_v<T> &&
+		requires(T v) {
+			{ typename T::Hash{}(v) } -> std::convertible_to<sizet>;
+			{ typename T::Equals{}(v, v) } -> std::convertible_to<bool>;
+		};
+
+	template <typename T>
+	concept t_singleton_component = std::is_base_of_v<ISingletonComponent, T> && std::is_default_constructible_v<T>;
 
 	// Forward-declare the handle struct. The full definition is in SharedComponentManager.hpp
 	struct SharedComponentHandle;
