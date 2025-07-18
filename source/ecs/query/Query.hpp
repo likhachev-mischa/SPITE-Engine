@@ -5,12 +5,13 @@
 
 #include "base/CollectionUtilities.hpp"
 
+#include "ecs/storage/ArchetypeManager.hpp"
+
 namespace spite
 {
 	class Query
 	{
 	private:
-		const ComponentMetadataRegistry* m_metadataRegistry;
 		const Aspect* m_includeAspect;
 		const Aspect* m_excludeAspect;
 		const Aspect* m_mustBeEnabledAspect;
@@ -22,24 +23,10 @@ namespace spite
 		friend class QueryRegistry;
 
 	public:
-		Query(const ArchetypeManager& archetypeManager, const ComponentMetadataRegistry* registry,
-		      const Aspect* includeAspect,
+		Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect,
 		      const Aspect* excludeAspect = nullptr,
 		      const Aspect* mustBeEnabledAspect = nullptr,
-		      const Aspect* mustBeModifiedAspect = nullptr) : m_metadataRegistry(registry),
-		                                                      m_includeAspect(includeAspect),
-		                                                      m_excludeAspect(excludeAspect),
-		                                                      m_mustBeEnabledAspect(
-			                                                      mustBeEnabledAspect),
-		                                                      m_mustBeModifiedAspect(
-			                                                      mustBeModifiedAspect)
-		{
-			SASSERTM(!m_includeAspect->intersects(*m_excludeAspect),
-			         "Included aspect intersects with excluded aspect!\n")
-			m_archetypes = archetypeManager.queryNonEmptyArchetypes(
-				*m_includeAspect,
-				*m_excludeAspect);
-		}
+		      const Aspect* mustBeModifiedAspect = nullptr);
 
 		sizet getEntityCount();
 
@@ -60,9 +47,7 @@ namespace spite
 			}
 		}
 
-		template <bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false, t_component...
-		          TComponent
-		>
+		template <bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false, typename... TArgs>
 		class Iterator
 		{
 		private:
@@ -76,14 +61,51 @@ namespace spite
 			using ChunkPtr = std::conditional_t<IsConst, const Chunk*, Chunk*>;
 			ChunkPtr m_currentChunk = nullptr;
 			Archetype* m_currentArchetype = nullptr;
-			eastl::array<int, sizeof...(TComponent)> m_componentIndicesInChunk;
+
+			// --- Metaprogramming helpers ---
+			template <typename T>
+			static constexpr bool is_entity_v = std::is_same_v<std::decay_t<T>, Entity>;
+
+			template <typename T>
+			static constexpr bool is_component_v = t_component<T>;
+
+			static constexpr sizet entity_count = (is_entity_v<TArgs> + ...);
+			static_assert(entity_count <= 1, "Cannot request Entity more than once in a query view.");
+
+			static constexpr sizet component_count = (is_component_v<TArgs> + ...);
+			static_assert(component_count + entity_count == sizeof...(TArgs),
+			              "All arguments to a query view must be either a component type or Entity.");
+
+			// Maps the index in TArgs... to the index in the component-only list. -1 if not a component.
+			static constexpr eastl::array<int, sizeof...(TArgs)> arg_to_comp_idx_map = []
+			{
+				eastl::array<int, sizeof...(TArgs)> map{};
+				int current_comp_idx = 0;
+				int current_arg_idx = 0;
+				auto set_map = [&]<typename T0>(T0)
+				{
+					using T = typename T0::type;
+					if constexpr (is_component_v<T>)
+					{
+						map[current_arg_idx] = current_comp_idx++;
+					}
+					else
+					{
+						map[current_arg_idx] = -1;
+					}
+					current_arg_idx++;
+				};
+				(set_map(std::type_identity<TArgs>{}), ...);
+				return map;
+			}();
+
+			eastl::array<int, component_count> m_componentIndicesInChunk;
 
 			ScratchAllocator::ScopedMarker m_marker;
-
 			scratch_vector<int> m_enabledIndicesInChunk;
 			scratch_vector<int> m_modifiedIndicesInChunk;
 
-			using single_component_type = std::tuple_element_t<0, std::tuple<TComponent...>>;
+			using first_arg_type = std::tuple_element_t<0, std::tuple<TArgs...>>;
 
 			void findNextValidEntity()
 			{
@@ -96,9 +118,7 @@ namespace spite
 						{
 							for (const int componentIndex : m_enabledIndicesInChunk)
 							{
-								if (!m_currentChunk->isComponentEnabledByIndex(
-									componentIndex,
-									m_entityIndexInChunk))
+								if (!m_currentChunk->isComponentEnabledByIndex(componentIndex, m_entityIndexInChunk))
 								{
 									passedFilters = false;
 									break;
@@ -112,8 +132,7 @@ namespace spite
 							{
 								for (const int componentIndex : m_modifiedIndicesInChunk)
 								{
-									if (!m_currentChunk->wasModifiedLastFrameByIndex(
-										componentIndex,
+									if (!m_currentChunk->wasModifiedLastFrameByIndex(componentIndex,
 										m_entityIndexInChunk))
 									{
 										passedFilters = false;
@@ -164,13 +183,21 @@ namespace spite
 				m_currentChunk = nullptr; // End of iteration
 			}
 
-
 			void updateChunkCache()
 			{
-				const ComponentID types[] = {m_query->m_metadataRegistry->getComponentId(typeid(TComponent))...};
-				for (size_t i = 0; i < sizeof...(TComponent); ++i)
+				if constexpr (component_count > 0)
 				{
-					m_componentIndicesInChunk[i] = m_currentArchetype->getComponentIndex(types[i]);
+					int current_comp_idx = 0;
+					auto get_component_indices = [&]<typename T0>(T0)
+					{
+						using T = typename T0::type;
+						if constexpr (is_component_v<T>)
+						{
+							m_componentIndicesInChunk[current_comp_idx++] = m_currentArchetype->getComponentIndex(
+								ComponentMetadataRegistry::getComponentId<T>());
+						}
+					};
+					(get_component_indices(std::type_identity<TArgs>{}), ...);
 				}
 
 				if constexpr (FilterEnabled)
@@ -215,31 +242,71 @@ namespace spite
 				}
 			}
 
-			template <std::size_t... I>
-			auto create_reference_tuple(
-				std::index_sequence<I...>) -> eastl::tuple<std::conditional_t<
-				IsConst, const TComponent&, TComponent&>...>
+			template <typename T>
+			using reference_type_for = std::conditional_t<
+				is_entity_v<T>,
+				Entity, // Return Entity by value
+				std::conditional_t<IsConst, const T&, T&>
+			>;
+
+			template <typename T>
+			using pointer_type_for = std::conditional_t<
+				is_entity_v<T>,
+				Entity*, // Pointer to entity
+				std::conditional_t<IsConst, const T*, T*>
+			>;
+
+			template <typename ArgType, sizet ArgIdx>
+			reference_type_for<ArgType> get_arg()
+			{
+				if constexpr (is_entity_v<ArgType>)
+				{
+					return getEntity();
+				}
+				else // is_component_v
+				{
+					constexpr int component_array_idx = arg_to_comp_idx_map[ArgIdx];
+					static_assert(component_array_idx != -1);
+					const int component_idx_in_chunk = m_componentIndicesInChunk[component_array_idx];
+
+					if constexpr (!IsConst)
+					{
+						m_currentChunk->markModifiedByIndex(component_idx_in_chunk, m_entityIndexInChunk);
+					}
+
+					using ComponentType = std::conditional_t<IsConst, const ArgType, ArgType>;
+					return *static_cast<ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
+						component_idx_in_chunk,
+						m_entityIndexInChunk));
+				}
+			}
+
+			template <sizet... I>
+			auto create_reference_tuple(std::index_sequence<I...>) -> eastl::tuple<reference_type_for<TArgs>...>
 			{
 				return eastl::forward_as_tuple(
-					*static_cast<std::conditional_t<IsConst, const TComponent*, TComponent*>>(
-						m_currentChunk->getComponentDataPtrByIndex(
-							m_componentIndicesInChunk[I],
-							m_entityIndexInChunk))...);
+					get_arg<std::tuple_element_t<I, std::tuple<TArgs...>>, I>()...);
 			}
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type = std::ptrdiff_t;
-			using value_type = std::conditional_t<
-				sizeof...(TComponent) == 1, single_component_type, eastl::tuple<TComponent...>>;
-			using pointer = std::conditional_t<
-				sizeof...(TComponent) == 1, std::conditional_t<
-					IsConst, const single_component_type*, single_component_type*>, eastl::tuple<
-					std::conditional_t<IsConst, const TComponent*, TComponent*>...>>;
+
 			using reference = std::conditional_t<
-				sizeof...(TComponent) == 1, std::conditional_t<
-					IsConst, const single_component_type&, single_component_type&>, eastl::tuple<
-					std::conditional_t<IsConst, const TComponent&, TComponent&>...>>;
+				sizeof...(TArgs) == 1,
+				reference_type_for<first_arg_type>,
+				eastl::tuple<reference_type_for<TArgs>...>
+			>;
+			using value_type = std::conditional_t<
+				sizeof...(TArgs) == 1,
+				std::decay_t<reference_type_for<first_arg_type>>,
+				eastl::tuple<std::decay_t<reference_type_for<TArgs>>...>
+			>;
+			using pointer = std::conditional_t<
+				sizeof...(TArgs) == 1,
+				pointer_type_for<first_arg_type>,
+				void // Returning a pointer to a temporary tuple is not feasible
+			>;
 
 			Iterator(query_ptr_t query, bool isEnd = false) : m_query(query),
 			                                                  m_entityIndexInChunk(0),
@@ -287,31 +354,13 @@ namespace spite
 					m_query->m_wasModified = true;
 				}
 
-				if constexpr (sizeof...(TComponent) == 1)
+				if constexpr (sizeof...(TArgs) == 1)
 				{
-					const int componentIndex = m_componentIndicesInChunk[0];
-					if constexpr (!IsConst)
-					{
-						m_currentChunk->markModifiedByIndex(componentIndex, m_entityIndexInChunk);
-					}
-					using ComponentType = std::conditional_t<
-						IsConst, const single_component_type, single_component_type>;
-					return *static_cast<ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
-						componentIndex,
-						m_entityIndexInChunk));
+					return get_arg<first_arg_type, 0>();
 				}
 				else
 				{
-					if constexpr (!IsConst)
-					{
-						for (size_t i = 0; i < sizeof...(TComponent); ++i)
-						{
-							m_currentChunk->markModifiedByIndex(
-								m_componentIndicesInChunk[i],
-								m_entityIndexInChunk);
-						}
-					}
-					return create_reference_tuple(std::index_sequence_for<TComponent...>{});
+					return create_reference_tuple(std::index_sequence_for<TArgs...>{});
 				}
 			}
 
@@ -323,6 +372,7 @@ namespace spite
 			bool operator==(const Iterator& other) const
 			{
 				if (m_currentChunk == nullptr && other.m_currentChunk == nullptr) return true;
+				if (m_currentChunk == nullptr || other.m_currentChunk == nullptr) return false;
 				return m_query == other.m_query && m_archetypeIt == other.m_archetypeIt && m_chunkIt
 					== other.m_chunkIt && m_entityIndexInChunk == other.m_entityIndexInChunk;
 			}
@@ -333,31 +383,31 @@ namespace spite
 			}
 		};
 
-		template <t_component... TComponent>
-		Iterator<false, false, false, TComponent...> begin()
+		template <typename... TArgs>
+		Iterator<false, false, false, TArgs...> begin()
 		{
-			return Iterator<false, false, false, TComponent...>(this);
+			return Iterator<false, false, false, TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		Iterator<false, false, false, TComponent...> end()
+		template <typename... TArgs>
+		Iterator<false, false, false, TArgs...> end()
 		{
-			return Iterator<false, false, false, TComponent...>(this, true);
+			return Iterator<false, false, false, TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
-		Iterator<true, false, false, TComponent...> cbegin() const
+		template <typename... TArgs>
+		Iterator<true, false, false, TArgs...> cbegin() const
 		{
-			return Iterator<true, false, false, TComponent...>(this);
+			return Iterator<true, false, false, TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		Iterator<true, false, false, TComponent...> cend() const
+		template <typename... TArgs>
+		Iterator<true, false, false, TArgs...> cend() const
 		{
-			return Iterator<true, false, false, TComponent...>(this, true);
+			return Iterator<true, false, false, TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct View
 		{
 			Query* m_query;
@@ -366,11 +416,11 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->begin<TComponent...>(); }
-			auto end() const { return m_query->end<TComponent...>(); }
+			auto begin() const { return m_query->begin<TArgs...>(); }
+			auto end() const { return m_query->end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct ConstView
 		{
 			const Query* m_query;
@@ -379,49 +429,49 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->cbegin<TComponent...>(); }
-			auto end() const { return m_query->cend<TComponent...>(); }
+			auto begin() const { return m_query->cbegin<TArgs...>(); }
+			auto end() const { return m_query->cend<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
-		View<TComponent...> view() { return View<TComponent...>(this); }
+		template <typename... TArgs>
+		View<TArgs...> view() { return View<TArgs...>(this); }
 
-		template <t_component... TComponent>
-		ConstView<TComponent...> view() const { return ConstView<TComponent...>(this); }
+		template <typename... TArgs>
+		ConstView<TArgs...> view() const { return ConstView<TArgs...>(this); }
 
-		template <t_component... TComponent>
-		ConstView<TComponent...> cview() const { return ConstView<TComponent...>(this); }
+		template <typename... TArgs>
+		ConstView<TArgs...> cview() const { return ConstView<TArgs...>(this); }
 
-		template <t_component... TComponent>
-		using EnabledIterator = Iterator<false, true, false, TComponent...>;
-		template <t_component... TComponent>
-		using ConstEnabledIterator = Iterator<true, true, false, TComponent...>;
+		template <typename... TArgs>
+		using EnabledIterator = Iterator<false, true, false, TArgs...>;
+		template <typename... TArgs>
+		using ConstEnabledIterator = Iterator<true, true, false, TArgs...>;
 
-		template <t_component... TComponent>
-		EnabledIterator<TComponent...> enabled_begin()
+		template <typename... TArgs>
+		EnabledIterator<TArgs...> enabled_begin()
 		{
-			return EnabledIterator<TComponent...>(this);
+			return EnabledIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		EnabledIterator<TComponent...> enabled_end()
+		template <typename... TArgs>
+		EnabledIterator<TArgs...> enabled_end()
 		{
-			return EnabledIterator<TComponent...>(this, true);
+			return EnabledIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
-		ConstEnabledIterator<TComponent...> cenabled_begin() const
+		template <typename... TArgs>
+		ConstEnabledIterator<TArgs...> cenabled_begin() const
 		{
-			return ConstEnabledIterator<TComponent...>(this);
+			return ConstEnabledIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		ConstEnabledIterator<TComponent...> cenabled_end() const
+		template <typename... TArgs>
+		ConstEnabledIterator<TArgs...> cenabled_end() const
 		{
-			return ConstEnabledIterator<TComponent...>(this, true);
+			return ConstEnabledIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct EnabledView
 		{
 			Query* m_query;
@@ -430,11 +480,11 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->enabled_begin<TComponent...>(); }
-			auto end() const { return m_query->enabled_end<TComponent...>(); }
+			auto begin() const { return m_query->enabled_begin<TArgs...>(); }
+			auto end() const { return m_query->enabled_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct ConstEnabledView
 		{
 			const Query* m_query;
@@ -443,50 +493,52 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->cenabled_begin<TComponent...>(); }
-			auto end() const { return m_query->cenabled_end<TComponent...>(); }
+			auto begin() const { return m_query->cenabled_begin<TArgs...>(); }
+			auto end() const { return m_query->cenabled_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
-		EnabledView<TComponent...> enabled_view() { return EnabledView<TComponent...>(this); }
+		template <typename... TArgs>
+		EnabledView<TArgs...> enabled_view() { return EnabledView<TArgs...>(this); }
 
-		template <t_component... TComponent>
-		ConstEnabledView<TComponent...> cenabled_view() const
+		template <typename... TArgs>
+		ConstEnabledView<TArgs...> cenabled_view() const
 		{
-			return ConstEnabledView<TComponent...>(this);
+			return ConstEnabledView<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		using ModifiedIterator = Iterator<false, false, true, TComponent...>;
 
-		template <t_component... TComponent>
-		using ConstModifiedIterator = Iterator<true, false, true, TComponent...>;
 
-		template <t_component... TComponent>
-		ModifiedIterator<TComponent...> modified_begin()
+		template <typename... TArgs>
+		using ModifiedIterator = Iterator<false, false, true, TArgs...>;
+
+		template <typename... TArgs>
+		using ConstModifiedIterator = Iterator<true, false, true, TArgs...>;
+
+		template <typename... TArgs>
+		ModifiedIterator<TArgs...> modified_begin()
 		{
-			return ModifiedIterator<TComponent...>(this);
+			return ModifiedIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		ModifiedIterator<TComponent...> modified_end()
+		template <typename... TArgs>
+		ModifiedIterator<TArgs...> modified_end()
 		{
-			return ModifiedIterator<TComponent...>(this, true);
+			return ModifiedIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
-		ConstModifiedIterator<TComponent...> cmodified_begin() const
+		template <typename... TArgs>
+		ConstModifiedIterator<TArgs...> cmodified_begin() const
 		{
-			return ConstModifiedIterator<TComponent...>(this);
+			return ConstModifiedIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		ConstModifiedIterator<TComponent...> cmodified_end() const
+		template <typename... TArgs>
+		ConstModifiedIterator<TArgs...> cmodified_end() const
 		{
-			return ConstModifiedIterator<TComponent...>(this, true);
+			return ConstModifiedIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct ModifiedView
 		{
 			Query* m_query;
@@ -495,11 +547,11 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->modified_begin<TComponent...>(); }
-			auto end() const { return m_query->modified_end<TComponent...>(); }
+			auto begin() const { return m_query->modified_begin<TArgs...>(); }
+			auto end() const { return m_query->modified_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct ConstModifiedView
 		{
 			const Query* m_query;
@@ -508,50 +560,50 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->cmodified_begin<TComponent...>(); }
-			auto end() const { return m_query->cmodified_end<TComponent...>(); }
+			auto begin() const { return m_query->cmodified_begin<TArgs...>(); }
+			auto end() const { return m_query->cmodified_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
-		ModifiedView<TComponent...> modified_view() { return ModifiedView<TComponent...>(this); }
+		template <typename... TArgs>
+		ModifiedView<TArgs...> modified_view() { return ModifiedView<TArgs...>(this); }
 
-		template <t_component... TComponent>
-		ConstModifiedView<TComponent...> cmodified_view() const
+		template <typename... TArgs>
+		ConstModifiedView<TArgs...> cmodified_view() const
 		{
-			return ConstModifiedView<TComponent...>(this);
+			return ConstModifiedView<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		using EnabledModifiedIterator = Iterator<false, true, true, TComponent...>;
+		template <typename... TArgs>
+		using EnabledModifiedIterator = Iterator<false, true, true, TArgs...>;
 
-		template <t_component... TComponent>
-		using ConstEnabledModifiedIterator = Iterator<true, true, true, TComponent...>;
+		template <typename... TArgs>
+		using ConstEnabledModifiedIterator = Iterator<true, true, true, TArgs...>;
 
-		template <t_component... TComponent>
-		EnabledModifiedIterator<TComponent...> enabled_modified_begin()
+		template <typename... TArgs>
+		EnabledModifiedIterator<TArgs...> enabled_modified_begin()
 		{
-			return EnabledModifiedIterator<TComponent...>(this);
+			return EnabledModifiedIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		EnabledModifiedIterator<TComponent...> enabled_modified_end()
+		template <typename... TArgs>
+		EnabledModifiedIterator<TArgs...> enabled_modified_end()
 		{
-			return EnabledModifiedIterator<TComponent...>(this, true);
+			return EnabledModifiedIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
-		ConstEnabledModifiedIterator<TComponent...> cenabled_modified_begin() const
+		template <typename... TArgs>
+		ConstEnabledModifiedIterator<TArgs...> cenabled_modified_begin() const
 		{
-			return ConstEnabledModifiedIterator<TComponent...>(this);
+			return ConstEnabledModifiedIterator<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		ConstEnabledModifiedIterator<TComponent...> cenabled_modified_end() const
+		template <typename... TArgs>
+		ConstEnabledModifiedIterator<TArgs...> cenabled_modified_end() const
 		{
-			return ConstEnabledModifiedIterator<TComponent...>(this, true);
+			return ConstEnabledModifiedIterator<TArgs...>(this, true);
 		}
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct EnabledModifiedView
 		{
 			Query* m_query;
@@ -560,11 +612,11 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->enabled_modified_begin<TComponent...>(); }
-			auto end() const { return m_query->enabled_modified_end<TComponent...>(); }
+			auto begin() const { return m_query->enabled_modified_begin<TArgs...>(); }
+			auto end() const { return m_query->enabled_modified_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
+		template <typename... TArgs>
 		struct ConstEnabledModifiedView
 		{
 			const Query* m_query;
@@ -573,20 +625,20 @@ namespace spite
 			{
 			}
 
-			auto begin() const { return m_query->cenabled_modified_begin<TComponent...>(); }
-			auto end() const { return m_query->cenabled_modified_end<TComponent...>(); }
+			auto begin() const { return m_query->cenabled_modified_begin<TArgs...>(); }
+			auto end() const { return m_query->cenabled_modified_end<TArgs...>(); }
 		};
 
-		template <t_component... TComponent>
-		EnabledModifiedView<TComponent...> enabled_modified_view()
+		template <typename... TArgs>
+		EnabledModifiedView<TArgs...> enabled_modified_view()
 		{
-			return EnabledModifiedView<TComponent...>(this);
+			return EnabledModifiedView<TArgs...>(this);
 		}
 
-		template <t_component... TComponent>
-		ConstEnabledModifiedView<TComponent...> cenabled_modified_view() const
+		template <typename... TArgs>
+		ConstEnabledModifiedView<TArgs...> cenabled_modified_view() const
 		{
-			return ConstEnabledModifiedView<TComponent...>(this);
+			return ConstEnabledModifiedView<TArgs...>(this);
 		}
 	};
 }

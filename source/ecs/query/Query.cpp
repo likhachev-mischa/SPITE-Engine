@@ -3,6 +3,22 @@
 
 namespace spite
 {
+	Query::Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect, const Aspect* excludeAspect,
+		const Aspect* mustBeEnabledAspect, const Aspect* mustBeModifiedAspect): 
+		m_includeAspect(includeAspect),
+		m_excludeAspect(excludeAspect),
+		m_mustBeEnabledAspect(
+			mustBeEnabledAspect),
+		m_mustBeModifiedAspect(
+			mustBeModifiedAspect)
+	{
+		SASSERTM(!m_includeAspect->intersects(*m_excludeAspect),
+		         "Included aspect intersects with excluded aspect!\n")
+		m_archetypes = archetypeManager->queryNonEmptyArchetypes(
+			*m_includeAspect,
+			*m_excludeAspect);
+	}
+
 	sizet Query::getEntityCount()
 	{
 		sizet result = 0;

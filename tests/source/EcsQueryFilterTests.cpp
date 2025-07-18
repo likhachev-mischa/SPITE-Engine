@@ -3,13 +3,7 @@
 #include "ecs/query/QueryBuilder.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-struct ComponentA : spite::IComponent
-{
-};
-
-struct ComponentB : spite::IComponent
-{
-};
+using namespace spite::test;
 
 class EcsQueryFilterTest : public testing::Test
 {
@@ -28,38 +22,34 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<ComponentA>();
-			componentInitializer.registerComponent<ComponentB>();
 		}
 	};
+
 
 	Allocators* allocContainer = new Allocators;
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -67,7 +57,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsQueryFilterTest()
@@ -95,11 +84,10 @@ TEST_F(EcsQueryFilterTest, EnabledFilter)
 
 	auto query = entityManager.getQueryBuilder().with<ComponentA, ComponentB>().enabled<ComponentA>().build();
 	int count = 0;
-	for (auto it = query->enabled_begin<ComponentA, ComponentB>(); it != query->enabled_end<ComponentA, ComponentB>();
-	     ++it)
+	for (auto [a,b,entity] : query.enabled_view<ComponentA, ComponentB, spite::Entity>())
 	{
 		count++;
-		ASSERT_EQ(it.getEntity(), e2);
+		ASSERT_EQ(entity, e2);
 	}
 	ASSERT_EQ(count, 1);
 }

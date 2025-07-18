@@ -4,12 +4,10 @@
 namespace spite
 {
 	QueryRegistry::QueryRegistry(const HeapAllocator& allocator, ArchetypeManager* archetypeManager,
-	                             VersionManager* versionManager, const AspectRegistry* aspectRegistry,
-	                             const ComponentMetadataRegistry* metadataRegistry)
-		: m_metadataRegistry(metadataRegistry)
-		  , m_archetypeManager(archetypeManager), m_versionManager(versionManager),
-		  m_aspectRegistry(aspectRegistry)
-		  , m_queries(makeHeapMap<QueryDescriptor, Query, QueryDescriptor::hash>(allocator))
+	                             VersionManager* versionManager)
+		: m_archetypeManager(archetypeManager),
+		  m_versionManager(versionManager),
+		  m_queries(makeHeapMap<QueryDescriptor, Query, QueryDescriptor::hash>(allocator))
 	{
 	}
 
@@ -18,7 +16,7 @@ namespace spite
 		auto it = m_queries.find(descriptor);
 		if (it == m_queries.end())
 		{
-			it = m_queries.emplace(descriptor, Query(*m_archetypeManager, m_metadataRegistry, descriptor.includeAspect,
+			it = m_queries.emplace(descriptor, Query(m_archetypeManager, descriptor.includeAspect,
 			                                         descriptor.excludeAspect, descriptor.enabledAspect,
 			                                         descriptor.modifiedAspect)).first;
 		}

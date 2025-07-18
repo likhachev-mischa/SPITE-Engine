@@ -4,36 +4,7 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-// Test Components
-struct Position : spite::IComponent
-{
-	float x, y, z;
-
-	Position() = default;
-
-	Position(float x, float y, float z) : x(x), y(y), z(z)
-	{
-	}
-};
-
-struct Velocity : spite::IComponent
-{
-	float dx, dy, dz;
-
-	Velocity() = default;
-
-	Velocity(float x, float y, float z) : dx(x), dy(y), dz(z)
-	{
-	}
-};
-
-struct TagA : spite::IComponent
-{
-};
-
-struct TagB : spite::IComponent
-{
-};
+using namespace spite::test;
 
 class EcsQueryTest : public testing::Test
 {
@@ -52,40 +23,34 @@ protected:
 
 	struct Container
 	{
-		spite::ComponentMetadataRegistry metadataRegistry;
 		spite::AspectRegistry aspectRegistry;
 		spite::VersionManager versionManager;
-		spite::ArchetypeManager archetypeManager;
 		spite::SharedComponentManager sharedComponentManager;
-		spite::SharedComponentRegistryBridge registryBridge;
+		spite::ArchetypeManager archetypeManager;
 		spite::EntityManager entityManager;
-		spite::ComponentMetadataInitializer componentInitializer;
+		spite::SingletonComponentRegistry singletonComponentRegistry;
 		spite::ScratchAllocator scratchAllocator;
 		spite::QueryRegistry queryRegistry;
 
 		Container(spite::HeapAllocator& allocator) :
 			aspectRegistry(allocator)
 			, versionManager(allocator, &aspectRegistry)
-			, archetypeManager(&metadataRegistry, allocator, &aspectRegistry, &versionManager)
-			, sharedComponentManager(metadataRegistry, allocator)
-			, queryRegistry(allocator, &archetypeManager, &versionManager, &aspectRegistry, &metadataRegistry)
-			, entityManager(archetypeManager, sharedComponentManager, metadataRegistry, &aspectRegistry, &queryRegistry)
-			, registryBridge(&sharedComponentManager)
-			, componentInitializer(&metadataRegistry, &registryBridge)
-			, scratchAllocator(1 * spite::MB)
+			, sharedComponentManager(allocator)
+			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
+			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
+			                &queryRegistry),
+			singletonComponentRegistry(),
+			scratchAllocator(1 * spite::MB)
+			, queryRegistry(allocator, &archetypeManager, &versionManager)
 		{
-			componentInitializer.registerComponent<Position>();
-			componentInitializer.registerComponent<Velocity>();
-			componentInitializer.registerComponent<TagA>();
-			componentInitializer.registerComponent<TagB>();
 		}
 	};
+
 
 	Allocators* allocContainer = new Allocators;
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
 
 	spite::HeapAllocator& allocator = allocContainer->allocator;
-	spite::ComponentMetadataRegistry& metadataRegistry = container->metadataRegistry;
 	spite::AspectRegistry& aspectRegistry = container->aspectRegistry;
 	spite::VersionManager& versionManager = container->versionManager;
 	spite::ArchetypeManager& archetypeManager = container->archetypeManager;
@@ -93,7 +58,6 @@ protected:
 	spite::QueryRegistry& queryRegistry = container->queryRegistry;
 	spite::EntityManager& entityManager = container->entityManager;
 	spite::ScratchAllocator& scratchAllocator = container->scratchAllocator;
-	spite::ComponentMetadataInitializer& componentInitializer = container->componentInitializer;
 
 
 	EcsQueryTest()
@@ -116,7 +80,7 @@ TEST_F(EcsQueryTest, SimpleQuery)
 
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
 	int count = 0;
-	for (auto& pos : query->view<Position>())
+	for (auto& pos : query.view<Position>())
 	{
 		count++;
 		ASSERT_EQ(pos.x, 1);
@@ -135,7 +99,7 @@ TEST_F(EcsQueryTest, QueryWithMultipleComponents)
 
 	auto query = entityManager.getQueryBuilder().with<Position, Velocity>().build();
 	int count = 0;
-	for (auto [pos, vel] : query->view<Position, Velocity>())
+	for (auto [pos, vel] : query.view<Position, Velocity>())
 	{
 		count++;
 		ASSERT_EQ(pos.x, 1);
@@ -155,7 +119,7 @@ TEST_F(EcsQueryTest, QueryWithExclusion)
 
 	auto query = entityManager.getQueryBuilder().with<Position>().without<TagA>().build();
 	int count = 0;
-	for (auto entity : query->view<Position>())
+	for (auto entity : query.view<Position>())
 	{
 		count++;
 	}
@@ -168,9 +132,9 @@ TEST_F(EcsQueryTest, QueryForEntity)
 	entityManager.addComponent<Position>(e1);
 
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
-	for (auto it = query->begin<Position>(); it != query->end<Position>(); ++it)
+	for (auto [entity,pos] : query.view<spite::Entity,Position>())
 	{
-		ASSERT_EQ(it.getEntity(), e1);
+		ASSERT_EQ(entity, e1);
 	}
 }
 
@@ -181,7 +145,7 @@ TEST_F(EcsQueryTest, QueryAfterStructuralChange)
 
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
 	int count1 = 0;
-	for (auto it = query->begin<Position>(); it != query->end<Position>(); ++it)
+	for (auto it = query.begin<Position>(); it != query.end<Position>(); ++it)
 	{
 		count1++;
 	}
@@ -191,7 +155,7 @@ TEST_F(EcsQueryTest, QueryAfterStructuralChange)
 	// Query should be updated automatically
 	auto query2 = entityManager.getQueryBuilder().with<Position>().build();
 	int count2 = 0;
-	for (auto it = query2->begin<Position>(); it != query2->end<Position>(); ++it)
+	for (auto it = query2.begin<Position>(); it != query2.end<Position>(); ++it)
 	{
 		count2++;
 	}
@@ -200,7 +164,7 @@ TEST_F(EcsQueryTest, QueryAfterStructuralChange)
 	entityManager.addComponent<Position>(e);
 	auto query3 = entityManager.getQueryBuilder().with<Position>().build();
 	int count3 = 0;
-	for (auto it = query3->begin<Position>(); it != query3->end<Position>(); ++it)
+	for (auto it = query3.begin<Position>(); it != query3.end<Position>(); ++it)
 	{
 		count3++;
 	}
@@ -210,7 +174,7 @@ TEST_F(EcsQueryTest, QueryAfterStructuralChange)
 TEST_F(EcsQueryTest, EmptyQuery)
 {
 	auto query = entityManager.getQueryBuilder().with<Position>().build();
-	ASSERT_EQ(query->begin<Position>(), query->end<Position>());
+	ASSERT_EQ(query.begin<Position>(), query.end<Position>());
 }
 
 TEST_F(EcsQueryTest, QueryWithModificationFilter)
@@ -220,7 +184,7 @@ TEST_F(EcsQueryTest, QueryWithModificationFilter)
 
 	auto query = entityManager.getQueryBuilder().with<Position>().modified<Position>().build();
 	int count = 0;
-	for (auto& pos : query->modified_view<Position>())
+	for (auto& pos : query.modified_view<Position>())
 	{
 		count++;
 	}
@@ -229,7 +193,7 @@ TEST_F(EcsQueryTest, QueryWithModificationFilter)
 	archetypeManager.resetAllModificationTracking();
 
 	count = 0;
-	for (auto& pos : query->modified_view<Position>())
+	for (auto& pos : query.modified_view<Position>())
 	{
 		count++;
 	}
@@ -238,7 +202,7 @@ TEST_F(EcsQueryTest, QueryWithModificationFilter)
 	entityManager.getComponent<Position>(e).x = 5.0f;
 
 	count = 0;
-	for (auto& pos : query->modified_view<Position>())
+	for (auto& pos : query.modified_view<Position>())
 	{
 		count++;
 	}

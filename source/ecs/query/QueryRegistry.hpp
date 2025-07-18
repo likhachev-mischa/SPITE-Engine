@@ -26,13 +26,11 @@ namespace spite
 
     class QueryRegistry
     {
-        const ComponentMetadataRegistry* m_metadataRegistry;
         ArchetypeManager* m_archetypeManager;
 		VersionManager* m_versionManager;
-		const AspectRegistry* m_aspectRegistry;
         heap_unordered_map<QueryDescriptor, Query, QueryDescriptor::hash> m_queries;
     public:
-        QueryRegistry(const HeapAllocator& allocator, ArchetypeManager* archetypeManager, VersionManager* versionManager, const AspectRegistry* aspectRegistry,const ComponentMetadataRegistry* metadataRegistry);
+        QueryRegistry(const HeapAllocator& allocator, ArchetypeManager* archetypeManager, VersionManager* versionManager);
 
         Query* findOrCreateQuery(const QueryDescriptor& descriptor);
 
