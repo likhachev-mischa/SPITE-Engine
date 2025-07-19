@@ -48,7 +48,7 @@ protected:
 			, sharedComponentManager(allocator)
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
-			                &queryRegistry),
+			                &queryRegistry,allocator),
 			singletonComponentRegistry(),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)

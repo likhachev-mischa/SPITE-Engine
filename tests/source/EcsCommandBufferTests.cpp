@@ -39,7 +39,7 @@ protected:
 			, sharedComponentManager(allocator)
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
-			                &queryRegistry),
+			                &queryRegistry,allocator),
 			singletonComponentRegistry(),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
@@ -135,6 +135,7 @@ TEST_F(EcsCommandBufferTest, MixedCommands)
 
 	auto e2 = entityManager.createEntity();
 	entityManager.addComponent<Velocity>(e2);
+	ASSERT_TRUE(archetypeManager.isEntityTracked(e2));
 	cmd.addComponent<Position>(e2, {2, 2, 2});
 	cmd.destroyEntity(e2);
 

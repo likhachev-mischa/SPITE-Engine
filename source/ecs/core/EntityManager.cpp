@@ -1,18 +1,22 @@
 #include "EntityManager.hpp"
 #include "ecs/query/QueryBuilder.hpp"
+#include "base/memory/Memory.hpp"
 
 namespace spite
 {
 	EntityManager::EntityManager(ArchetypeManager* archetypeManager, SharedComponentManager* sharedComponentManager,
 	                             SingletonComponentRegistry* singletonComponentRegistry, AspectRegistry* aspectRegistry,
-	                             QueryRegistry* queryRegistry): m_archetypeManager(archetypeManager),
-	                                                            m_sharedComponentManager(sharedComponentManager),
-	                                                            m_aspectRegistry(aspectRegistry),
-	                                                            m_singletonComponentRegistry(
-		                                                            singletonComponentRegistry),
-	                                                            m_queryRegistry(queryRegistry),
-	                                                            m_nextEntityId(1)
+	                             QueryRegistry* queryRegistry, const HeapAllocator& allocator)
+		: m_archetypeManager(archetypeManager),
+		  m_sharedComponentManager(sharedComponentManager),
+		  m_aspectRegistry(aspectRegistry),
+		  m_singletonComponentRegistry(
+			  singletonComponentRegistry),
+		  m_queryRegistry(queryRegistry),
+		  m_generations(makeHeapVector<u32>(allocator)),
+		  m_freeIndices(makeHeapVector<u32>(allocator))
 	{
+		m_generations.push_back(0);
 	}
 
 	QueryBuilder EntityManager::getQueryBuilder() const
@@ -22,45 +26,76 @@ namespace spite
 
 	Entity EntityManager::createEntity(const Aspect& aspect)
 	{
-		Entity entity(m_nextEntityId++);
+		u32 index;
+		if (!m_freeIndices.empty())
+		{
+			index = m_freeIndices.back();
+			m_freeIndices.pop_back();
+		}
+		else
+		{
+			index = static_cast<u32>(m_generations.size());
+			m_generations.push_back(0);
+		}
+		Entity entity(index, m_generations[index]);
 		m_archetypeManager->addEntity(aspect, entity);
 		return entity;
 	}
 
-	void EntityManager::destroyEntity(Entity entity) const
+	void EntityManager::destroyEntity(Entity entity)
 	{
+		SASSERT(isValid(entity))
+
 		m_archetypeManager->removeEntity(entity);
+
+		const u32 index = entity.index();
+		++m_generations[index];
+		m_freeIndices.push_back(index);
 	}
 
-	void EntityManager::destroyEntities(eastl::span<const Entity> entities) const
+	void EntityManager::destroyEntities(eastl::span<const Entity> entities)
 	{
-		m_archetypeManager->removeEntities(entities);
+		for(const auto& entity : entities)
+		{
+			destroyEntity(entity);
+		}
+	}
+
+	bool EntityManager::isValid(Entity entity) const
+	{
+		const u32 index = entity.index();
+		return index < m_generations.size() && m_generations[index] == entity.generation();
 	}
 
 	void EntityManager::addComponents(eastl::span<const Entity> entities, eastl::span<const ComponentID> componentIds) const
 	{
+		for(const auto& entity : entities) SASSERT(isValid(entity))
 		m_archetypeManager->addComponents(entities, componentIds);
 	}
 
 	void EntityManager::moveEntities(const Aspect& toAspect, eastl::span<const Entity> entities) const
 	{
+		for(const auto& entity : entities) SASSERT(isValid(entity))
 		m_archetypeManager->moveEntities(toAspect, entities);
 	}
 
 	void EntityManager::removeComponents(eastl::span<const Entity> entities,
 		eastl::span<ComponentID> componentIds) const
 	{
+		for(const auto& entity : entities) SASSERT(isValid(entity))
 		m_archetypeManager->removeComponents(entities, componentIds);
 	}
 
 	bool EntityManager::hasComponent(Entity entity, ComponentID id) const
 	{
+		SASSERT(isValid(entity))
 		const Archetype& archetype = m_archetypeManager->getEntityArchetype(entity);
 		return archetype.aspect().contains(id);
 	}
 
 	void EntityManager::setComponentData(Entity entity, ComponentID componentId, void* componentData) const
 	{
+		SASSERT(isValid(entity))
 		const Archetype& archetype = m_archetypeManager->getEntityArchetype(entity);
 		auto [chunk, indexInChunk] = archetype.getEntityLocation(entity);
 

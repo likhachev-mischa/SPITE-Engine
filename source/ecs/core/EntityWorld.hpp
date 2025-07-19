@@ -33,7 +33,7 @@ namespace spite
 			m_archetypeManager(m_allocator, &m_aspectRegistry, &m_versionManager, &m_sharedComponentManager),
 			m_queryRegistry(m_allocator, &m_archetypeManager, &m_versionManager),
 			m_entityManager(&m_archetypeManager, &m_sharedComponentManager, &m_singletonComponentRegistry,
-			                &m_aspectRegistry, &m_queryRegistry),
+			                &m_aspectRegistry, &m_queryRegistry, m_allocator),
 			m_systemManager(&m_entityManager)
 		{
 		}

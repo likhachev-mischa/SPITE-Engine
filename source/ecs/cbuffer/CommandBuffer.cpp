@@ -5,9 +5,6 @@
 
 namespace spite
 {
-	// A high bit to mark an entity as a proxy
-	constexpr u64 PROXY_FLAG = 1ull << 63;
-
 	CommandBuffer::CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager)
 		: m_archetypeManager(archetypeManager),
 		  m_allocator(allocator), m_commandBuffer(makeScratchVector<std::byte>(allocator)), m_nextProxyId(0)
@@ -30,7 +27,7 @@ namespace spite
 		const u32 proxyId = m_nextProxyId++;
 		auto cmd = static_cast<CreateEntityCmd*>(writeCommand(CommandType::eCreateEntity, sizeof(CreateEntityCmd)));
 		cmd->proxyId = proxyId;
-		return Entity{PROXY_FLAG | proxyId};
+		return Entity{proxyId, Entity::PROXY_GENERATION};
 	}
 
 	void CommandBuffer::destroyEntity(Entity entity)
@@ -72,7 +69,7 @@ namespace spite
 				{
 					const auto* cmd = reinterpret_cast<const CreateEntityCmd*>(header);
 					decodedCmds.push_back({
-						Entity{PROXY_FLAG | cmd->proxyId}, CommandType::eCreateEntity, INVALID_COMPONENT_ID, nullptr
+						Entity{cmd->proxyId, Entity::PROXY_GENERATION}, CommandType::eCreateEntity, INVALID_COMPONENT_ID, nullptr
 					});
 					break;
 				}
@@ -208,7 +205,7 @@ namespace spite
 					auto it = componentsToAdd.find(currentEntity);
 					if (it != componentsToAdd.end())
 					{
-						componentsToAdd.erase(currentEntity);
+						componentsToAdd.erase(it);
 					}
 					// Don't delete entities created and destroyed in the same buffer
 					deletions.push_back(currentEntity);
@@ -279,10 +276,7 @@ namespace spite
 		}
 
 		// Execute deletions
-		if (!deletions.empty())
-		{
-			entityManager.destroyEntities(deletions);
-		}
+		entityManager.destroyEntities(deletions);
 
 		// --- Cleanup ---
 		m_commandBuffer.clear();
@@ -291,11 +285,11 @@ namespace spite
 
 	bool CommandBuffer::isProxy(Entity entity)
 	{
-		return (entity.id() & PROXY_FLAG) != 0;
+		return entity.generation() == Entity::PROXY_GENERATION;
 	}
 
 	u32 CommandBuffer::getProxyId(Entity entity)
 	{
-		return static_cast<u32>(entity.id() & ~PROXY_FLAG);
+		return entity.index();
 	}
 }

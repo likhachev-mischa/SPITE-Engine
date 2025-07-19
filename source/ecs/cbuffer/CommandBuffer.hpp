@@ -65,9 +65,6 @@ namespace spite
 
 		void* writeCommand(CommandType type, u16 size);
 
-		static bool isProxy(Entity entity);
-		static u32 getProxyId(Entity entity);
-
 	public:
 		CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager);
 
@@ -88,6 +85,9 @@ namespace spite
 
 		// Executes all recorded commands on the EntityManager.
 		void commit(EntityManager& entityManager);
+
+		static bool isProxy(Entity entity);
+		static u32 getProxyId(Entity entity);
 	};
 
 	template <t_component T>
@@ -108,7 +108,7 @@ namespace spite
 	void CommandBuffer::removeComponent(Entity entity)
 	{
 		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
-		const u16 commandSize = sizeof(RemoveComponentCmd);
+		constexpr u16 commandSize = sizeof(RemoveComponentCmd);
 
 		auto cmd = static_cast<RemoveComponentCmd*>(writeCommand(CommandType::eRemoveComponent, commandSize));
 		cmd->entity = entity;

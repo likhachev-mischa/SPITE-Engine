@@ -1,5 +1,6 @@
 #pragma once
 #include "Base/Platform.hpp"
+#include <limits>
 
 namespace spite
 {
@@ -13,10 +14,11 @@ namespace spite
 		{
 		}
 
-		u64 id() const
-		{
-			return m_id;
-		}
+		Entity(u32 index, u32 generation) : m_id(static_cast<u64>(generation) << 32 | index) {}
+
+		[[nodiscard]] u32 index() const { return m_id & 0xFFFFFFFF; }
+		[[nodiscard]] u32 generation() const { return m_id >> 32; }
+		[[nodiscard]] u64 id() const { return m_id; }
 
 		friend bool operator==(const Entity& lhs, const Entity& rhs) { return lhs.m_id == rhs.m_id; }
 		friend bool operator!=(const Entity& lhs, const Entity& rhs) { return lhs.m_id != rhs.m_id; }
@@ -33,5 +35,7 @@ namespace spite
 		{
 			return Entity(0);
 		}
+
+		static constexpr u32 PROXY_GENERATION = std::numeric_limits<u32>::max();
 	};
 }
