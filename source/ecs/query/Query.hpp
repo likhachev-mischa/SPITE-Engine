@@ -13,17 +13,18 @@ namespace spite
 	{
 	private:
 		const Aspect* m_includeAspect;
+		const Aspect* m_readAspect;
+		const Aspect* m_writeAspect;
 		const Aspect* m_excludeAspect;
 		const Aspect* m_mustBeEnabledAspect;
 		const Aspect* m_mustBeModifiedAspect;
 		heap_vector<Archetype*> m_archetypes;
-		mutable bool m_wasModified = false;
 		u64 m_includeVersion = 0;
 
 		friend class QueryRegistry;
 
 	public:
-		Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect,
+		Query(const ArchetypeManager* archetypeManager,const Aspect* includeAspect, const Aspect* readAspect, const Aspect* writeAspect,
 		      const Aspect* excludeAspect = nullptr,
 		      const Aspect* mustBeEnabledAspect = nullptr,
 		      const Aspect* mustBeModifiedAspect = nullptr);
@@ -32,9 +33,6 @@ namespace spite
 
 		void rebuild(const ArchetypeManager& archetypeManager);
 
-		bool wasModified() const;
-		void resetModificationStatus() const;
-
 		template <typename TFunc>
 		void forEachChunk(TFunc& func)
 		{
@@ -42,39 +40,31 @@ namespace spite
 			{
 				for (const auto& chunk : archetype->getChunks())
 				{
-					func(chunk.get());
+					func(chunk);
 				}
 			}
 		}
 
-		template <bool IsConst = false, bool FilterEnabled = false, bool FilterModified = false, typename... TArgs>
+		template <typename... TArgs>
 		class Iterator
 		{
 		private:
-			using query_ptr_t = std::conditional_t<IsConst, const Query*, Query*>;
-			query_ptr_t m_query;
+			Query* m_query;
 
 			heap_vector<Archetype*>::const_iterator m_archetypeIt;
-			heap_vector<std::unique_ptr<Chunk>>::const_iterator m_chunkIt;
+			heap_vector<Chunk*>::const_iterator m_chunkIt;
 			sizet m_entityIndexInChunk;
 
-			using ChunkPtr = std::conditional_t<IsConst, const Chunk*, Chunk*>;
-			ChunkPtr m_currentChunk = nullptr;
+			Chunk* m_currentChunk = nullptr;
 			Archetype* m_currentArchetype = nullptr;
 
-			// --- Metaprogramming helpers ---
-			template <typename T>
-			static constexpr bool is_entity_v = std::is_same_v<std::decay_t<T>, Entity>;
-
-			template <typename T>
-			static constexpr bool is_component_v = t_component<T>;
+			static_assert(((is_read_wrapper_v<TArgs> || is_write_wrapper_v<TArgs> || is_entity_v<TArgs>) && ...),
+			              "All arguments to a query view must be Read<T>, Write<T>, or Entity.");
 
 			static constexpr sizet entity_count = (is_entity_v<TArgs> + ...);
 			static_assert(entity_count <= 1, "Cannot request Entity more than once in a query view.");
 
-			static constexpr sizet component_count = (is_component_v<TArgs> + ...);
-			static_assert(component_count + entity_count == sizeof...(TArgs),
-			              "All arguments to a query view must be either a component type or Entity.");
+			static constexpr sizet component_count = ((is_read_wrapper_v<TArgs> || is_write_wrapper_v<TArgs>) + ...);
 
 			// Maps the index in TArgs... to the index in the component-only list. -1 if not a component.
 			static constexpr eastl::array<int, sizeof...(TArgs)> arg_to_comp_idx_map = []
@@ -82,10 +72,9 @@ namespace spite
 				eastl::array<int, sizeof...(TArgs)> map{};
 				int current_comp_idx = 0;
 				int current_arg_idx = 0;
-				auto set_map = [&]<typename T0>(T0)
+				auto set_map = [&]<typename T0>(std::type_identity<T0>)
 				{
-					using T = typename T0::type;
-					if constexpr (is_component_v<T>)
+					if constexpr (is_read_wrapper_v<T0> || is_write_wrapper_v<T0>)
 					{
 						map[current_arg_idx] = current_comp_idx++;
 					}
@@ -114,7 +103,7 @@ namespace spite
 					while (m_entityIndexInChunk < m_currentChunk->count())
 					{
 						bool passedFilters = true;
-						if constexpr (FilterEnabled)
+						if (!m_enabledIndicesInChunk.empty())
 						{
 							for (const int componentIndex : m_enabledIndicesInChunk)
 							{
@@ -126,18 +115,15 @@ namespace spite
 							}
 						}
 
-						if (passedFilters)
+						if (passedFilters && !m_modifiedIndicesInChunk.empty())
 						{
-							if constexpr (FilterModified)
+							for (const int componentIndex : m_modifiedIndicesInChunk)
 							{
-								for (const int componentIndex : m_modifiedIndicesInChunk)
+								if (!m_currentChunk->wasModifiedLastFrameByIndex(componentIndex,
+								                                                 m_entityIndexInChunk))
 								{
-									if (!m_currentChunk->wasModifiedLastFrameByIndex(componentIndex,
-										m_entityIndexInChunk))
-									{
-										passedFilters = false;
-										break;
-									}
+									passedFilters = false;
+									break;
 								}
 							}
 						}
@@ -172,7 +158,7 @@ namespace spite
 					{
 						if (!(*m_chunkIt)->empty())
 						{
-							m_currentChunk = m_chunkIt->get();
+							m_currentChunk = *m_chunkIt;
 							m_entityIndexInChunk = 0;
 							return;
 						}
@@ -188,96 +174,111 @@ namespace spite
 				if constexpr (component_count > 0)
 				{
 					int current_comp_idx = 0;
-					auto get_component_indices = [&]<typename T0>(T0)
+					auto get_component_indices = [&]<typename T0>(std::type_identity<T0>)
 					{
-						using T = typename T0::type;
-						if constexpr (is_component_v<T>)
+						if constexpr (is_read_wrapper_v<T0> || is_write_wrapper_v<T0>)
 						{
+							using ComponentType = get_component_type<T0>;
 							m_componentIndicesInChunk[current_comp_idx++] = m_currentArchetype->getComponentIndex(
-								ComponentMetadataRegistry::getComponentId<T>());
+								ComponentMetadataRegistry::getComponentId<ComponentType>());
 						}
 					};
 					(get_component_indices(std::type_identity<TArgs>{}), ...);
 				}
 
-				if constexpr (FilterEnabled)
+				m_enabledIndicesInChunk.clear();
+				if (m_query->m_mustBeEnabledAspect && !m_query->m_mustBeEnabledAspect->empty())
 				{
-					if (m_query->m_mustBeEnabledAspect)
+					const auto& enabledTypes = m_query->m_mustBeEnabledAspect->getComponentIds();
+					m_enabledIndicesInChunk.reserve(enabledTypes.size());
+					for (const auto& type : enabledTypes)
 					{
-						m_enabledIndicesInChunk.clear();
-						const auto& enabledTypes = m_query->m_mustBeEnabledAspect->getComponentIds();
-						if (!enabledTypes.empty())
-						{
-							m_enabledIndicesInChunk.reserve(enabledTypes.size());
-							for (const auto& type : enabledTypes)
-							{
-								const int index = m_currentArchetype->getComponentIndex(type);
-								if (index != -1)
-								{
-									m_enabledIndicesInChunk.push_back(index);
-								}
-							}
-						}
+						const int index = m_currentArchetype->getComponentIndex(type);
+						if (index != -1) m_enabledIndicesInChunk.push_back(index);
 					}
 				}
-				if constexpr (FilterModified)
+
+				m_modifiedIndicesInChunk.clear();
+				if (m_query->m_mustBeModifiedAspect && !m_query->m_mustBeModifiedAspect->empty())
 				{
-					if (m_query->m_mustBeModifiedAspect)
+					const auto& modifiedTypes = m_query->m_mustBeModifiedAspect->getComponentIds();
+					m_modifiedIndicesInChunk.reserve(modifiedTypes.size());
+					for (const auto& type : modifiedTypes)
 					{
-						m_modifiedIndicesInChunk.clear();
-						const auto& modifiedTypes = m_query->m_mustBeModifiedAspect->getComponentIds();
-						if (!modifiedTypes.empty())
-						{
-							m_modifiedIndicesInChunk.reserve(modifiedTypes.size());
-							for (const auto& type : modifiedTypes)
-							{
-								const int index = m_currentArchetype->getComponentIndex(type);
-								if (index != -1)
-								{
-									m_modifiedIndicesInChunk.push_back(index);
-								}
-							}
-						}
+						const int index = m_currentArchetype->getComponentIndex(type);
+						if (index != -1) m_modifiedIndicesInChunk.push_back(index);
 					}
 				}
 			}
 
-			template <typename T>
-			using reference_type_for = std::conditional_t<
-				is_entity_v<T>,
-				Entity, // Return Entity by value
-				std::conditional_t<IsConst, const T&, T&>
-			>;
+			template <typename T, typename = void>
+			struct reference_type_for_helper;
 
 			template <typename T>
-			using pointer_type_for = std::conditional_t<
-				is_entity_v<T>,
-				Entity*, // Pointer to entity
-				std::conditional_t<IsConst, const T*, T*>
-			>;
+			struct reference_type_for_helper<T, std::enable_if_t<is_read_wrapper_v<T> || is_write_wrapper_v<T>>>
+			{
+				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>&, const get_component_type<T>&>;
+			};
+
+			template <typename T>
+			struct reference_type_for_helper<T, std::enable_if_t<is_entity_v<T>>>
+			{
+				using type = Entity;
+			};
+
+			template <typename T>
+			using reference_type_for = typename reference_type_for_helper<T>::type;
+
+			template <typename T, typename = void>
+			struct pointer_type_for_helper;
+
+			template <typename T>
+			struct pointer_type_for_helper<T, std::enable_if_t<is_read_wrapper_v<T> || is_write_wrapper_v<T>>>
+			{
+				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>*, const get_component_type<T>*>;
+			};
+
+			template <typename T>
+			struct pointer_type_for_helper<T, std::enable_if_t<is_entity_v<T>>>
+			{
+				using type = Entity*;
+			};
+
+			template <typename T>
+			using pointer_type_for = typename pointer_type_for_helper<T>::type;
 
 			template <typename ArgType, sizet ArgIdx>
-			reference_type_for<ArgType> get_arg()
+			auto get_arg() -> reference_type_for<ArgType>
 			{
 				if constexpr (is_entity_v<ArgType>)
 				{
 					return getEntity();
 				}
-				else // is_component_v
+				else // is Read<T> or Write<T>
 				{
+					using ComponentType = get_component_type<ArgType>;
+					ComponentID componentId = ComponentMetadataRegistry::getComponentId<ComponentType>();
 					constexpr int component_array_idx = arg_to_comp_idx_map[ArgIdx];
 					static_assert(component_array_idx != -1);
 					const int component_idx_in_chunk = m_componentIndicesInChunk[component_array_idx];
 
-					if constexpr (!IsConst)
+					if constexpr (is_write_wrapper_v<ArgType>)
 					{
+						SASSERTM(m_query->m_writeAspect->contains(componentId),
+						        "Write<T> requested for a component not declared with with_write()!")
 						m_currentChunk->markModifiedByIndex(component_idx_in_chunk, m_entityIndexInChunk);
+						return *static_cast<ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
+							component_idx_in_chunk,
+							m_entityIndexInChunk));
 					}
-
-					using ComponentType = std::conditional_t<IsConst, const ArgType, ArgType>;
-					return *static_cast<ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
-						component_idx_in_chunk,
-						m_entityIndexInChunk));
+					else // is_read_wrapper_v<ArgType>
+					{
+						SASSERTM(m_query->m_readAspect->contains(componentId) || m_query->m_writeAspect->contains(
+							        componentId), "Read<T> requested for a component with no declared dependency!")
+						return *static_cast<const ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
+							component_idx_in_chunk,
+							m_entityIndexInChunk));
+					}
 				}
 			}
 
@@ -308,17 +309,17 @@ namespace spite
 				void // Returning a pointer to a temporary tuple is not feasible
 			>;
 
-			Iterator(query_ptr_t query, bool isEnd = false) : m_query(query),
-			                                                  m_entityIndexInChunk(0),
-			                                                  m_marker(
-				                                                  FrameScratchAllocator::get().
-				                                                  get_scoped_marker()),
-			                                                  m_enabledIndicesInChunk(
-				                                                  makeScratchVector<int>(
-					                                                  FrameScratchAllocator::get())),
-			                                                  m_modifiedIndicesInChunk(
-				                                                  makeScratchVector<int>(
-					                                                  FrameScratchAllocator::get()))
+			Iterator(Query* query, bool isEnd = false) : m_query(query),
+			                                             m_entityIndexInChunk(0),
+			                                             m_marker(
+				                                             FrameScratchAllocator::get().
+				                                             get_scoped_marker()),
+			                                             m_enabledIndicesInChunk(
+				                                             makeScratchVector<int>(
+					                                             FrameScratchAllocator::get())),
+			                                             m_modifiedIndicesInChunk(
+				                                             makeScratchVector<int>(
+					                                             FrameScratchAllocator::get()))
 			{
 				m_archetypeIt = m_query->m_archetypes.begin();
 				if (isEnd || m_archetypeIt == m_query->m_archetypes.end())
@@ -349,11 +350,6 @@ namespace spite
 
 			reference operator*()
 			{
-				if constexpr (!IsConst)
-				{
-					m_query->m_wasModified = true;
-				}
-
 				if constexpr (sizeof...(TArgs) == 1)
 				{
 					return get_arg<first_arg_type, 0>();
@@ -384,27 +380,15 @@ namespace spite
 		};
 
 		template <typename... TArgs>
-		Iterator<false, false, false, TArgs...> begin()
+		Iterator<TArgs...> begin()
 		{
-			return Iterator<false, false, false, TArgs...>(this);
+			return Iterator<TArgs...>(this);
 		}
 
 		template <typename... TArgs>
-		Iterator<false, false, false, TArgs...> end()
+		Iterator<TArgs...> end()
 		{
-			return Iterator<false, false, false, TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		Iterator<true, false, false, TArgs...> cbegin() const
-		{
-			return Iterator<true, false, false, TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		Iterator<true, false, false, TArgs...> cend() const
-		{
-			return Iterator<true, false, false, TArgs...>(this, true);
+			return Iterator<TArgs...>(this, true);
 		}
 
 		template <typename... TArgs>
@@ -421,224 +405,6 @@ namespace spite
 		};
 
 		template <typename... TArgs>
-		struct ConstView
-		{
-			const Query* m_query;
-
-			ConstView(const Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->cbegin<TArgs...>(); }
-			auto end() const { return m_query->cend<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
 		View<TArgs...> view() { return View<TArgs...>(this); }
-
-		template <typename... TArgs>
-		ConstView<TArgs...> view() const { return ConstView<TArgs...>(this); }
-
-		template <typename... TArgs>
-		ConstView<TArgs...> cview() const { return ConstView<TArgs...>(this); }
-
-		template <typename... TArgs>
-		using EnabledIterator = Iterator<false, true, false, TArgs...>;
-		template <typename... TArgs>
-		using ConstEnabledIterator = Iterator<true, true, false, TArgs...>;
-
-		template <typename... TArgs>
-		EnabledIterator<TArgs...> enabled_begin()
-		{
-			return EnabledIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		EnabledIterator<TArgs...> enabled_end()
-		{
-			return EnabledIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		ConstEnabledIterator<TArgs...> cenabled_begin() const
-		{
-			return ConstEnabledIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		ConstEnabledIterator<TArgs...> cenabled_end() const
-		{
-			return ConstEnabledIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		struct EnabledView
-		{
-			Query* m_query;
-
-			EnabledView(Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->enabled_begin<TArgs...>(); }
-			auto end() const { return m_query->enabled_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		struct ConstEnabledView
-		{
-			const Query* m_query;
-
-			ConstEnabledView(const Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->cenabled_begin<TArgs...>(); }
-			auto end() const { return m_query->cenabled_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		EnabledView<TArgs...> enabled_view() { return EnabledView<TArgs...>(this); }
-
-		template <typename... TArgs>
-		ConstEnabledView<TArgs...> cenabled_view() const
-		{
-			return ConstEnabledView<TArgs...>(this);
-		}
-
-
-
-		template <typename... TArgs>
-		using ModifiedIterator = Iterator<false, false, true, TArgs...>;
-
-		template <typename... TArgs>
-		using ConstModifiedIterator = Iterator<true, false, true, TArgs...>;
-
-		template <typename... TArgs>
-		ModifiedIterator<TArgs...> modified_begin()
-		{
-			return ModifiedIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		ModifiedIterator<TArgs...> modified_end()
-		{
-			return ModifiedIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		ConstModifiedIterator<TArgs...> cmodified_begin() const
-		{
-			return ConstModifiedIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		ConstModifiedIterator<TArgs...> cmodified_end() const
-		{
-			return ConstModifiedIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		struct ModifiedView
-		{
-			Query* m_query;
-
-			ModifiedView(Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->modified_begin<TArgs...>(); }
-			auto end() const { return m_query->modified_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		struct ConstModifiedView
-		{
-			const Query* m_query;
-
-			ConstModifiedView(const Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->cmodified_begin<TArgs...>(); }
-			auto end() const { return m_query->cmodified_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		ModifiedView<TArgs...> modified_view() { return ModifiedView<TArgs...>(this); }
-
-		template <typename... TArgs>
-		ConstModifiedView<TArgs...> cmodified_view() const
-		{
-			return ConstModifiedView<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		using EnabledModifiedIterator = Iterator<false, true, true, TArgs...>;
-
-		template <typename... TArgs>
-		using ConstEnabledModifiedIterator = Iterator<true, true, true, TArgs...>;
-
-		template <typename... TArgs>
-		EnabledModifiedIterator<TArgs...> enabled_modified_begin()
-		{
-			return EnabledModifiedIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		EnabledModifiedIterator<TArgs...> enabled_modified_end()
-		{
-			return EnabledModifiedIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		ConstEnabledModifiedIterator<TArgs...> cenabled_modified_begin() const
-		{
-			return ConstEnabledModifiedIterator<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		ConstEnabledModifiedIterator<TArgs...> cenabled_modified_end() const
-		{
-			return ConstEnabledModifiedIterator<TArgs...>(this, true);
-		}
-
-		template <typename... TArgs>
-		struct EnabledModifiedView
-		{
-			Query* m_query;
-
-			EnabledModifiedView(Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->enabled_modified_begin<TArgs...>(); }
-			auto end() const { return m_query->enabled_modified_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		struct ConstEnabledModifiedView
-		{
-			const Query* m_query;
-
-			ConstEnabledModifiedView(const Query* query) : m_query(query)
-			{
-			}
-
-			auto begin() const { return m_query->cenabled_modified_begin<TArgs...>(); }
-			auto end() const { return m_query->cenabled_modified_end<TArgs...>(); }
-		};
-
-		template <typename... TArgs>
-		EnabledModifiedView<TArgs...> enabled_modified_view()
-		{
-			return EnabledModifiedView<TArgs...>(this);
-		}
-
-		template <typename... TArgs>
-		ConstEnabledModifiedView<TArgs...> cenabled_modified_view() const
-		{
-			return ConstEnabledModifiedView<TArgs...>(this);
-		}
 	};
 }

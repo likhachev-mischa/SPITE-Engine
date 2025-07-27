@@ -1,22 +1,26 @@
 #include "Query.hpp"
 #include "ecs/storage/Archetype.hpp"
+#include "base/memory/ScratchAllocator.hpp"
 
 namespace spite
 {
-	Query::Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect, const Aspect* excludeAspect,
-		const Aspect* mustBeEnabledAspect, const Aspect* mustBeModifiedAspect): 
-		m_includeAspect(includeAspect),
-		m_excludeAspect(excludeAspect),
-		m_mustBeEnabledAspect(
-			mustBeEnabledAspect),
-		m_mustBeModifiedAspect(
-			mustBeModifiedAspect)
+	Query::Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect, const Aspect* readAspect,
+	             const Aspect* writeAspect,
+	             const Aspect* excludeAspect, const Aspect* mustBeEnabledAspect,
+	             const Aspect* mustBeModifiedAspect): m_includeAspect(includeAspect),
+	                                                  m_readAspect(readAspect),
+	                                                  m_writeAspect(writeAspect),
+	                                                  m_excludeAspect(excludeAspect),
+	                                                  m_mustBeEnabledAspect(
+		                                                  mustBeEnabledAspect),
+	                                                  m_mustBeModifiedAspect(
+		                                                  mustBeModifiedAspect),
+	                                                  m_archetypes(archetypeManager->queryNonEmptyArchetypes(
+		                                                  *m_includeAspect,
+		                                                  *m_excludeAspect))
 	{
-		SASSERTM(!m_includeAspect->intersects(*m_excludeAspect),
+		SASSERTM(!includeAspect->intersects(*m_excludeAspect),
 		         "Included aspect intersects with excluded aspect!\n")
-		m_archetypes = archetypeManager->queryNonEmptyArchetypes(
-			*m_includeAspect,
-			*m_excludeAspect);
 	}
 
 	sizet Query::getEntityCount()
@@ -24,7 +28,7 @@ namespace spite
 		sizet result = 0;
 		for (Archetype* archetype : m_archetypes)
 		{
-			for (const auto & chunk : archetype->getChunks())
+			for (const auto& chunk : archetype->getChunks())
 			{
 				result += chunk->count();
 			}
@@ -36,15 +40,4 @@ namespace spite
 	{
 		m_archetypes = archetypeManager.queryNonEmptyArchetypes(*m_includeAspect, *m_excludeAspect);
 	}
-
-	bool Query::wasModified() const
-	{
-		return m_wasModified;
-	}
-
-	void Query::resetModificationStatus() const
-	{
-		m_wasModified = false;
-	}
 }
-

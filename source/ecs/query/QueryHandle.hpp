@@ -12,8 +12,8 @@ namespace spite
 	class QueryHandle
 	{
 	private:
-		QueryRegistry* m_queryRegistry;
-		QueryDescriptor m_descriptor;
+		QueryRegistry* m_queryRegistry{};
+		QueryDescriptor m_descriptor{};
 		mutable Query* m_cachedQuery = nullptr;
 
 		// Fetches the fresh, potentially rebuilt query from the registry.
@@ -33,10 +33,17 @@ namespace spite
 		}
 
 	public:
+		QueryHandle() = default;
+
 		QueryHandle(QueryRegistry* registry, const QueryDescriptor& desc)
 			: m_queryRegistry(registry), m_descriptor(desc)
 		{
 		}
+
+		QueryHandle(const QueryHandle& other) = default;
+		QueryHandle(QueryHandle&& other) noexcept = default;
+		QueryHandle& operator = (QueryHandle&& other) noexcept = default;
+		QueryHandle& operator=(const QueryHandle& other) = default;
 
 		// Expose the descriptor for advanced usage like prerequisite checks.
 		const QueryDescriptor& getDescriptor() const { return m_descriptor; }
@@ -44,13 +51,9 @@ namespace spite
 		// --- Forwarded Query API ---
 
 		sizet getEntityCount() { return getQuery()->getEntityCount(); }
-		bool wasModified() const { return getQuery()->wasModified(); }
-		void resetModificationStatus() const { getQuery()->resetModificationStatus(); }
 
 		template <typename TFunc>
 		void forEachChunk(TFunc& func) { getQuery()->forEachChunk(func); }
-
-		// --- Views (most common usage) ---
 
 		template <typename... TArgs>
 		auto view() { return getQuery()->view<TArgs...>(); }
@@ -59,38 +62,9 @@ namespace spite
 		auto view() const { return getQuery()->view<TArgs...>(); }
 
 		template <typename... TArgs>
-		auto cview() const { return getQuery()->cview<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto enabled_view() { return getQuery()->enabled_view<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto cenabled_view() const { return getQuery()->cenabled_view<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto modified_view() { return getQuery()->modified_view<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto cmodified_view() const { return getQuery()->cmodified_view<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto enabled_modified_view() { return getQuery()->enabled_modified_view<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto cenabled_modified_view() const { return getQuery()->cenabled_modified_view<TArgs...>(); }
-
-		// --- Iterators (less common, but supported) ---
-
-		template <typename... TArgs>
 		auto begin() { return getQuery()->begin<TArgs...>(); }
 
 		template <typename... TArgs>
 		auto end() { return getQuery()->end<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto cbegin() const { return getQuery()->cbegin<TArgs...>(); }
-
-		template <typename... TArgs>
-		auto cend() const { return getQuery()->cend<TArgs...>(); }
 	};
 }

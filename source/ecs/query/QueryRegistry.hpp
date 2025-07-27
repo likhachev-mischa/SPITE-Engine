@@ -11,10 +11,13 @@ namespace spite
 
     struct QueryDescriptor
     {
-        const Aspect* includeAspect;
-        const Aspect* excludeAspect;
-        const Aspect* enabledAspect;
-        const Aspect* modifiedAspect;
+        //= readAspect + writeAspect
+        const Aspect* includeAspect{};
+        const Aspect* readAspect{};    
+        const Aspect* writeAspect{};   
+        const Aspect* excludeAspect{};
+        const Aspect* enabledAspect{};
+        const Aspect* modifiedAspect{};    
 
         bool operator==(const QueryDescriptor& other) const;
 
