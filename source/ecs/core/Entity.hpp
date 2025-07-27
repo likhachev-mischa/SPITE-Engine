@@ -14,7 +14,9 @@ namespace spite
 		{
 		}
 
-		Entity(u32 index, u32 generation) : m_id(static_cast<u64>(generation) << 32 | index) {}
+		Entity(u32 index, u32 generation) : m_id(static_cast<u64>(generation) << 32 | index)
+		{
+		}
 
 		[[nodiscard]] u32 index() const { return m_id & 0xFFFFFFFF; }
 		[[nodiscard]] u32 generation() const { return m_id >> 32; }
@@ -38,4 +40,7 @@ namespace spite
 
 		static constexpr u32 PROXY_GENERATION = std::numeric_limits<u32>::max();
 	};
+
+	template <typename T>
+	static constexpr bool is_entity_v = std::is_same_v<std::decay_t<T>, Entity>;
 }

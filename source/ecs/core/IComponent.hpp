@@ -1,6 +1,6 @@
 #pragma once
 #include <type_traits>
-#include <utility>      
+#include <utility>
 
 #include "base/Platform.hpp"
 
@@ -32,7 +32,8 @@ namespace spite
 	// Enforces that the type has nested Hash and Equals structs.
 	template <typename T>
 	concept t_shared_component = std::is_base_of_v<ISharedComponent, T> && std::is_copy_constructible_v<T> &&
-		requires(T v) {
+		requires(T v)
+		{
 			{ typename T::Hash{}(v) } -> std::convertible_to<sizet>;
 			{ typename T::Equals{}(v, v) } -> std::convertible_to<bool>;
 		};
@@ -66,4 +67,63 @@ namespace spite
 	// A concept to specifically identify SharedComponent<T> handle components.
 	template <typename T>
 	concept t_shared_handle = is_shared_handle<T>::value;
+
+	// --- Access Wrappers ---
+
+	// Wrapper to request read-only access to a component in a query.
+	template <t_component T>
+	struct Read
+	{
+		using type = T;
+	};
+
+	// Wrapper to request read-write access to a component in a query.
+	template <t_component T>
+	struct Write
+	{
+		using type = T;
+	};
+
+	template <typename T>
+	struct is_read_wrapper : std::false_type
+	{
+	};
+
+	template <typename U>
+	struct is_read_wrapper<Read<U>> : std::true_type
+	{
+	};
+
+	template <typename T>
+	static constexpr bool is_read_wrapper_v = is_read_wrapper<T>::value;
+
+	template <typename T>
+	struct is_write_wrapper : std::false_type
+	{
+	};
+
+	template <typename U>
+	struct is_write_wrapper<Write<U>> : std::true_type
+	{
+	};
+
+	template <typename T>
+	static constexpr bool is_write_wrapper_v = is_write_wrapper<T>::value;
+
+	namespace detail
+	{
+		template <typename T, typename = void>
+		struct get_component_type_sfinae
+		{
+		};
+
+		template <typename T>
+		struct get_component_type_sfinae<T, std::void_t<typename T::type>>
+		{
+			using type = typename T::type;
+		};
+	} // namespace detail
+
+	template <typename T>
+	using get_component_type = typename detail::get_component_type_sfinae<T>::type;
 }

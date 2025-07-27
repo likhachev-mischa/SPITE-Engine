@@ -4,23 +4,14 @@
 
 namespace spite
 {
-	// Define the static members
-	eastl::array<ComponentMetadata, ComponentMetadataRegistry::MAX_COMPONENTS> ComponentMetadataRegistry::m_idToMetadata;
-	std::once_flag ComponentMetadataRegistry::m_onceFlag;
+	ComponentMetadataRegistry* ComponentMetadataRegistry::m_instance = nullptr;
 
-	void ComponentMetadataRegistry::initialize()
+	ComponentMetadataRegistry::ComponentMetadataRegistry(const HeapAllocator& allocator)
+		: m_idToMetadata(makeHeapVector<ComponentMetadata>(allocator)),
+		  m_typeToIdMap(makeHeapMap<std::type_index, ComponentID,std::hash<std::type_index>>(allocator)),m_allocator(allocator)
 	{
-		// Set the default metadata for ID 0
-		m_idToMetadata[0] = ComponentMetadata{};
-
-		// Use a helper to iterate the ComponentList tuple and populate the metadata array.
-		auto populate_metadata = [&]<typename T>()
-		{
-			constexpr ComponentID id = ComponentMetadataRegistry::getComponentId<T>();
-			m_idToMetadata[id] = detail::create_metadata_for<T>();
-		};
-
-		detail::for_each_in_tuple<ComponentList>(populate_metadata);
+		// Reserve ID 0 for INVALID_COMPONENT_ID
+		m_idToMetadata.emplace_back();
 	}
 
 	void DestructionContext::destroySharedHandle(void* component) const

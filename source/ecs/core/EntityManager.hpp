@@ -9,9 +9,12 @@
 #include "ecs/storage/SharedComponentManager.hpp"
 #include "base/CollectionAliases.hpp"
 
+#include "ecs/event/EventManager.hpp"
+
 namespace spite
 {
 	class AspectRegistry;
+	class CommandBuffer;
 	class QueryRegistry;
 	class QueryBuilder;
 
@@ -23,7 +26,8 @@ namespace spite
 		AspectRegistry* m_aspectRegistry;
 		SingletonComponentRegistry* m_singletonComponentRegistry;
 		QueryRegistry* m_queryRegistry;
-		
+		EventManager m_eventManager;
+
 		heap_vector<u32> m_generations;
 		heap_vector<u32> m_freeIndices;
 
@@ -32,10 +36,17 @@ namespace spite
 		              SingletonComponentRegistry* singletonComponentRegistry, AspectRegistry* aspectRegistry,
 		              QueryRegistry* queryRegistry, const HeapAllocator& allocator);
 
-		QueryBuilder getQueryBuilder() const;
+		[[nodiscard]] QueryBuilder getQueryBuilder() const;
+
+		[[nodiscard]] CommandBuffer getCommandBuffer() const;
+
+		[[nodiscard]] ArchetypeManager* getArchetypeManager() const { return m_archetypeManager; }
+
+		[[nodiscard]] const EventManager& getEventManager() const;
 
 		//creates Entity with aspect which it will belong to
 		Entity createEntity(const Aspect& aspect = Aspect());
+
 
 		/*
 		@brief Creates a specified number of entities and places them
@@ -144,11 +155,11 @@ namespace spite
 		m_archetypeManager->addEntities(aspect, outputEntities);
 	}
 
-	template <t_component T, typename ... Args>
+	template <t_component T, typename... Args>
 	void EntityManager::addComponent(Entity entity, Args&&... args)
 	{
 		SASSERT(isValid(entity))
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		m_archetypeManager->addComponent(entity, {&componentId, 1});
 
 		auto& archetype = m_archetypeManager->getEntityArchetype(entity);
@@ -165,7 +176,7 @@ namespace spite
 	void EntityManager::addComponent(Entity entity)
 	{
 		SASSERT(isValid(entity))
-		constexpr eastl::array<ComponentID, sizeof...(Components)> componentIds = {
+		const eastl::array<ComponentID, sizeof...(Components)> componentIds = {
 			ComponentMetadataRegistry::getComponentId<Components>()...
 		};
 		m_archetypeManager->addComponent(entity, componentIds);
@@ -178,7 +189,7 @@ namespace spite
 			(
 				[&]
 				{
-					constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<Components>();
+					const ComponentID componentId = ComponentMetadataRegistry::getComponentId<Components>();
 					const int componentIndexInChunk = archetype.getComponentIndex(componentId);
 					SASSERTM(componentIndexInChunk != -1, "Component not found in archetype after adding it")
 					void* componentData = chunk->getComponentDataPtrByIndex(
@@ -192,8 +203,9 @@ namespace spite
 	template <t_component ... Components>
 	void EntityManager::addComponents(eastl::span<const Entity> entities)
 	{
-		for(const auto& entity : entities) SASSERT(isValid(entity))
-		constexpr eastl::array<ComponentID, sizeof...(Components)> componentIds = {
+		for (const auto& entity : entities)
+			SASSERT(isValid(entity))
+		const eastl::array<ComponentID, sizeof...(Components)> componentIds = {
 			ComponentMetadataRegistry::getComponentId<Components>()...
 		};
 		m_archetypeManager->addComponents(entities, componentIds);
@@ -208,7 +220,7 @@ namespace spite
 				(
 					[&]
 					{
-						constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<Components>();
+						const ComponentID componentId = ComponentMetadataRegistry::getComponentId<Components>();
 						const int componentIndexInChunk = archetype.getComponentIndex(componentId);
 						SASSERTM(componentIndexInChunk != -1, "Component not found in archetype after adding it")
 						void* componentData = chunk->getComponentDataPtrByIndex(
@@ -224,7 +236,7 @@ namespace spite
 	void EntityManager::removeComponent(Entity entity)
 	{
 		SASSERT(isValid(entity))
-		constexpr eastl::array<ComponentID, sizeof...(Components)> componentIds = {
+		const eastl::array<ComponentID, sizeof...(Components)> componentIds = {
 			ComponentMetadataRegistry::getComponentId<Components>()...
 		};
 		m_archetypeManager->removeComponent(entity, componentIds);
@@ -233,8 +245,9 @@ namespace spite
 	template <t_component ... Components>
 	void EntityManager::removeComponents(eastl::span<const Entity> entities)
 	{
-		for(const auto& entity : entities) SASSERT(isValid(entity))
-		constexpr eastl::array<ComponentID, sizeof...(Components)> componentIds = {
+		for (const auto& entity : entities)
+			SASSERT(isValid(entity))
+		const eastl::array<ComponentID, sizeof...(Components)> componentIds = {
 			ComponentMetadataRegistry::getComponentId<Components>()...
 		};
 		m_archetypeManager->removeComponents(entities, componentIds);
@@ -265,7 +278,7 @@ namespace spite
 	{
 		SASSERT(isValid(entity))
 		const auto& archetype = m_archetypeManager->getEntityArchetype(entity);
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		const int componentIndexInChunk = archetype.getComponentIndex(componentId);
 		SASSERT(componentIndexInChunk != -1)
 
@@ -278,7 +291,7 @@ namespace spite
 	{
 		SASSERT(isValid(entity))
 		const auto& archetype = m_archetypeManager->getEntityArchetype(entity);
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		const int componentIndexInChunk = archetype.getComponentIndex(componentId);
 		SASSERT(componentIndexInChunk != -1)
 
@@ -291,7 +304,7 @@ namespace spite
 	{
 		SASSERT(isValid(entity))
 		const Archetype& archetype = m_archetypeManager->getEntityArchetype(entity);
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		return archetype.aspect().contains(componentId);
 	}
 
@@ -329,7 +342,7 @@ namespace spite
 			// Structural change path
 			SharedComponentHandle newHandle = m_sharedComponentManager->getSharedHandle(data);
 			m_sharedComponentManager->incrementRef(newHandle);
-			SharedComponent < T > componentToAdd;
+			SharedComponent<T> componentToAdd;
 			componentToAdd.handle = newHandle;
 			addComponent<SharedComponent<T>>(entity, componentToAdd);
 		}
@@ -349,7 +362,7 @@ namespace spite
 		SASSERT(isValid(entity))
 		SharedComponent<T>& handleComp = getComponent<SharedComponent<T>>(entity);
 		SharedComponentHandle oldHandle = handleComp.handle;
-		T & mutableData = m_sharedComponentManager->getMutable<T>(handleComp.handle);
+		T& mutableData = m_sharedComponentManager->getMutable<T>(handleComp.handle);
 		if (oldHandle.dataIndex != handleComp.handle.dataIndex)
 		{
 			m_sharedComponentManager->decrementRef(oldHandle);
@@ -370,4 +383,3 @@ namespace spite
 		return m_singletonComponentRegistry->get<T>();
 	}
 }
-

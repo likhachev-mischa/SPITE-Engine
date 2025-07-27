@@ -1,6 +1,7 @@
 #include "EntityManager.hpp"
+
+#include "ecs/cbuffer/CommandBuffer.hpp"
 #include "ecs/query/QueryBuilder.hpp"
-#include "base/memory/Memory.hpp"
 
 namespace spite
 {
@@ -13,8 +14,8 @@ namespace spite
 		  m_singletonComponentRegistry(
 			  singletonComponentRegistry),
 		  m_queryRegistry(queryRegistry),
-		  m_generations(makeHeapVector<u32>(allocator)),
-		  m_freeIndices(makeHeapVector<u32>(allocator))
+		  m_eventManager(this),
+		  m_generations(makeHeapVector<u32>(allocator)), m_freeIndices(makeHeapVector<u32>(allocator))
 	{
 		m_generations.push_back(0);
 	}
@@ -22,6 +23,11 @@ namespace spite
 	QueryBuilder EntityManager::getQueryBuilder() const
 	{
 		return QueryBuilder(m_queryRegistry, m_aspectRegistry);
+	}
+
+	CommandBuffer EntityManager::getCommandBuffer() const
+	{
+		return CommandBuffer (m_archetypeManager);
 	}
 
 	Entity EntityManager::createEntity(const Aspect& aspect)
@@ -42,6 +48,11 @@ namespace spite
 		return entity;
 	}
 
+	const EventManager& EntityManager::getEventManager() const
+	{
+		return m_eventManager;
+	}
+
 	void EntityManager::destroyEntity(Entity entity)
 	{
 		SASSERT(isValid(entity))
@@ -55,7 +66,7 @@ namespace spite
 
 	void EntityManager::destroyEntities(eastl::span<const Entity> entities)
 	{
-		for(const auto& entity : entities)
+		for (const auto& entity : entities)
 		{
 			destroyEntity(entity);
 		}
@@ -67,22 +78,26 @@ namespace spite
 		return index < m_generations.size() && m_generations[index] == entity.generation();
 	}
 
-	void EntityManager::addComponents(eastl::span<const Entity> entities, eastl::span<const ComponentID> componentIds) const
+	void EntityManager::addComponents(eastl::span<const Entity> entities,
+	                                  eastl::span<const ComponentID> componentIds) const
 	{
-		for(const auto& entity : entities) SASSERT(isValid(entity))
+		for (const auto& entity : entities)
+			SASSERT(isValid(entity))
 		m_archetypeManager->addComponents(entities, componentIds);
 	}
 
 	void EntityManager::moveEntities(const Aspect& toAspect, eastl::span<const Entity> entities) const
 	{
-		for(const auto& entity : entities) SASSERT(isValid(entity))
+		for (const auto& entity : entities)
+			SASSERT(isValid(entity))
 		m_archetypeManager->moveEntities(toAspect, entities);
 	}
 
 	void EntityManager::removeComponents(eastl::span<const Entity> entities,
-		eastl::span<ComponentID> componentIds) const
+	                                     eastl::span<ComponentID> componentIds) const
 	{
-		for(const auto& entity : entities) SASSERT(isValid(entity))
+		for (const auto& entity : entities)
+			SASSERT(isValid(entity))
 		m_archetypeManager->removeComponents(entities, componentIds);
 	}
 

@@ -1,21 +1,14 @@
 #pragma once
-
-#ifdef SPITE_TEST
-#include "ecs/config/TestComponents.hpp"
-#else
-#include "ecs/config/Components.hpp"
-#endif
-
-
 #include "ComponentMetadata.hpp"
 #include "IComponent.hpp"
 #include "base/Platform.hpp"
-#include <EASTL/array.h>
 #include <utility>
 #include <type_traits>
 #include <mutex>
+#include <typeindex>
 
-#include "Base/Assert.hpp"
+#include "base/Assert.hpp"
+#include "base/CollectionAliases.hpp"
 
 
 namespace spite
@@ -43,43 +36,10 @@ namespace spite
 		{
 		}
 
-		// Helper to find the compile-time index of a type T in a tuple.
-		template <typename T, typename Tuple>
-		struct TupleIndex;
-
-		template <typename T, typename... Types>
-		struct TupleIndex<T, std::tuple<T, Types...>>
-		{
-			static constexpr sizet value = 0;
-		};
-
-		template <typename T, typename U, typename... Types>
-		struct TupleIndex<T, std::tuple<U, Types...>>
-		{
-			static constexpr sizet value = 1 + TupleIndex<T, std::tuple<Types...>>::value;
-		};
-
-		template <typename T, typename Tuple>
-		constexpr sizet tuple_index_v = TupleIndex<T, Tuple>::value;
-
-		template <typename Tuple, typename Func, std::size_t... Is>
-		void for_each_in_tuple(Func&& func, std::index_sequence<Is...>)
-		{
-			(func.template operator()<std::tuple_element_t<Is, Tuple>>(), ...);
-		}
-
-		template <typename Tuple, typename Func>
-		void for_each_in_tuple(Func&& func)
-		{
-			for_each_in_tuple<Tuple>(std::forward<Func>(func), std::make_index_sequence<std::tuple_size_v<Tuple>>{});
-		}
-
 		// Creates a single ComponentMetadata entry for a given component type.
 		template <t_component T>
-		constexpr ComponentMetadata create_metadata_for()
+		ComponentMetadata create_metadata_for(ComponentID id)
 		{
-			const ComponentID newId = static_cast<ComponentID>(detail::tuple_index_v<T, ComponentList> + 1);
-
 			// Start with the default no-op policy.
 			ComponentMetadata::DestructionPolicyFn policyFn = &empty_destruction_policy;
 			ComponentMetadata::MoveAndDestroyFn moveAndDestroyFn;
@@ -98,7 +58,6 @@ namespace spite
 			}
 
 			// --- Select Move Policy ---
-			// This is the corrected condition for trivial relocatability in C++20
 			if constexpr (std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<T>)
 			{
 				// Most optimal path: raw memory copy.
@@ -118,7 +77,7 @@ namespace spite
 			}
 
 			return ComponentMetadata(
-				newId,
+				id,
 				sizeof(T),
 				alignof(T),
 				policyFn,
@@ -127,42 +86,78 @@ namespace spite
 		}
 	}
 
+	//Currently statically initialized within main world
 	class ComponentMetadataRegistry
 	{
 	private:
-		static constexpr ComponentID MAX_COMPONENTS = std::tuple_size_v<ComponentList> + 1;
+		heap_vector<ComponentMetadata> m_idToMetadata;
+		heap_unordered_map<std::type_index, ComponentID,std::hash<std::type_index>> m_typeToIdMap;
 
-		// The metadata table is now lazily initialized at runtime.
-		static eastl::array<ComponentMetadata, MAX_COMPONENTS> m_idToMetadata;
-		static std::once_flag m_onceFlag;
-
-		// The initialization function, to be called only once.
-		static void initialize();
+		HeapAllocator m_allocator;
+		static ComponentMetadataRegistry* m_instance;
 
 	public:
-		constexpr ComponentMetadataRegistry() = default;
+		ComponentMetadataRegistry(const HeapAllocator& allocator);
 
-		// Returns the unique, compile-time ID for a component type.
-		template <t_component T>
-		static constexpr ComponentID getComponentId()
+		static void init(HeapAllocator& allocator)
 		{
-			return static_cast<ComponentID>(detail::tuple_index_v<T, ComponentList> + 1);
+			SASSERTM(!ComponentMetadataRegistry::m_instance, "ComponentMetadataRegistry is already initialized\n")
+			ComponentMetadataRegistry::m_instance = allocator.new_object<ComponentMetadataRegistry>(allocator);
 		}
 
-		// Retrieves the metadata for a given component ID.
+		template <t_component T>
+		static ComponentID registerComponent()
+		{
+			SASSERTM(ComponentMetadataRegistry::m_instance, "ComponentMetadataRegistry is not initialized\n")
+			const auto typeIndex = std::type_index(typeid(T));
+			auto& typeToIdMap = ComponentMetadataRegistry::m_instance->m_typeToIdMap;
+			auto it = typeToIdMap.find(typeIndex);
+			if (it != typeToIdMap.end())
+			{
+				return it->second; // Already registered
+			}
+
+			auto& idToMetadata = ComponentMetadataRegistry::m_instance->m_idToMetadata;
+			const ComponentID newId = static_cast<ComponentID>(idToMetadata.size());
+			idToMetadata.push_back(detail::create_metadata_for<T>(newId));
+			typeToIdMap[typeIndex] = newId;
+			SDEBUG_LOG("ComponentMetadata for %s is registered with %u id\n", typeIndex.name(), newId)
+			return newId;
+		}
+
+		template <t_component T>
+		static ComponentID getComponentId()
+		{
+			static const ComponentID id = registerComponent<T>();
+			return id;
+		}
+
 		static const ComponentMetadata& getMetadata(ComponentID id)
 		{
-			std::call_once(m_onceFlag, initialize);
-			SASSERT(id < MAX_COMPONENTS)
-			return m_idToMetadata[id];
+			SASSERTM(ComponentMetadataRegistry::m_instance, "ComponentMetadataRegistry is not initialized\n")
+			auto& idToMetadata = ComponentMetadataRegistry::m_instance->m_idToMetadata;
+			SASSERTM(id < idToMetadata.size(),"Id %u is out of ComponentMetadataRegistry bounds",id)
+			return idToMetadata[id];
 		}
 
-		// Retrieves the metadata for a given component type.
 		template <t_component T>
 		static const ComponentMetadata& getMetadata()
 		{
-			std::call_once(m_onceFlag, initialize);
-			return m_idToMetadata[getComponentId<T>()];
+			static const ComponentMetadata metadata = getMetadata(getComponentId<T>());
+			return metadata;
+		}
+
+		static sizet getRegisteredComponentCount()
+		{
+			SASSERTM(ComponentMetadataRegistry::m_instance, "ComponentMetadataRegistry is not initialized\n")
+			auto& idToMetadata = ComponentMetadataRegistry::m_instance->m_idToMetadata;
+			return idToMetadata.size();
+		}
+
+		static void destroy()
+		{
+			SASSERTM(ComponentMetadataRegistry::m_instance, "ComponentMetadataRegistry is not initialized\n")
+			ComponentMetadataRegistry::m_instance->m_allocator.delete_object(ComponentMetadataRegistry::m_instance);
 		}
 	};
 }

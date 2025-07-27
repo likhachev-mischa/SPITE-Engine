@@ -1,18 +1,13 @@
 #pragma once
 
-#ifdef SPITE_TEST
-#include "ecs/config/TestComponents.hpp"
-#else
-#include "ecs/config/SingletonComponents.hpp"
-#endif
-
 #include <memory>
-#include <tuple>
 #include <utility>
+#include <typeindex>
+#include <mutex>
+#include <functional>
 
 #include "base/Assert.hpp"
-
-#include "ecs/core/ComponentMetadataRegistry.hpp"
+#include "base/CollectionAliases.hpp"
 #include "ecs/core/IComponent.hpp"
 
 namespace spite
@@ -20,60 +15,114 @@ namespace spite
 	class SingletonComponentRegistry
 	{
 	private:
-		// Helper to create a tuple of unique_ptrs from a tuple of types.
-		template <typename... Ts>
-		static auto create_instance_tuple(const std::tuple<Ts...>&)
+		struct ISingletonWrapper
 		{
-			return std::make_tuple(std::unique_ptr<Ts>()...);
+			virtual ~ISingletonWrapper() = default;
+		};
+
+		template <typename T>
+		struct SingletonWrapper : ISingletonWrapper
+		{
+			std::unique_ptr<T> instance;
+			SingletonWrapper() : instance(std::make_unique<T>()) {}
+		};
+
+		heap_unordered_map<std::type_index, std::unique_ptr<ISingletonWrapper>, std::hash<std::type_index>> m_instances;
+		heap_unordered_map<std::type_index, std::mutex*, std::hash<std::type_index>> m_mutexes;
+		HeapAllocator m_allocator;
+
+		std::mutex& getMutexForType(const std::type_index& typeIndex)
+		{
+			auto it = m_mutexes.find(typeIndex);
+			if (it == m_mutexes.end())
+			{
+				it = m_mutexes.emplace(typeIndex, m_allocator.new_object<std::mutex>()).first;
+			}
+			return *it->second;
 		}
 
-		// The storage for all singleton instances.
-		decltype(create_instance_tuple(SingletonComponentList{})) m_instances;
+		std::mutex& getMutexForType(const std::type_index& typeIndex) const
+		{
+			auto it = m_mutexes.find(typeIndex);
+			SASSERTM(it != m_mutexes.end(), "Mutex for singleton of type %s was accessed before it was created\n", typeIndex.name())
+			return *it->second;
+		}
 
 	public:
-		SingletonComponentRegistry() = default;
+		SingletonComponentRegistry(const HeapAllocator& allocator);
 
-		// This registry manages unique resources and should not be copied or moved.
 		SingletonComponentRegistry(const SingletonComponentRegistry&) = delete;
 		SingletonComponentRegistry& operator=(const SingletonComponentRegistry&) = delete;
 		SingletonComponentRegistry(SingletonComponentRegistry&&) = delete;
 		SingletonComponentRegistry& operator=(SingletonComponentRegistry&&) = delete;
 
-		~SingletonComponentRegistry() = default;
+		~SingletonComponentRegistry();
 
-		// Gets the singleton instance.
-		// Creates it on first access if it doesn't exist.
+		template <t_singleton_component T>
+		void registerSingleton(std::unique_ptr<T> instance = nullptr)
+		{
+			const auto typeIndex = std::type_index(typeid(T));
+			auto wrapper = std::make_unique<SingletonWrapper<T>>();
+			if(instance)
+			{
+				wrapper->instance = std::move(instance);
+			}
+			m_instances[typeIndex] = std::move(wrapper);
+		}
+
+		//not thread-safe
 		template <t_singleton_component T>
 		T& get()
 		{
-			constexpr auto componentId = detail::tuple_index_v<T, SingletonComponentList>;
-			auto& ptr = std::get<componentId>(m_instances);
-
-			if (!ptr)
+			const auto typeIndex = std::type_index(typeid(T));
+			auto it = m_instances.find(typeIndex);
+			if (it == m_instances.end())
 			{
-				// Lazy instantiation on first call
-				ptr = std::make_unique<T>();
+				registerSingleton<T>();
+				it = m_instances.find(typeIndex);
 			}
-			return *ptr;
+			auto* wrapper = static_cast<SingletonWrapper<T>*>(it->second.get());
+			return *wrapper->instance;
 		}
 
+		//not thread-safe
 		template <t_singleton_component T>
 		const T& get() const
 		{
-			constexpr auto componentId = detail::tuple_index_v<T, SingletonComponentList>;
-			const auto& ptr = std::get<componentId>(m_instances);
-			SASSERTM(ptr, "Singleton of type %s was accessed before it was created.", typeid(T).name())
-			return *ptr;
+			const auto typeIndex = std::type_index(typeid(T));
+			auto it = m_instances.find(typeIndex);
+			SASSERTM(it != m_instances.end(), "Singleton of type %s was accessed before it was created\n", typeid(T).name())
+			const auto* wrapper = static_cast<const SingletonWrapper<T>*>(it->second.get());
+			return *wrapper->instance;
 		}
 
-		// Allows for custom initialization or mocking for tests.
-		// This will overwrite any existing instance.
-		template <t_singleton_component T>
-		void registerSingleton(std::unique_ptr<T> instance)
+		//thread-safe
+		template<t_singleton_component T>
+		void access(std::function<void(T&)> accessor)
 		{
-			constexpr auto componentId = detail::tuple_index_v<T, SingletonComponentList>;
-			auto& ptr = std::get<componentId>(m_instances);
-			ptr = std::move(instance);
+			const auto typeIndex = std::type_index(typeid(T));
+			std::lock_guard<std::mutex> lock(getMutexForType(typeIndex));
+
+			auto it = m_instances.find(typeIndex);
+			if (it == m_instances.end()) {
+				registerSingleton<T>();
+				it = m_instances.find(typeIndex);
+			}
+			auto* wrapper = static_cast<SingletonWrapper<T>*>(it->second.get());
+			accessor(*wrapper->instance);
+		}
+
+		//thread-safe
+		template<t_singleton_component T>
+		void access(std::function<void(const T&)> accessor) const
+		{
+			const auto typeIndex = std::type_index(typeid(T));
+			std::lock_guard<std::mutex> lock(getMutexForType(typeIndex));
+
+			auto it = m_instances.find(typeIndex);
+			SASSERTM(it != m_instances.end(), "Singleton of type %s was accessed before it was created.", typeid(T).name())
+			const auto* wrapper = static_cast<const SingletonWrapper<T>*>(it->second.get());
+			accessor(*wrapper->instance);
 		}
 	};
 }
