@@ -12,8 +12,8 @@ namespace spite
 		const Aspect* m_aspect;
 		heap_unordered_map<ComponentID, int> m_componentIdToIndexMap;
 
-		heap_vector<std::unique_ptr<Chunk>> m_chunks;
-		heap_vector<std::unique_ptr<Chunk>> m_freeChunks;
+		heap_vector<Chunk*> m_chunks;
+		heap_vector<Chunk*> m_freeChunks;
 		sizet m_firstNonFullChunkIdx;
 		HeapAllocator& m_allocator;
 
@@ -23,6 +23,8 @@ namespace spite
 	public:
 		Archetype(const Aspect* aspect,
 		          HeapAllocator& allocator);
+
+		~Archetype();
 
 		// Finds or creates a chunk with space, adds the entity, and returns its location.
 		// second elem in pair is Entity's idx in provided chunk
@@ -34,7 +36,7 @@ namespace spite
 		void removeEntities(eastl::span<const Entity> entities, const DestructionContext& destructionContext,
 		                    const Aspect* skipDestructionAspect = nullptr);
 
-		const heap_vector<std::unique_ptr<Chunk>>& getChunks() const;
+		const heap_vector<Chunk*>& getChunks() const;
 
 		const Aspect& aspect() const;
 

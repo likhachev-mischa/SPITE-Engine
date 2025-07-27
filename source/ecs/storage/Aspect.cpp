@@ -60,6 +60,16 @@ namespace spite
 	Aspect& Aspect::operator=(const Aspect& other) = default;
 	Aspect& Aspect::operator=(Aspect&& other) noexcept = default;
 
+	Aspect Aspect::operator+(const Aspect& other) const
+	{
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
+		auto types = makeScratchVector<ComponentID>(FrameScratchAllocator::get());
+		types.reserve(other.size() + size());
+		types.insert(types.end(), m_componentIds.begin(), m_componentIds.end());
+		types.insert(types.end(), other.m_componentIds.begin(), other.m_componentIds.end());
+		return Aspect(types.begin(), types.end());
+	}
+
 	bool Aspect::operator==(const Aspect& other) const
 	{
 		return m_componentIds == other.m_componentIds;

@@ -32,6 +32,8 @@ namespace spite
 		Aspect& operator=(const Aspect& other);
 		Aspect& operator=(Aspect&& other) noexcept;
 
+		Aspect operator+(const Aspect& other) const;
+
 		bool operator==(const Aspect& other) const;
 
 		bool operator!=(const Aspect& other) const;

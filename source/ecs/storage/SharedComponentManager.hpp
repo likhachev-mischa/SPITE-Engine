@@ -230,7 +230,7 @@ namespace spite
 		{
 			TypedSharedComponentPool<T>* pool = getOrCreatePool<T>();
 			u32 dataIndex = pool->findOrCreateIndex(item);
-			constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
+			const ComponentID componentId = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
 			return {componentId, dataIndex};
 		}
 
@@ -267,7 +267,7 @@ namespace spite
 		template <t_shared_component T>
 		TypedSharedComponentPool<T>* getOrCreatePool()
 		{
-			constexpr ComponentID id = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
+			const ComponentID id = ComponentMetadataRegistry::getComponentId<SharedComponent<T>>();
 			auto it = m_pools.find(id);
 			if (it != m_pools.end())
 			{

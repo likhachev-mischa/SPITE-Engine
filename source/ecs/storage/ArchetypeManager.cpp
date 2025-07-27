@@ -134,11 +134,6 @@ namespace spite
 				moveEntitiesBetweenArchetypes(fromArchetype, toArchetype, entityGroup);
 			}
 		}
-
-		for (const auto& entity : entities)
-		{
-			m_entityToArchetype[entity] = toArchetype;
-		}
 	}
 
 	void ArchetypeManager::removeEntity(Entity entity)

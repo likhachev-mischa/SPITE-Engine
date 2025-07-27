@@ -11,9 +11,9 @@ namespace spite
 	                                                m_componentIdToIndexMap(
 		                                                makeHeapMap<
 			                                                ComponentID, int>(allocator)),
-	                                                m_chunks(makeHeapVector<std::unique_ptr<Chunk>>(allocator)),
+	                                                m_chunks(makeHeapVector<Chunk*>(allocator)),
 	                                                m_freeChunks(
-		                                                makeHeapVector<std::unique_ptr<Chunk>>(
+		                                                makeHeapVector<Chunk*>(
 			                                                allocator)), m_firstNonFullChunkIdx(0),
 	                                                m_allocator(allocator),
 	                                                m_entityLocations(
@@ -27,6 +27,18 @@ namespace spite
 		}
 	}
 
+	Archetype::~Archetype()
+	{
+		for(Chunk* chunk : m_chunks)
+		{
+			m_allocator.delete_object(chunk);
+		}
+		for(Chunk* chunk : m_freeChunks)
+		{
+			m_allocator.delete_object(chunk);
+		}
+	}
+
 	eastl::pair<Chunk*, sizet> Archetype::addEntity(const Entity entity)
 	{
 		Chunk* targetChunk = nullptr;
@@ -35,7 +47,7 @@ namespace spite
 		// Start search from the last known non-full chunk.
 		if (m_firstNonFullChunkIdx < m_chunks.size() && !m_chunks[m_firstNonFullChunkIdx]->full())
 		{
-			targetChunk = m_chunks[m_firstNonFullChunkIdx].get();
+			targetChunk = m_chunks[m_firstNonFullChunkIdx];
 			chunkIndex = m_firstNonFullChunkIdx;
 		}
 		else
@@ -46,7 +58,7 @@ namespace spite
 			{
 				if (!m_chunks[chunkIndex]->full())
 				{
-					targetChunk = m_chunks[chunkIndex].get();
+					targetChunk = m_chunks[chunkIndex];
 					m_firstNonFullChunkIdx = chunkIndex;
 					found = true;
 					break;
@@ -59,17 +71,17 @@ namespace spite
 		{
 			if (!m_freeChunks.empty())
 			{
-				m_chunks.push_back(std::move(m_freeChunks.back()));
+				m_chunks.push_back(m_freeChunks.back());
 				m_freeChunks.pop_back();
 				chunkIndex = m_chunks.size() - 1;
-				targetChunk = m_chunks[chunkIndex].get();
+				targetChunk = m_chunks[chunkIndex];
 				m_firstNonFullChunkIdx = chunkIndex;
 			}
 			else
 			{
-				auto newChunk = std::make_unique<Chunk>(m_aspect, m_allocator);
-				targetChunk = newChunk.get();
-				m_chunks.push_back(std::move(newChunk));
+				Chunk* newChunk = m_allocator.new_object<Chunk>(m_aspect, m_allocator);
+				targetChunk = newChunk;
+				m_chunks.push_back(newChunk);
 				chunkIndex = m_chunks.size() - 1;
 				m_firstNonFullChunkIdx = chunkIndex; // The new chunk is now the first non-full one.
 			}
@@ -97,7 +109,7 @@ namespace spite
 		for (sizet chunkIdx = 0; chunkIdx < m_chunks.size() && entitiesAdded < totalToAdd; ++
 		     chunkIdx)
 		{
-			Chunk* chunk = m_chunks[chunkIdx].get();
+			Chunk* chunk = m_chunks[chunkIdx];
 			while (!chunk->full() && entitiesAdded < totalToAdd)
 			{
 				const Entity& entity = entities[entitiesAdded];
@@ -118,14 +130,14 @@ namespace spite
 
 			for (sizet i = 0; i < numNewChunks; ++i)
 			{
-				auto newChunk = std::make_unique<Chunk>(m_aspect, m_allocator);
-				m_chunks.push_back(std::move(newChunk));
+				Chunk* newChunk = m_allocator.new_object<Chunk>(m_aspect, m_allocator);
+				m_chunks.push_back(newChunk);
 			}
 
 			for (sizet chunkIdx = m_chunks.size() - numNewChunks; chunkIdx < m_chunks.size() &&
 			     entitiesAdded < totalToAdd; ++chunkIdx)
 			{
-				Chunk* chunk = m_chunks[chunkIdx].get();
+				Chunk* chunk = m_chunks[chunkIdx];
 				while (!chunk->full() && entitiesAdded < totalToAdd)
 				{
 					const Entity& entity = entities[entitiesAdded];
@@ -145,14 +157,14 @@ namespace spite
 		auto it = m_entityLocations.find(entity);
 		if (it == m_entityLocations.end())
 		{
-			SASSERTM(false, "Entity %llu not in this archetype for removal\n,", entity.id())
+			SASSERTM(false, "Entity %llu not in this archetype for removal\n", entity.id())
 			return;
 		}
 
 		sizet chunkIdx = it->second.first;
 		sizet entityIdxInChunk = it->second.second;
 
-		Chunk* chunk = m_chunks[chunkIdx].get();
+		Chunk* chunk = m_chunks[chunkIdx];
 
 		// Before swapping, call destruction policies for components of the entity being removed
 		for (const auto& componentId : m_aspect->getComponentIds())
@@ -178,17 +190,17 @@ namespace spite
 		{
 			const sizet lastChunkIdx = m_chunks.size() - 1;
 			// Move the now-empty chunk to the free list.
-			m_freeChunks.push_back(std::move(m_chunks[chunkIdx]));
+			m_freeChunks.push_back(m_chunks[chunkIdx]);
 
 			// If the empty chunk was not the last one, swap the last chunk into its place
 			// to keep the active chunk vector contiguous.
 			if (chunkIdx != lastChunkIdx)
 			{
 				// Move the last chunk into the now-empty slot
-				m_chunks[chunkIdx] = std::move(m_chunks[lastChunkIdx]);
+				m_chunks[chunkIdx] = m_chunks[lastChunkIdx];
 
 				// Update the locations for all entities in the chunk that was just moved.
-				Chunk* movedChunk = m_chunks[chunkIdx].get();
+				Chunk* movedChunk = m_chunks[chunkIdx];
 				for (sizet i = 0, size = movedChunk->count(); i < size; ++i)
 				{
 					Entity updEntity = movedChunk->entity(i);
@@ -226,7 +238,7 @@ namespace spite
 			auto it = m_entityLocations.find(entity);
 			if (it != m_entityLocations.end())
 			{
-				Chunk* chunk = m_chunks[it->second.first].get();
+				Chunk* chunk = m_chunks[it->second.first];
 				auto groupIt = toRemoveByChunk.find(chunk);
 				if (groupIt == toRemoveByChunk.end())
 				{
@@ -271,7 +283,7 @@ namespace spite
 		}
 	}
 
-	const heap_vector<std::unique_ptr<Chunk>>& Archetype::getChunks() const
+	const heap_vector<Chunk*>& Archetype::getChunks() const
 	{
 		return m_chunks;
 	}
@@ -296,7 +308,7 @@ namespace spite
 		auto it = m_entityLocations.find(entity);
 		if (it != m_entityLocations.end())
 		{
-			return {m_chunks[it->second.first].get(), it->second.second};
+			return {m_chunks[it->second.first], it->second.second};
 		}
 		SASSERTM(false, "Entity %llu is not located in Archetype\n", entity.id())
 		return {nullptr, static_cast<sizet>(-1)};
@@ -334,7 +346,7 @@ namespace spite
 	{
 		for (auto& chunk : m_chunks)
 		{
-			destroyAllComponentsInChunk(chunk.get(), destructionContext);
+			destroyAllComponentsInChunk(chunk, destructionContext);
 		}
 	}
 }
