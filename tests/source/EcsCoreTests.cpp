@@ -4,9 +4,27 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-#include "ecs/config/TestComponents.hpp"
 
-using namespace spite::test;
+struct Position : spite::IComponent
+{
+	float x, y, z;
+	Position() = default;
+
+	Position(float x, float y, float z) : x(x), y(y), z(z)
+	{
+	}
+};
+
+struct Velocity : spite::IComponent
+{
+	float dx, dy, dz;
+
+	Velocity() = default;
+
+	Velocity(float x, float y, float z) : dx(x), dy(y), dz(z)
+	{
+	}
+};
 
 class EcsCoreTest : public testing::Test
 {
@@ -49,9 +67,13 @@ protected:
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
 			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
@@ -69,6 +91,8 @@ protected:
 
 	EcsCoreTest()
 	{
+		spite::ComponentMetadataRegistry::registerComponent<Position>();
+		spite::ComponentMetadataRegistry::registerComponent<Velocity>();
 	}
 
 	void TearDown() override

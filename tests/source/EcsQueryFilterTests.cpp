@@ -3,7 +3,13 @@
 #include "ecs/query/QueryBuilder.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-using namespace spite::test;
+struct ComponentA : spite::IComponent
+{
+};
+
+struct ComponentB : spite::IComponent
+{
+};
 
 class EcsQueryFilterTest : public testing::Test
 {
@@ -38,9 +44,13 @@ protected:
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
 			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
@@ -61,6 +71,8 @@ protected:
 
 	EcsQueryFilterTest()
 	{
+		spite::ComponentMetadataRegistry::registerComponent<ComponentA>();
+		spite::ComponentMetadataRegistry::registerComponent<ComponentB>();
 	}
 
 	void TearDown() override
@@ -82,9 +94,9 @@ TEST_F(EcsQueryFilterTest, EnabledFilter)
 
 	entityManager.disableComponent<ComponentA>(e1);
 
-	auto query = entityManager.getQueryBuilder().with<ComponentA, ComponentB>().enabled<ComponentA>().build();
+	auto query = entityManager.getQueryBuilder().with<spite::Read<ComponentA>, spite::Read<ComponentB>>().enabled<ComponentA>().build();
 	int count = 0;
-	for (auto [a,b,entity] : query.enabled_view<ComponentA, ComponentB, spite::Entity>())
+	for (auto [a,b,entity] : query.view<spite::Read<ComponentA>, spite::Read<ComponentB>, spite::Entity>())
 	{
 		count++;
 		ASSERT_EQ(entity, e2);

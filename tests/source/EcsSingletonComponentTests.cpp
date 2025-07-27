@@ -1,18 +1,22 @@
 #include <gtest/gtest.h>
 #include "ecs/core/SingletonComponentRegistry.hpp"
 #include "ecs/core/EntityManager.hpp"
-#include "ecs/config/TestComponents.hpp"
 #include "base/memory/HeapAllocator.hpp"
 #include "ecs/core/EntityWorld.hpp"
 
-using namespace spite;
-using namespace spite::test;
+struct TestSingletonA : spite::ISingletonComponent
+{
+	int value = 10;
+};
+
+struct TestSingletonB : spite::ISingletonComponent
+{
+	float value = 20.0f;
+};
 
 class EcsSingletonComponentTest : public testing::Test
 {
 protected:
-	SingletonComponentRegistry registry;
-
 	struct Allocators
 	{
 		spite::HeapAllocator allocator;
@@ -42,18 +46,33 @@ protected:
 			, sharedComponentManager(allocator)
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
-			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			                &queryRegistry, allocator),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
 
 	Allocators* allocContainer = new Allocators;
 	Container* container = allocContainer->allocator.new_object<Container>(allocContainer->allocator);
+	spite::SingletonComponentRegistry& registry = container->singletonComponentRegistry;
 
-	EntityManager& entityManager = container->entityManager;
+	spite::EntityManager& entityManager = container->entityManager;
+
+	EcsSingletonComponentTest()
+	{
+	}
+
+	~EcsSingletonComponentTest() override
+	{
+		allocContainer->allocator.delete_object(container);
+		delete allocContainer;
+	}
 };
 
 TEST_F(EcsSingletonComponentTest, GetCreatesInstance)
@@ -103,10 +122,10 @@ TEST_F(EcsSingletonComponentTest, MultipleSingletons)
 
 TEST_F(EcsSingletonComponentTest, EntityManagerIntegration)
 {
-    TestSingletonA& s1 = entityManager.getSingletonComponent<TestSingletonA>();
-    s1.value = 55;
+	TestSingletonA& s1 = entityManager.getSingletonComponent<TestSingletonA>();
+	s1.value = 55;
 
-    TestSingletonA& s2 = entityManager.getSingletonComponent<TestSingletonA>();
-    ASSERT_EQ(s2.value, 55);
-    ASSERT_EQ(&s1, &s2);
+	TestSingletonA& s2 = entityManager.getSingletonComponent<TestSingletonA>();
+	ASSERT_EQ(s2.value, 55);
+	ASSERT_EQ(&s1, &s2);
 }

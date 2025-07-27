@@ -4,9 +4,28 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 #include "base/memory/ScratchAllocator.hpp"
-#include "ecs/config/TestComponents.hpp"
 
-using namespace spite::test;
+struct Position : spite::IComponent
+{
+	float x, y, z;
+	Position() = default;
+
+	Position(float x, float y, float z) : x(x), y(y), z(z)
+	{
+	}
+};
+
+struct Velocity : spite::IComponent
+{
+	float dx, dy, dz;
+
+	Velocity() = default;
+
+	Velocity(float x, float y, float z) : dx(x), dy(y), dz(z)
+	{
+	}
+};
+
 class EcsCommandBufferTest : public testing::Test
 {
 protected:
@@ -40,9 +59,13 @@ protected:
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
 			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
@@ -61,6 +84,8 @@ protected:
 
 	EcsCommandBufferTest()
 	{
+		spite::ComponentMetadataRegistry::registerComponent<Position>();
+		spite::ComponentMetadataRegistry::registerComponent<Velocity>();
 	}
 
 	void TearDown() override
@@ -72,7 +97,7 @@ protected:
 
 TEST_F(EcsCommandBufferTest, CreateEntity)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
+	auto cmd = entityManager.getCommandBuffer();
 	auto e_proxy = cmd.createEntity();
 	cmd.commit(entityManager);
 
@@ -86,7 +111,7 @@ TEST_F(EcsCommandBufferTest, DestroyEntity)
 	auto e = entityManager.createEntity();
 	ASSERT_TRUE(archetypeManager.isEntityTracked(e));
 
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
+	auto cmd = entityManager.getCommandBuffer();
 	cmd.destroyEntity(e);
 	cmd.commit(entityManager);
 
@@ -95,15 +120,15 @@ TEST_F(EcsCommandBufferTest, DestroyEntity)
 
 TEST_F(EcsCommandBufferTest, AddComponent)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
+	auto cmd = entityManager.getCommandBuffer();
 	auto e_proxy = cmd.createEntity();
 	cmd.addComponent<Position>(e_proxy, {1, 2, 3});
 	cmd.commit(entityManager);
 
-	auto query = entityManager.getQueryBuilder().with<Position>().build();
+	auto query = entityManager.getQueryBuilder().with<spite::Read<Position>>().build();
 	int count = 0;
 	spite::Entity realEntity;
-	for (auto it = query.begin<Position>(); it != query.end<Position>(); ++it)
+	for (auto it = query.begin<spite::Read<Position>>(); it != query.end<spite::Read<Position>>(); ++it)
 	{
 		count++;
 		realEntity = it.getEntity();
@@ -119,7 +144,7 @@ TEST_F(EcsCommandBufferTest, RemoveComponent)
 	auto e = entityManager.createEntity();
 	entityManager.addComponent<Position>(e);
 
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
+	auto cmd = entityManager.getCommandBuffer();
 	cmd.removeComponent<Position>(e);
 	cmd.commit(entityManager);
 
@@ -128,7 +153,7 @@ TEST_F(EcsCommandBufferTest, RemoveComponent)
 
 TEST_F(EcsCommandBufferTest, MixedCommands)
 {
-	spite::CommandBuffer cmd(scratchAllocator, archetypeManager);
+	auto cmd = entityManager.getCommandBuffer();
 
 	auto e1_proxy = cmd.createEntity();
 	cmd.addComponent<Position>(e1_proxy, {1, 1, 1});
@@ -141,9 +166,9 @@ TEST_F(EcsCommandBufferTest, MixedCommands)
 
 	cmd.commit(entityManager);
 
-	auto query = entityManager.getQueryBuilder().with<Position>().build();
+	auto query = entityManager.getQueryBuilder().with_read<Position>().build();
 	int count = 0;
-	for (auto it = query.begin<Position>(); it != query.end<Position>(); ++it)
+	for (auto it = query.begin<spite::Read<Position>>(); it != query.end<spite::Read<Position>>(); ++it)
 	{
 		count++;
 	}

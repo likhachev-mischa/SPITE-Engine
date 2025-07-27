@@ -4,9 +4,16 @@
 #include "ecs/query/QueryBuilder.hpp"
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
-#include "ecs/config/TestComponents.hpp"
-using namespace spite::test;
 
+struct Transform : spite::IComponent
+{
+	float x, y, z;
+};
+
+struct Renderable : spite::IComponent
+{
+	int meshId;
+};
 
 class EcsCreationTest : public testing::Test {
 protected:
@@ -40,9 +47,13 @@ protected:
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
 			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
@@ -63,6 +74,8 @@ protected:
 
 	EcsCreationTest()
 	{
+		spite::ComponentMetadataRegistry::registerComponent<Transform>();
+		spite::ComponentMetadataRegistry::registerComponent<Renderable>();
 	}
 
 	void TearDown() override

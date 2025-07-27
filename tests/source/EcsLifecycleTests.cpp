@@ -5,7 +5,72 @@
 #include "ecs/cbuffer/CommandBuffer.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
-using namespace spite::test;
+struct LifecycleComponent : spite::IComponent
+{
+	int* constructor_calls_ptr = nullptr;
+	int* destructor_calls_ptr = nullptr;
+	int* move_constructor_calls_ptr = nullptr;
+	int* data = nullptr;
+
+	LifecycleComponent() : data(new int(10))
+	{
+	}
+
+	LifecycleComponent(int* ctor_ptr, int* dtor_ptr, int* move_ctor_ptr)
+		: constructor_calls_ptr(ctor_ptr)
+		, destructor_calls_ptr(dtor_ptr)
+		, move_constructor_calls_ptr(move_ctor_ptr)
+		, data(new int(10))
+	{
+		if (constructor_calls_ptr)
+		{
+			(*constructor_calls_ptr)++;
+		}
+	}
+
+	~LifecycleComponent()
+	{
+		if (destructor_calls_ptr)
+		{
+			(*destructor_calls_ptr)++;
+		}
+		delete data;
+	}
+
+	LifecycleComponent(const LifecycleComponent&) = delete;
+	LifecycleComponent& operator=(const LifecycleComponent&) = delete;
+
+	LifecycleComponent(LifecycleComponent&& other) noexcept
+		: constructor_calls_ptr(other.constructor_calls_ptr)
+		, destructor_calls_ptr(other.destructor_calls_ptr)
+		, move_constructor_calls_ptr(other.move_constructor_calls_ptr)
+		, data(other.data)
+	{
+		if (move_constructor_calls_ptr)
+		{
+			(*move_constructor_calls_ptr)++;
+		}
+		other.data = nullptr;
+	}
+
+	LifecycleComponent& operator=(LifecycleComponent&& other) noexcept
+	{
+		if (this != &other)
+		{
+			delete data;
+			constructor_calls_ptr = other.constructor_calls_ptr;
+			destructor_calls_ptr = other.destructor_calls_ptr;
+			move_constructor_calls_ptr = other.move_constructor_calls_ptr;
+			data = other.data;
+			other.data = nullptr;
+		}
+		return *this;
+	}
+};
+
+struct OtherComponent : spite::IComponent
+{
+};
 
 class EcsLifecycleTest : public testing::Test
 {
@@ -44,9 +109,13 @@ protected:
 			, archetypeManager(allocator, &aspectRegistry, &versionManager, &sharedComponentManager)
 			, entityManager(&archetypeManager, &sharedComponentManager, &singletonComponentRegistry, &aspectRegistry,
 			                &queryRegistry,allocator),
-			singletonComponentRegistry(),
+			singletonComponentRegistry(allocator),
 			scratchAllocator(1 * spite::MB)
 			, queryRegistry(allocator, &archetypeManager, &versionManager)
+		{
+		}
+
+		~Container()
 		{
 		}
 	};
@@ -66,6 +135,8 @@ protected:
 
 	EcsLifecycleTest()
 	{
+		spite::ComponentMetadataRegistry::registerComponent<LifecycleComponent>();
+		spite::ComponentMetadataRegistry::registerComponent<OtherComponent>();
 	}
 
 	void SetUp() override {
