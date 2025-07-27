@@ -49,7 +49,6 @@ namespace spite
 		 */
 		void shutdown(bool forceDealloc = false) const;
 
-	protected:
 		bool operator==(const HeapAllocator& b) const;
 		bool operator!=(const HeapAllocator& b) const;
 
@@ -95,6 +94,17 @@ namespace spite
 
 		void deallocate(T* p, sizet n);
 		void deallocate(void* p, sizet n);
+
+		template <typename U>
+		bool operator==(const HeapAllocatorAdapter<U>& b) const
+		{
+			return *m_allocator == *b.m_allocator;
+		}
+		template <typename U>
+		bool operator!=(const HeapAllocatorAdapter<U>& b) const
+		{
+			return *m_allocator != *b.m_allocator;
+		}
 	};
 
 	// Stateless allocator that always uses the global allocator

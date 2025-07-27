@@ -1,14 +1,12 @@
 #pragma once
 #include <cstddef>
+#include <mutex>
 
 #include <EASTL/deque.h>
 
 #include "Base/Assert.hpp"
 #include "base/memory/HeapAllocator.hpp"
 #include "base/memory/Memory.hpp"
-
-#include "EASTL/unordered_map.h"
-#include "EASTL/vector.h"
 
 namespace spite
 {
@@ -37,9 +35,9 @@ namespace spite
 		ScratchAllocator(const ScratchAllocator&) = delete;
 		ScratchAllocator& operator=(const ScratchAllocator&) = delete;
 
-		ScratchAllocator(ScratchAllocator&& other) ;
+		ScratchAllocator(ScratchAllocator&& other) noexcept;
 
-		ScratchAllocator& operator=(ScratchAllocator&& other);
+		ScratchAllocator& operator=(ScratchAllocator&& other) noexcept;
 
 		//alignment is 16 by default
 		void* allocate(sizet size, int flags = 0);
@@ -166,6 +164,10 @@ namespace spite
 	private:
 		static constexpr sizet DEFAULT_FRAME_SIZE = 32 * MB; // 32MB per frame
 		static thread_local ScratchAllocator* m_frameAllocator;
+
+		// Central registry for all created thread-local allocators
+		static void* m_allAllocators;
+		static std::mutex m_registryMutex;
 
 	public:
 		static void init();
