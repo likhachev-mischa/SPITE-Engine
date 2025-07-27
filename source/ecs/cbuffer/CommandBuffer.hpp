@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 
 #include "ecs/storage/Archetype.hpp"
 #include "ecs/core/Entity.hpp"
@@ -16,7 +17,7 @@ namespace spite
 	class CommandBuffer
 	{
 	private:
-		ArchetypeManager& m_archetypeManager;
+		ArchetypeManager* m_archetypeManager;
 
 		enum class CommandType : u8
 		{
@@ -59,17 +60,22 @@ namespace spite
 			ComponentID componentId;
 		};
 
-		ScratchAllocator& m_allocator;
+		std::mutex m_bufferMutex;
 		scratch_vector<std::byte> m_commandBuffer;
 		u32 m_nextProxyId;
 
 		void* writeCommand(CommandType type, u16 size);
 
-	public:
-		CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager);
+		public:
+		explicit CommandBuffer(ArchetypeManager* archetypeManager);
+
+		CommandBuffer(const CommandBuffer&) = delete;
+		CommandBuffer& operator=(const CommandBuffer&) = delete;
+
+		CommandBuffer(CommandBuffer&& other) noexcept;
+		CommandBuffer& operator=(CommandBuffer&& other) noexcept;
 
 		// Creates a proxy entity and records the creation command.
-		// Returns a temporary handle to be used in subsequent commands within this buffer.
 		Entity createEntity();
 
 		// Records a command to destroy an entity.
@@ -93,8 +99,8 @@ namespace spite
 	template <t_component T>
 	void CommandBuffer::addComponent(Entity entity, T&& component)
 	{
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
-		const u16 commandSize = sizeof(AddComponentCmd) + sizeof(T);
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		constexpr u16 commandSize = sizeof(AddComponentCmd) + sizeof(T);
 
 		auto cmd = static_cast<AddComponentCmd*>(writeCommand(CommandType::eAddComponent, commandSize));
 		cmd->entity = entity;
@@ -107,7 +113,7 @@ namespace spite
 	template <t_component T>
 	void CommandBuffer::removeComponent(Entity entity)
 	{
-		constexpr ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
+		const ComponentID componentId = ComponentMetadataRegistry::getComponentId<T>();
 		constexpr u16 commandSize = sizeof(RemoveComponentCmd);
 
 		auto cmd = static_cast<RemoveComponentCmd*>(writeCommand(CommandType::eRemoveComponent, commandSize));

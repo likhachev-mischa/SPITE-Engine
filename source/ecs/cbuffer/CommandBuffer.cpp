@@ -5,15 +5,36 @@
 
 namespace spite
 {
-	CommandBuffer::CommandBuffer(ScratchAllocator& allocator, ArchetypeManager& archetypeManager)
+	CommandBuffer::CommandBuffer(ArchetypeManager* archetypeManager)
 		: m_archetypeManager(archetypeManager),
-		  m_allocator(allocator), m_commandBuffer(makeScratchVector<std::byte>(allocator)), m_nextProxyId(0)
+		   m_commandBuffer(makeScratchVector<std::byte>(FrameScratchAllocator::get())), m_nextProxyId(0)
 	{
 		m_commandBuffer.reserve(1024);
 	}
 
+	CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
+		: m_archetypeManager(other.m_archetypeManager),
+		  m_commandBuffer(std::move(other.m_commandBuffer)),
+		  m_nextProxyId(other.m_nextProxyId)
+	{
+		other.m_nextProxyId = 0;
+	}
+
+	CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept
+	{
+		if (this != &other)
+		{
+			m_archetypeManager = other.m_archetypeManager;
+			m_commandBuffer = std::move(other.m_commandBuffer);
+			m_nextProxyId = other.m_nextProxyId;
+			other.m_nextProxyId = 0;
+		}
+		return *this;
+	}
+
 	void* CommandBuffer::writeCommand(CommandType type, u16 size)
 	{
+		std::lock_guard<std::mutex> lock(m_bufferMutex);
 		const auto offset = m_commandBuffer.size();
 		m_commandBuffer.resize(offset + size);
 		auto header = reinterpret_cast<CommandHeader*>(m_commandBuffer.data() + offset);
@@ -43,7 +64,7 @@ namespace spite
 			return;
 		}
 
-		auto marker = m_allocator.get_scoped_marker();
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
 
 		// --- Pass 1: Decode and Sort ---
 		struct DecodedCommand
@@ -54,7 +75,7 @@ namespace spite
 			void* componentData; // Only for Add
 		};
 
-		auto decodedCmds = makeScratchVector<DecodedCommand>(m_allocator);
+		auto decodedCmds = makeScratchVector<DecodedCommand>(FrameScratchAllocator::get());
 		decodedCmds.reserve(m_commandBuffer.size() / sizeof(CommandHeader)); // Approximate reservation
 
 		const std::byte* cursor = m_commandBuffer.data();
@@ -104,19 +125,19 @@ namespace spite
 
 		// --- Pass 2: Process Sorted Commands ---
 
-		scratch_vector<Entity> proxyToRealEntity = makeScratchVector<Entity>(m_allocator);
+		scratch_vector<Entity> proxyToRealEntity = makeScratchVector<Entity>(FrameScratchAllocator::get());
 		proxyToRealEntity.resize(m_nextProxyId, Entity::undefined());
 
-		auto creations = makeScratchMap<Aspect, scratch_vector<Entity>, Aspect::hash>(m_allocator);
-		auto moves = makeScratchMap<Aspect, scratch_vector<Entity>, Aspect::hash>(m_allocator);
-		scratch_vector<Entity> deletions = makeScratchVector<Entity>(m_allocator);
+		auto creations = makeScratchMap<Aspect, scratch_vector<Entity>, Aspect::hash>(FrameScratchAllocator::get());
+		auto moves = makeScratchMap<Aspect, scratch_vector<Entity>, Aspect::hash>(FrameScratchAllocator::get());
+		scratch_vector<Entity> deletions = makeScratchVector<Entity>(FrameScratchAllocator::get());
 
 		//for convenient entities->components bulk sort
 		auto componentsToAdd = makeScratchMap<Entity, eastl::pair<scratch_vector<ComponentID>, scratch_vector<void*>>,
 		                                      Entity::hash>(
-			m_allocator);
+			FrameScratchAllocator::get());
 
-		auto componentsToRemove = makeScratchVector<ComponentID>(m_allocator);
+		auto componentsToRemove = makeScratchVector<ComponentID>(FrameScratchAllocator::get());
 
 		for (sizet i = 0; i < decodedCmds.size();)
 		{
@@ -133,8 +154,8 @@ namespace spite
 			bool isCreatedInThisBuffer = false;
 			bool isDestroyedInThisBuffer = false;
 
-			auto finalAspectIds = makeScratchVector<ComponentID>(m_allocator);
-			Aspect finalAspect = isProxy(currentEntity) ? Aspect{} : m_archetypeManager.getEntityAspect(currentEntity);
+			auto finalAspectIds = makeScratchVector<ComponentID>(FrameScratchAllocator::get());
+			Aspect finalAspect = isProxy(currentEntity) ? Aspect{} : m_archetypeManager->getEntityAspect(currentEntity);
 
 			finalAspectIds.assign(finalAspect.getComponentIds().begin(), finalAspect.getComponentIds().end());
 
@@ -165,8 +186,8 @@ namespace spite
 						{
 							it = componentsToAdd.emplace(currentEntity,
 							                             eastl::make_pair(
-								                             makeScratchVector<ComponentID>(m_allocator),
-								                             makeScratchVector<void*>(m_allocator))).
+								                             makeScratchVector<ComponentID>(FrameScratchAllocator::get()),
+								                             makeScratchVector<void*>(FrameScratchAllocator::get()))).
 							                     first;
 						}
 						it->second.first.push_back(cmd.componentId);
@@ -225,7 +246,7 @@ namespace spite
 				}
 				else
 				{
-					if (m_archetypeManager.getEntityAspect(currentEntity) != finalAspect)
+					if (m_archetypeManager->getEntityAspect(currentEntity) != finalAspect)
 					{
 						auto it = moves.find(finalAspect);
 						if (it == moves.end())
@@ -245,7 +266,7 @@ namespace spite
 		// Execute creations
 		for (auto const& [aspect, proxyEntities] : creations)
 		{
-			scratch_vector<Entity> realEntities = makeScratchVector<Entity>(m_allocator);
+			scratch_vector<Entity> realEntities = makeScratchVector<Entity>(FrameScratchAllocator::get());
 			entityManager.createEntities(proxyEntities.size(), realEntities, aspect);
 			for (sizet i = 0; i < proxyEntities.size(); ++i)
 			{
