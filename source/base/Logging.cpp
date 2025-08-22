@@ -7,7 +7,7 @@
 namespace spite
 {
 	LogService g_logService;
-	
+
 	static constexpr u32 K_STRING_BUFFER_SIZE = 1024 * 1024;
 	static char gs_logBuffer[K_STRING_BUFFER_SIZE];
 
