@@ -10,6 +10,8 @@
     "vulkan-memory-allocator",
     "vulkan-memory-allocator-hpp",
     "assimp",
-    "nlohmann-json"
+    "nlohmann-json",
+    "enkits",
+    "spirv-reflect"
   ]
 }
