@@ -1,13 +1,14 @@
 #pragma once
-#include <SDL3/SDL.h>
 
 #include "Base/Platform.hpp"
-#include "Base/VulkanUsage.hpp"
+#include "GraphicsApi.hpp"
+#include <memory>
+
+struct SDL_Window;
 
 namespace spite
 {
-	//class InputManager;
-	//class EventManager;
+    class IWindowApiBinding;
 
 	class WindowManager
 	{
@@ -17,32 +18,27 @@ namespace spite
 		WindowManager& operator=(const WindowManager& other) = delete;
 		WindowManager& operator=(WindowManager&& other) = delete;
 
-	//	WindowManager(std::shared_ptr<EventManager> eventManager, std::shared_ptr<InputManager> inputManager);
-		WindowManager();
+		explicit WindowManager(GraphicsApi api);
 
 		void terminate();
 
 		void waitWindowExpand() const;
 
 		void getFramebufferSize(int& width, int& height) const;
-		bool isMinimized() const;
 
-		char const* const* getExtensions(u32& extensionCount) const;
+		[[nodiscard]] bool isMinimized() const;
 
-		bool shouldTerminate() const;
+		[[nodiscard]] bool shouldTerminate() const;
 
-		vk::SurfaceKHR createWindowSurface(const vk::Instance& instance,
-		                                   vk::AllocationCallbacks* allocationCallbacks = nullptr);
+        [[nodiscard]] IWindowApiBinding* getBinding() const { return m_binding.get(); }
 
 		~WindowManager();
 
 	private:
 		SDL_Window* m_window{};
-		//std::shared_ptr<EventManager> m_eventManager;
-		//std::shared_ptr<InputManager> m_inputManager;
-
+        std::unique_ptr<IWindowApiBinding> m_binding;
 		bool m_shouldTerminate = false;
 
-		void initWindow();
+		void initWindow(u64 apiFlag);
 	};
 }
