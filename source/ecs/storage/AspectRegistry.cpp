@@ -231,7 +231,7 @@ namespace spite
 			if (newAspect.contains(aspect) && aspect != newAspect)
 			{
 				// This aspect contains the new one, check if it's more specific than current best
-				if (bestParent->aspect.empty() || bestParent->aspect.size() <= aspect.size())
+				if (bestParent->aspect.size() < aspect.size())
 				{
 					bestParent = node;
 				}
