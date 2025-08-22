@@ -51,7 +51,8 @@ namespace spite
 		scratch_vector<Vertex>& vertices,
 		scratch_vector<u32>& indices);
 
-	std::vector<char> readBinaryFile(cstring filename);
+	std::vector<char> readBinaryFile(const char* filename);
+	void writeBinaryFile(const char* filename, const void* data, sizet size);
 
 	void readModelInfoFile(
 		cstring filename,

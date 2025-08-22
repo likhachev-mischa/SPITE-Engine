@@ -23,7 +23,11 @@ namespace spite
 
 	{
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
-		SASSERT(file.is_open())
+		if (!file.is_open())
+		{
+			SDEBUG_LOG("WARNING: file %s could not be opened for binary read\n", filename)
+			return {};
+		}
 
 		sizet fileSize = (sizet)file.tellg();
 
@@ -36,6 +40,19 @@ namespace spite
 		file.close();
 
 		return buffer;
+	}
+
+	void writeBinaryFile(const cstring filename, const void* data, sizet size)
+	{
+		std::ofstream file(filename, std::ios::out | std::ios::binary);
+		if (!file.is_open())
+		{
+			SDEBUG_LOG("Warning: Could not open file %s for writing.\n", filename);
+			return;
+		}
+
+		file.write(static_cast<const char*>(data), size);
+		file.close();
 	}
 
 	u8* loadTexture(const cstring path, int& width, int& height, int& channels)
@@ -60,7 +77,7 @@ namespace spite
 	                       scratch_vector<Vertex>& vertices,
 	                       scratch_vector<u32>& indices)
 	{
-		Assimp::Importer importer;
+		static Assimp::Importer importer;
 
 		const aiScene* scene = importer.ReadFile(filename,
 		                                         aiProcess_MakeLeftHanded | aiProcess_Triangulate);
