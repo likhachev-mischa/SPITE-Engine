@@ -1,13 +1,14 @@
 #version 450
+#extension GL_KHR_vulkan_glsl : enable
 
 layout(location = 0) in vec2 inUV;
 
 layout(location = 0) out vec4 outFragColor;
 
 // G-Buffer Textures bound via Descriptor Set
-layout(set = 0, binding = 0) uniform sampler2D texPosition;
-layout(set = 0, binding = 1) uniform sampler2D texNormal;
-layout(set = 0, binding = 2) uniform sampler2D texAlbedoSpec;
+layout(set = 0, binding = 0) uniform sampler2D PositionBuffer;
+layout(set = 0, binding = 1) uniform sampler2D NormalBuffer;
+layout(set = 0, binding = 2) uniform sampler2D AlbedoBuffer;
 
 struct PointLight {
     vec4 position; // World space position. w component radius
@@ -26,20 +27,34 @@ struct SpotLight {
     vec2 cutOffs;   // x is inner cone (cosine), y is outer cone (cosine)
 };
 
-layout(set = 1, binding = 0) readonly uniform LightData {
+//layout(set = 1, binding = 0) readonly LightData {
+//   PointLight pointLights[1]; 
+//   DirectionalLight directionalLights[1]; 
+//   SpotLight spotLights[1]; 
+//} lightData;
+
+struct LightData {
    PointLight pointLights[1]; 
    DirectionalLight directionalLights[1]; 
    SpotLight spotLights[1]; 
 } lightData;
 
-layout(push_constant) uniform CameraInfo {
+
+//layout(push_constant) uniform CameraInfo {
+ //   vec3 cameraPositionWorld;
+//} cameraInfo;
+
+ struct CameraInfo {
     vec3 cameraPositionWorld;
 } cameraInfo;
 
 void main() {
-    vec3 fragPosWorld   = texture(texPosition, inUV).rgb;
-    vec3 normalWorld    = normalize(texture(texNormal, inUV).rgb); // Ensure normal is normalized
-    vec4 albedoSpec = texture(texAlbedoSpec, inUV);
+    
+cameraInfo.cameraPositionWorld = vec3(0.0,0.0,0.0);
+
+    vec3 fragPosWorld   = texture(PositionBuffer, inUV).rgb;
+    vec3 normalWorld    = normalize(texture(NormalBuffer, inUV).rgb); // Ensure normal is normalized
+    vec4 albedoSpec = texture(AlbedoBuffer, inUV);
     vec3 albedo     = albedoSpec.rgb;
     float specularStrength = 0.1;
 

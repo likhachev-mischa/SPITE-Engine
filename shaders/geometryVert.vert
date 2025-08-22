@@ -1,8 +1,9 @@
 #version 450
+#extension GL_EXT_debug_printf : enable
 
-layout (set=0,binding =0) uniform UniformBufferObject{
+layout (set=0,binding =0) uniform CameraUBO{
 mat4 viewProjection;
-} ubo;
+} cameraUBO;
 
 layout(push_constant) uniform pc
 {
@@ -31,7 +32,7 @@ void main()
 	outPosition = worldPos.xyz;
 	outUV = inUV;
 
-	gl_Position =ubo.viewProjection * worldPos;
+	gl_Position =cameraUBO.viewProjection * worldPos;
 	//gl_Position = vec4(position,1.0);
 
 }
