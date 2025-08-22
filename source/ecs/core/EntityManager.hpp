@@ -9,7 +9,7 @@
 #include "ecs/storage/SharedComponentManager.hpp"
 #include "base/CollectionAliases.hpp"
 
-#include "ecs/event/EventManager.hpp"
+#include "ecs/event/EntityEventManager.hpp"
 
 namespace spite
 {
@@ -26,7 +26,9 @@ namespace spite
 		AspectRegistry* m_aspectRegistry;
 		SingletonComponentRegistry* m_singletonComponentRegistry;
 		QueryRegistry* m_queryRegistry;
-		EventManager m_eventManager;
+		EntityEventManager m_eventManager;
+
+		HeapAllocator m_allocator;
 
 		heap_vector<u32> m_generations;
 		heap_vector<u32> m_freeIndices;
@@ -38,11 +40,11 @@ namespace spite
 
 		[[nodiscard]] QueryBuilder getQueryBuilder() const;
 
-		[[nodiscard]] CommandBuffer getCommandBuffer() const;
+		[[nodiscard]] CommandBuffer createCommandBuffer() const;
 
 		[[nodiscard]] ArchetypeManager* getArchetypeManager() const { return m_archetypeManager; }
 
-		[[nodiscard]] const EventManager& getEventManager() const;
+		[[nodiscard]] EntityEventManager& getEventManager();
 
 		//creates Entity with aspect which it will belong to
 		Entity createEntity(const Aspect& aspect = Aspect());
@@ -53,7 +55,7 @@ namespace spite
 			into the provided container.
 		@tparam TContainer A vector - like container that supports clear()
 			, reserve(), and emplace_back().
-		@param count The number of entities to create.
+		@param size The number of entities to create.
 		@param outEntities The container to be filled with the new
 			Entity IDs.The container will be cleared first.
 		@param aspect Aspect to which entities will belong.
@@ -119,10 +121,19 @@ namespace spite
 		T& getMutableShared(Entity entity);
 
 		template <t_singleton_component T>
+		void registerSingletonComponent(std::unique_ptr<T> instance);
+
+		template <t_singleton_component T>
 		T& getSingletonComponent();
 
 		template <t_singleton_component T>
 		const T& getSingletonComponent() const;
+
+		template <t_singleton_component T>
+		void accesSingleton(std::function<void(T&)> accessor);
+
+		template <t_singleton_component T>
+		void accesSingleton(std::function<void(const T&)> accessor) const;
 	};
 
 	template <typename TContainer>
@@ -320,20 +331,20 @@ namespace spite
 			SharedComponent<T>& handleComponent = getComponent<SharedComponent<T>>(entity);
 			SharedComponentHandle oldHandle = handleComponent.handle;
 
-			// get a handle to the new data. This also increments the new handle's ref count.
+			// get a handle to the new data. This also increments the new handle's ref size.
 			SharedComponentHandle newHandle = m_sharedComponentManager->getSharedHandle(data);
 
 			// Only perform the swap if the handles are actually different.
 			if (oldHandle != newHandle)
 			{
-				// Decrement the old handle's ref count and assign the new one.
+				// Decrement the old handle's ref size and assign the new one.
 				m_sharedComponentManager->decrementRef(oldHandle);
 				handleComponent.handle = newHandle;
 			}
 			else
 			{
 				// The new handle is the same as the old one. Since getSharedHandle incremented
-				// the ref count, we need to decrement it to maintain the correct count.
+				// the ref size, we need to decrement it to maintain the correct size.
 				m_sharedComponentManager->decrementRef(newHandle);
 			}
 		}
@@ -372,6 +383,12 @@ namespace spite
 	}
 
 	template <t_singleton_component T>
+	void EntityManager::registerSingletonComponent(std::unique_ptr<T> instance)
+	{
+		m_singletonComponentRegistry->registerSingleton<T>(std::move(instance));
+	}
+
+	template <t_singleton_component T>
 	T& EntityManager::getSingletonComponent()
 	{
 		return m_singletonComponentRegistry->get<T>();
@@ -381,5 +398,17 @@ namespace spite
 	const T& EntityManager::getSingletonComponent() const
 	{
 		return m_singletonComponentRegistry->get<T>();
+	}
+
+	template <t_singleton_component T>
+	void EntityManager::accesSingleton(std::function<void(T&)> accessor)
+	{
+		m_singletonComponentRegistry->access(accessor);
+	}
+
+	template <t_singleton_component T>
+	void EntityManager::accesSingleton(std::function<void(const T&)> accessor) const
+	{
+		std::as_const(m_singletonComponentRegistry)->access(accessor);
 	}
 }

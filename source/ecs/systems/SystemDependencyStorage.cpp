@@ -44,7 +44,7 @@ namespace spite
 		auto& deps = it->second;
 		deps.queries.push_back(queryDescriptor);
 
-		for(const auto& componentId : queryDescriptor.readAspect->getComponentIds())
+		for (const auto& componentId : queryDescriptor.readAspect->getComponentIds())
 		{
 			deps.read.set(componentId);
 		}
@@ -57,6 +57,11 @@ namespace spite
 
 	const SystemDependencies& SystemDependencyStorage::getDependencies(SystemBase* system)
 	{
-		return m_systemDependencies.at(system);
+		auto it = m_systemDependencies.find(system);
+		if (it == m_systemDependencies.end())
+		{
+			it = m_systemDependencies.emplace(system, SystemDependencies(m_allocator)).first;
+		}
+		return it->second;
 	}
 }

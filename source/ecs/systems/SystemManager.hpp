@@ -88,11 +88,24 @@ namespace spite
 
 	public:
 		SystemManager(const HeapAllocator& allocator, EntityManager* entityManager,
-		              AspectRegistry* aspectRegistry,VersionManager* versionManager, eastl::span<ExecutionStage> executionStages);
+		              AspectRegistry* aspectRegistry, VersionManager* versionManager);
 
 		void registerSystem(std::unique_ptr<SystemBase> system);
 
 		void registerSystems(eastl::span<std::unique_ptr<SystemBase>> systems);
+
+		template <typename T>
+		void registerSystem()
+		{
+			static_assert(std::is_base_of_v<SystemBase, T>);
+			registerSystem(std::make_unique<T>());
+		}
+
+		template <typename ...T>
+		void registerSystems()
+		{
+			(registerSystem<T>(), ...);
+		}
 
 		// Call this after all systems are registered, before the first update.
 		void initialize();

@@ -1,19 +1,26 @@
 #pragma once
 
+#include "base/Platform.hpp"
+
 namespace spite
 {
-	enum class ExecutionStage
+	using ExecutionStage = u16;
+
+	namespace CoreExecutionStages
 	{
-		// Runs first. Good for input polling, clearing buffers, etc.
-		PreUpdate, 
-		
-		// Main game logic. Physics, AI, etc.
-		Update,
+		enum : ExecutionStage
+		{
+			PRE_UPDATE = 10000,
 
-		// Runs after main logic. Good for camera updates, preparing render data.
-		PostUpdate, 
+			UPDATE = 20000,
 
-		// Runs last. For submitting render commands, cleanup.
-		Render
-	};
+			POST_UPDATE = 30000,
+
+			PRE_RENDER = 40000,
+
+			RENDER = 50000,
+
+			POST_RENDER = 60000
+		};
+	}
 }

@@ -1,5 +1,4 @@
 #include "SystemBase.hpp"
-#include "SystemManager.hpp"
 #include "ecs/query/QueryBuilder.hpp"
 
 namespace spite
@@ -59,18 +58,18 @@ namespace spite
 	void SystemBase::updatePrerequisiteState(const VersionManager& versionManager)
 	{
 		m_wasPrerequisiteMet = m_isPrerequisiteMet;
-		if (!m_prerequisite.has_value())
+		if (!m_prerequisite.isValid())
 		{
 			m_isPrerequisiteMet = true; // No prerequisite always means met.
 			return;
 		}
 
-		const Aspect* aspect = m_prerequisite->getDescriptor().includeAspect;
+		const Aspect* aspect = m_prerequisite.getDescriptor().includeAspect;
 		const u64 currentVersion = versionManager.getVersion(*aspect);
 
 		if (currentVersion != m_cachedVersion)
 		{
-			m_isPrerequisiteMet = m_prerequisite->getEntityCount() > 0;
+			m_isPrerequisiteMet = m_prerequisite.getEntityCount() > 0;
 			m_cachedVersion = currentVersion;
 		}
 	}

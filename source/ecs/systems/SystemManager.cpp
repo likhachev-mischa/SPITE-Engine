@@ -1,15 +1,23 @@
 #include "SystemManager.hpp"
 #include "ecs/core/EntityManager.hpp"
 #include "ecs/storage/AspectRegistry.hpp"
+#include "base/Logging.hpp"
+#include <typeinfo>
+#include <algorithm>
 
 namespace spite
 {
 	void SystemManager::initialize()
 	{
 		SASSERTM(!m_isInitialized, "SystemManager is already initialized.")
+		SDEBUG_LOG("\n --- Initializing System Graph ---\n")
+
+		eastl::sort(m_executionStages.begin(), m_executionStages.end());
 
 		for (const auto& stage : m_executionStages)
 		{
+			m_commandBuffers.emplace_back(m_entityManager->createCommandBuffer());
+
 			auto systemsInStage = makeScratchVector<SystemBase*>(FrameScratchAllocator::get());
 			for (const auto& system : m_systems)
 			{
@@ -22,11 +30,13 @@ namespace spite
 			if (!systemsInStage.empty())
 			{
 				m_cachedMasterGraphs.emplace(stage, SystemGraph(m_allocator));
+				SDEBUG_LOG("Building System Graph for %i stage\n", stage)
 				buildDependencyGraph(systemsInStage, m_cachedMasterGraphs.at(stage));
 			}
 		}
 
 		m_isInitialized = true;
+		SDEBUG_LOG("\n--- System Graph Initialized ---\n\n")
 	}
 
 	void SystemManager::buildAndExecuteStage(ExecutionStage stage, CommandBuffer* commandBuffer, float deltaTime)
@@ -62,7 +72,7 @@ namespace spite
 			SystemContext context(m_entityManager, commandBuffer, deltaTime,
 			                      &m_dependencyStorage.getDependencies(system));
 			tasks.emplace(system, SystemTask(system, context, deltaTime));
-			activeIncomingCounts[system] = 0; // Initialize active count
+			activeIncomingCounts[system] = 0; // Initialize active size
 		}
 
 		// Build active graph and set dependencies
@@ -110,7 +120,7 @@ namespace spite
 				SystemBase* sysA = systemsInStage[i];
 				SystemBase* sysB = systemsInStage[j];
 
-								const auto& depsA = m_dependencyStorage.getDependencies(sysA);
+				const auto& depsA = m_dependencyStorage.getDependencies(sysA);
 				const auto& depsB = m_dependencyStorage.getDependencies(sysB);
 
 				bool hasConflict = false;
@@ -136,11 +146,28 @@ namespace spite
 				}
 			}
 		}
+
+		SDEBUG_LOG("--- System Dependency Graph ---\n")
+		for (auto* system : systemsInStage)
+		{
+			SDEBUG_LOG("System '%s' has %u dependencies", typeid(*system).name(),
+			           systemGraph.incomingDependencyCount.at(system))
+			auto& successors = systemGraph.graph.at(system);
+			if (!successors.empty())
+			{
+				SDEBUG_LOG("  Successors:")
+				for (auto* successor : successors)
+				{
+					SDEBUG_LOG("    - %s", typeid(*successor).name())
+				}
+			}
+			SDEBUG_LOG("\n")
+		}
+		SDEBUG_LOG("-----------------------------\n")
 	}
 
 	SystemManager::SystemManager(const HeapAllocator& allocator, EntityManager* entityManager,
-	                             AspectRegistry* aspectRegistry, VersionManager* versionManager,
-	                             eastl::span<ExecutionStage> executionStages)
+	                             AspectRegistry* aspectRegistry, VersionManager* versionManager)
 		: m_entityManager(entityManager), m_dependencyStorage(allocator),
 		  m_aspectRegistry(aspectRegistry),
 		  m_versionManager(versionManager),
@@ -152,15 +179,6 @@ namespace spite
 		  m_cachedMasterGraphs(makeHeapMap<ExecutionStage, SystemGraph>(allocator)),
 		  m_systems(makeHeapVector<std::unique_ptr<SystemBase>>(allocator))
 	{
-		for (const auto& stage : executionStages)
-		{
-			if (std::ranges::find(m_executionStages, stage) == m_executionStages.end())
-			{
-				m_executionStages.emplace_back(stage);
-				m_commandBuffers.emplace_back(entityManager->getCommandBuffer());
-			}
-		}
-
 		m_taskScheduler = std::make_unique<enki::TaskScheduler>();
 		m_taskScheduler->Initialize();
 	}
@@ -170,11 +188,18 @@ namespace spite
 		SASSERTM(!m_isInitialized, "Cannot register systems after initialization.")
 		SystemContext initCtx(m_entityManager, nullptr, 0.0f, nullptr);
 		system->onInitialize(initCtx, m_dependencyStorage);
+
+		if (std::ranges::find(m_executionStages, system->getExecutionStage()) == m_executionStages.end())
+		{
+			m_executionStages.push_back(system->getExecutionStage());
+		}
+
 		m_systems.push_back(std::move(system));
 	}
 
 	void SystemManager::registerSystems(eastl::span<std::unique_ptr<SystemBase>> systems)
 	{
+		//TODO introduce block allocator
 		SASSERTM(!m_isInitialized, "Cannot register systems after initialization.")
 		m_systems.reserve(systems.size());
 
@@ -182,6 +207,10 @@ namespace spite
 		for (auto& system : systems)
 		{
 			system->onInitialize(ctx, m_dependencyStorage);
+			if (std::ranges::find(m_executionStages, system->getExecutionStage()) == m_executionStages.end())
+			{
+				m_executionStages.push_back(system->getExecutionStage());
+			}
 			m_systems.push_back(std::move(system));
 		}
 	}
@@ -189,6 +218,7 @@ namespace spite
 	void SystemManager::update(float deltaTime)
 	{
 		SASSERTM(m_isInitialized, "SystemManager is not initialized. Call initialize() after registering all systems.")
+
 		for (sizet i = 0; i < m_executionStages.size(); ++i)
 		{
 			buildAndExecuteStage(m_executionStages[i], &m_commandBuffers[i], deltaTime);

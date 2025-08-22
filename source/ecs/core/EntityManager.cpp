@@ -15,7 +15,8 @@ namespace spite
 			  singletonComponentRegistry),
 		  m_queryRegistry(queryRegistry),
 		  m_eventManager(this),
-		  m_generations(makeHeapVector<u32>(allocator)), m_freeIndices(makeHeapVector<u32>(allocator))
+		  m_generations(makeHeapVector<u32>(allocator)), m_freeIndices(makeHeapVector<u32>(allocator)),
+		  m_allocator(allocator)
 	{
 		m_generations.push_back(0);
 	}
@@ -25,9 +26,9 @@ namespace spite
 		return QueryBuilder(m_queryRegistry, m_aspectRegistry);
 	}
 
-	CommandBuffer EntityManager::getCommandBuffer() const
+	CommandBuffer EntityManager::createCommandBuffer() const
 	{
-		return CommandBuffer (m_archetypeManager);
+		return CommandBuffer(m_archetypeManager, m_allocator);
 	}
 
 	Entity EntityManager::createEntity(const Aspect& aspect)
@@ -48,7 +49,7 @@ namespace spite
 		return entity;
 	}
 
-	const EventManager& EntityManager::getEventManager() const
+	EntityEventManager& EntityManager::getEventManager()
 	{
 		return m_eventManager;
 	}

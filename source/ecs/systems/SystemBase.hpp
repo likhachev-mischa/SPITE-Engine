@@ -4,7 +4,7 @@
 #include <typeinfo>
 
 #include "SystemDependencyStorage.hpp"
-#include "SystemContext.hpp" 
+#include "SystemContext.hpp"
 
 #include "ecs/core/IComponent.hpp"
 #include "ecs/query/QueryHandle.hpp"
@@ -24,16 +24,15 @@ namespace spite
 		bool m_isActive = true;
 		bool m_isManuallyDisabled = false;
 
-		std::optional<QueryHandle> m_prerequisite;
+		QueryHandle m_prerequisite{};
 
 		bool m_isPrerequisiteMet = false;
 		bool m_wasPrerequisiteMet = false;
 		u64 m_cachedVersion = 0;
 
-		ExecutionStage m_stage = ExecutionStage::Update;
+		ExecutionStage m_stage = CoreExecutionStages::UPDATE;
 
 	protected:
-
 		QueryHandle registerQuery(SystemQueryBuilder& builder, SystemDependencyStorage& dependencyStorage);
 
 		template <typename... T>

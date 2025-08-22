@@ -19,45 +19,45 @@ namespace spite
 		{
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& with()
 		{
-			m_queryBuilder.with<T>();
+			m_queryBuilder.with<T...>();
 			return *this;
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& with_write()
 		{
-			m_queryBuilder.with_write<T>();
+			m_queryBuilder.with_write<T...>();
 			return *this;
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& with_read()
 		{
-			m_queryBuilder.with_read<T>();
+			m_queryBuilder.with_read<T...>();
 			return *this;
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& without()
 		{
-			m_queryBuilder.without<T>();
+			m_queryBuilder.without<T...>();
 			return *this;
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& enabled()
 		{
-			m_queryBuilder.enabled<T>();
+			m_queryBuilder.enabled<T...>();
 			return *this;
 		}
 
-		template <typename T>
+		template <typename... T>
 		SystemQueryBuilder& modified()
 		{
-			m_queryBuilder.modified<T>();
+			m_queryBuilder.modified<T...>();
 			return *this;
 		}
 	};
@@ -92,6 +92,11 @@ namespace spite
 		SystemQueryBuilder getQueryBuilder() const
 		{
 			return SystemQueryBuilder(m_entityManager->getQueryBuilder());
+		}
+
+		EntityEventManager& getEventManager() const
+		{
+			return m_entityManager->getEventManager();
 		}
 
 		template <t_component T>
@@ -136,16 +141,32 @@ namespace spite
 			return m_entityManager->getComponent<T>(entity);
 		}
 
+		//not thread safe
 		template <t_singleton_component T>
 		T& getSingletonComponent()
 		{
 			return m_entityManager->getSingletonComponent<T>();
 		}
 
+		//not thread safe
 		template <t_singleton_component T>
 		const T& getSingletonComponent() const
 		{
 			return m_entityManager->getSingletonComponent<T>();
+		}
+
+		//thread safe
+		template <t_singleton_component T>
+		void accessSingleton(std::function<void(T&)> accessor)
+		{
+			m_entityManager->accesSingleton(accessor);
+		}
+
+		//thread safe
+		template <t_singleton_component T>
+		void accessSingleton(std::function<void(const T&)> accessor) const
+		{
+			std::as_const(m_entityManager)->accesSingleton(accessor);
 		}
 
 		bool isEntityValid(Entity entity) const
