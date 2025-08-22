@@ -41,7 +41,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -126,11 +126,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;TRACY_ENABLE;SPITE_TEST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;TRACY_ENABLE;SPITE_USE_DESCRIPTOR_SETS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./source/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./source/;./vcpkg_installed/x64-windows/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,7 +154,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;TRACY_ENABLE</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./source/;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./source/;./vcpkg_installed/x64-windows/include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -182,11 +183,14 @@
   <ItemGroup>
     <ClInclude Include="source\application\AppConifg.hpp" />
     <ClInclude Include="source\application\EventDispatcher.hpp" />
+    <ClInclude Include="source\application\GraphicsApi.hpp" />
     <ClInclude Include="source\application\InputEvents.hpp" />
     <ClInclude Include="source\application\input\InputManager.hpp" />
     <ClInclude Include="source\application\input\InputActionMap.hpp" />
     <ClInclude Include="source\application\input\Keycodes.hpp" />
+    <ClInclude Include="source\application\IWindowApiBinding.hpp" />
     <ClInclude Include="source\application\Time.hpp" />
+    <ClInclude Include="source\application\vulkan\VulkanWindowBinding.hpp" />
     <ClInclude Include="source\application\WindowManager.hpp" />
     <ClInclude Include="source\base\Assert.hpp" />
     <ClInclude Include="source\base\CallstackDebug.hpp" />
@@ -194,10 +198,10 @@
     <ClInclude Include="source\base\Collections.hpp" />
     <ClInclude Include="source\base\CollectionUtilities.hpp" />
     <ClInclude Include="source\base\Common.hpp" />
+    <ClInclude Include="source\base\DynamicBitset.hpp" />
     <ClInclude Include="source\base\Event.hpp" />
     <ClInclude Include="source\base\File.hpp" />
     <ClInclude Include="source\base\Logging.hpp" />
-    <ClInclude Include="source\base\LoggingTestStrings.hpp" />
     <ClInclude Include="source\base\Math.hpp" />
     <ClInclude Include="source\base\memory\AllocatorRegistry.hpp" />
     <ClInclude Include="source\base\memory\HeapAllocator.hpp" />
@@ -212,6 +216,8 @@
     <ClInclude Include="source\ecs\config\Components.hpp" />
     <ClInclude Include="source\ecs\config\SingletonComponents.hpp" />
     <ClInclude Include="source\ecs\config\TestComponents.hpp" />
+    <ClInclude Include="source\ecs\event\EntityEventManager.hpp" />
+    <ClInclude Include="source\ecs\event\IEventComponent.hpp" />
     <ClInclude Include="source\ecs\query\QueryHandle.hpp" />
     <ClInclude Include="source\ecs\storage\Archetype.hpp" />
     <ClInclude Include="source\ecs\storage\ArchetypeManager.hpp" />
@@ -226,7 +232,10 @@
     <ClInclude Include="source\ecs\core\EntityWorld.hpp" />
     <ClInclude Include="source\ecs\generated\GeneratedComponentCount.hpp" />
     <ClInclude Include="source\ecs\generated\GeneratedComponentRegistration.hpp" />
-    <ClInclude Include="source\ecs\generated\GeneratedSystemManager.hpp" />
+    <ClInclude Include="source\ecs\systems\ExecutionStage.hpp" />
+    <ClInclude Include="source\ecs\systems\SystemContext.hpp" />
+    <ClInclude Include="source\ecs\systems\SystemDependencyStorage.hpp" />
+    <ClInclude Include="source\ecs\systems\SystemManager.hpp" />
     <ClInclude Include="source\ecs\core\IComponent.hpp" />
     <ClInclude Include="source\ecs\query\Query.hpp" />
     <ClInclude Include="source\ecs\query\QueryBuilder.hpp" />
@@ -236,16 +245,70 @@
     <ClInclude Include="source\ecs\systems\SystemBase.hpp" />
     <ClInclude Include="source\ecs\config\SystemPipeline.hpp" />
     <ClInclude Include="source\ecs\storage\VersionManager.hpp" />
-    <ClInclude Include="source\engine\Common.hpp" />
-    <ClInclude Include="source\engine\VulkanBuffer.hpp" />
-    <ClInclude Include="source\engine\VulkanDebug.hpp" />
-    <ClInclude Include="source\engine\VulkanDepth.hpp" />
-    <ClInclude Include="source\engine\VulkanGeometry.hpp" />
-    <ClInclude Include="source\engine\VulkanImages.hpp" />
-    <ClInclude Include="source\engine\VulkanLighting.hpp" />
-    <ClInclude Include="source\engine\VulkanRendering.hpp" />
-    <ClInclude Include="source\engine\VulkanResources.hpp" />
-    <ClInclude Include="source\engine\VulkanAllocator.hpp" />
+    <ClInclude Include="source\ecs\systems\SystemDependencies.hpp" />
+    <ClInclude Include="source\engine\components\CoreComponents.hpp" />
+    <ClInclude Include="source\engine\components\RenderingComponents.hpp" />
+    <ClInclude Include="source\engine\rendering\IBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\GraphicsApiManager.hpp" />
+    <ClInclude Include="source\engine\rendering\GraphicsDescs.hpp" />
+    <ClInclude Include="source\engine\rendering\GraphicsTypes.hpp" />
+    <ClInclude Include="source\engine\rendering\IImageView.hpp" />
+    <ClInclude Include="source\engine\rendering\IPipelineCache.hpp" />
+    <ClInclude Include="source\engine\rendering\IPipelineLayoutCache.hpp" />
+    <ClInclude Include="source\engine\rendering\IRenderContext.hpp" />
+    <ClInclude Include="source\engine\rendering\IRenderDevice.hpp" />
+    <ClInclude Include="source\engine\rendering\IRenderResourceManager.hpp" />
+    <ClInclude Include="source\engine\rendering\IResourceSetLayoutCache.hpp" />
+    <ClInclude Include="source\engine\rendering\IResourceSetManager.hpp" />
+    <ClInclude Include="source\engine\rendering\ISecondaryRenderCommandBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\IShaderModuleCache.hpp" />
+    <ClInclude Include="source\engine\rendering\NamedBufferRegistry.hpp" />
+    <ClInclude Include="source\engine\rendering\IPipeline.hpp" />
+    <ClInclude Include="source\engine\rendering\IPipelineLayout.hpp" />
+    <ClInclude Include="source\engine\rendering\IRenderCommandBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\RenderingManager.hpp" />
+    <ClInclude Include="source\engine\rendering\ISampler.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanImage.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanRenderContext.hpp" />
+    <ClInclude Include="source\engine\rendering\IRenderer.hpp" />
+    <ClInclude Include="source\engine\rendering\RenderGraph.hpp" />
+    <ClInclude Include="source\engine\rendering\RenderGraphUsages.hpp" />
+    <ClInclude Include="source\engine\rendering\RenderResourceHandles.hpp" />
+    <ClInclude Include="source\engine\rendering\ResourcePool.hpp" />
+    <ClInclude Include="source\engine\rendering\IResourceSet.hpp" />
+    <ClInclude Include="source\engine\rendering\IResourceSetLayout.hpp" />
+    <ClInclude Include="source\engine\rendering\IShaderModule.hpp" />
+    <ClInclude Include="source\engine\rendering\Synchronization.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanDescriptorSet.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanDescriptorSetLayout.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanImageView.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanPipeline.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanPipelineCache.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanPipelineLayout.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanPipelineLayoutCache.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanRenderCommandBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanRenderDevice.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanRenderer.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanRenderResourceManager.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanResourceSetLayoutCache.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanResourceSetManager.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanSampler.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanSecondaryRenderCommandBuffer.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanShaderModule.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanShaderModuleCache.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanShaderReflectionModule.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanSwapchain.hpp" />
+    <ClInclude Include="source\engine\rendering\vulkan\VulkanTypeMappings.hpp" />
+    <ClInclude Include="source\engine\systems\BeginFrameSystem.hpp" />
+    <ClInclude Include="source\engine\systems\CameraMatricesUpdateSystem.hpp" />
+    <ClInclude Include="source\engine\systems\DepthPassSystem.hpp" />
+    <ClInclude Include="source\engine\systems\EventCleanupSystem.hpp" />
+    <ClInclude Include="source\engine\systems\GeometryPassSystem.hpp" />
+    <ClInclude Include="source\engine\systems\LightPassSystem.hpp" />
+    <ClInclude Include="source\engine\systems\ModelLoadSystem.hpp" />
+    <ClInclude Include="source\engine\systems\RenderSystem.hpp" />
+    <ClInclude Include="source\engine\systems\TransformMatrixCalculateSystem.hpp" />
     <ClInclude Include="source\external\StackWalker.h" />
     <ClInclude Include="source\external\tlsf.h" />
   </ItemGroup>
@@ -254,6 +317,7 @@
     <ClCompile Include="source\application\input\InputManager.cpp" />
     <ClCompile Include="source\application\input\InputActionMap.cpp" />
     <ClCompile Include="source\application\Time.cpp" />
+    <ClCompile Include="source\application\vulkan\VulkanWindowBinding.cpp" />
     <ClCompile Include="source\application\WindowManager.cpp" />
     <ClCompile Include="source\base\CallstackDebug.cpp" />
     <ClCompile Include="source\base\File.cpp" />
@@ -265,6 +329,10 @@
     <ClCompile Include="source\base\StbUsage.cpp" />
     <ClCompile Include="source\base\VmaUsage.cpp" />
     <ClCompile Include="source\ecs\core\ComponentMetadataRegistry.cpp" />
+    <ClCompile Include="source\ecs\core\SingletonComponentRegistry.cpp" />
+    <ClCompile Include="source\ecs\event\EntityEventManager.cpp" />
+    <ClCompile Include="source\ecs\systems\SystemBase.cpp" />
+    <ClCompile Include="source\ecs\systems\SystemDependencyStorage.cpp" />
     <ClCompile Include="source\ecs\storage\Archetype.cpp" />
     <ClCompile Include="source\ecs\storage\ArchetypeManager.cpp" />
     <ClCompile Include="source\ecs\storage\Aspect.cpp" />
@@ -277,16 +345,43 @@
     <ClCompile Include="source\ecs\query\QueryRegistry.cpp" />
     <ClCompile Include="source\ecs\storage\SharedComponentManager.cpp" />
     <ClCompile Include="source\ecs\storage\VersionManager.cpp" />
-    <ClCompile Include="source\engine\Common.cpp" />
-    <ClCompile Include="source\engine\VulkanBuffer.cpp" />
-    <ClCompile Include="source\engine\VulkanDebug.cpp" />
-    <ClCompile Include="source\engine\VulkanDepth.cpp" />
-    <ClCompile Include="source\engine\VulkanGeometry.cpp" />
-    <ClCompile Include="source\engine\VulkanImages.cpp" />
-    <ClCompile Include="source\engine\VulkanLighting.cpp" />
-    <ClCompile Include="source\engine\VulkanRendering.cpp" />
-    <ClCompile Include="source\engine\VulkanResources.cpp" />
-    <ClCompile Include="source\engine\VulkanAllocator.cpp" />
+    <ClCompile Include="source\ecs\systems\SystemManager.cpp" />
+    <ClCompile Include="source\engine\rendering\GraphicsApiManager.cpp" />
+    <ClCompile Include="source\engine\rendering\IResourceSetLayoutCache.cpp" />
+    <ClCompile Include="source\engine\rendering\IShaderModuleCache.cpp" />
+    <ClCompile Include="source\engine\rendering\NamedBufferRegistry.cpp" />
+    <ClCompile Include="source\engine\rendering\RenderGraph.cpp" />
+    <ClCompile Include="source\engine\rendering\RenderingManager.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanBuffer.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanDescriptorSetLayout.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanImage.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanImageView.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanPipeline.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanPipelineCache.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanPipelineLayout.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanPipelineLayoutCache.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanRenderCommandBuffer.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanRenderContext.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanRenderDevice.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanRenderer.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanRenderResourceManager.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanResourceSetLayoutCache.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanResourceSetManager.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanSampler.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanSecondaryRenderCommandBuffer.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanShaderModule.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanShaderModuleCache.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanShaderReflectionModule.cpp" />
+    <ClCompile Include="source\engine\rendering\vulkan\VulkanSwapchain.cpp" />
+    <ClCompile Include="source\engine\systems\BeginFrameSystem.cpp" />
+    <ClCompile Include="source\engine\systems\CameraMatricesUpdateSystem.cpp" />
+    <ClCompile Include="source\engine\systems\DepthPassSystem.cpp" />
+    <ClCompile Include="source\engine\systems\EventCleanupSystem.cpp" />
+    <ClCompile Include="source\engine\systems\GeometryPassSystem.cpp" />
+    <ClCompile Include="source\engine\systems\LightPassSystem.cpp" />
+    <ClCompile Include="source\engine\systems\ModelLoadSystem.cpp" />
+    <ClCompile Include="source\engine\systems\RenderSystem.cpp" />
+    <ClCompile Include="source\engine\systems\TransformMatrixCalculateSystem.cpp" />
     <ClCompile Include="source\external\tlsf.c" />
     <ClCompile Include="source\external\tracy\TracyClient.cpp" />
     <ClCompile Include="source\Main.cpp" />
