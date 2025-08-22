@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "ecs/storage/Archetype.hpp"
 #include "ecs/core/IComponent.hpp"
 
@@ -24,7 +26,8 @@ namespace spite
 		friend class QueryRegistry;
 
 	public:
-		Query(const ArchetypeManager* archetypeManager,const Aspect* includeAspect, const Aspect* readAspect, const Aspect* writeAspect,
+		Query(const ArchetypeManager* archetypeManager, const Aspect* includeAspect, const Aspect* readAspect,
+		      const Aspect* writeAspect,
 		      const Aspect* excludeAspect = nullptr,
 		      const Aspect* mustBeEnabledAspect = nullptr,
 		      const Aspect* mustBeModifiedAspect = nullptr);
@@ -33,12 +36,22 @@ namespace spite
 
 		void rebuild(const ArchetypeManager& archetypeManager);
 
-		template <typename TFunc>
-		void forEachChunk(TFunc& func)
+		void forEachChunk(const std::function<void(const Chunk* chunk)>& func) const
 		{
 			for (Archetype* archetype : m_archetypes)
 			{
 				for (const auto& chunk : archetype->getChunks())
+				{
+					func(chunk);
+				}
+			}
+		}
+
+		void forEachChunk(const std::function<void(Chunk* chunk)>& func)
+		{
+			for (Archetype* archetype : m_archetypes)
+			{
+				for (auto& chunk : archetype->getChunks())
 				{
 					func(chunk);
 				}
@@ -100,7 +113,7 @@ namespace spite
 			{
 				while (m_currentChunk)
 				{
-					while (m_entityIndexInChunk < m_currentChunk->count())
+					while (m_entityIndexInChunk < m_currentChunk->size())
 					{
 						bool passedFilters = true;
 						if (!m_enabledIndicesInChunk.empty())
@@ -120,7 +133,7 @@ namespace spite
 							for (const int componentIndex : m_modifiedIndicesInChunk)
 							{
 								if (!m_currentChunk->wasModifiedLastFrameByIndex(componentIndex,
-								                                                 m_entityIndexInChunk))
+									m_entityIndexInChunk))
 								{
 									passedFilters = false;
 									break;
@@ -217,7 +230,8 @@ namespace spite
 			template <typename T>
 			struct reference_type_for_helper<T, std::enable_if_t<is_read_wrapper_v<T> || is_write_wrapper_v<T>>>
 			{
-				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>&, const get_component_type<T>&>;
+				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>&, const get_component_type<
+					                                T>&>;
 			};
 
 			template <typename T>
@@ -235,7 +249,8 @@ namespace spite
 			template <typename T>
 			struct pointer_type_for_helper<T, std::enable_if_t<is_read_wrapper_v<T> || is_write_wrapper_v<T>>>
 			{
-				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>*, const get_component_type<T>*>;
+				using type = std::conditional_t<is_write_wrapper_v<T>, get_component_type<T>*, const get_component_type<
+					                                T>*>;
 			};
 
 			template <typename T>
@@ -265,7 +280,7 @@ namespace spite
 					if constexpr (is_write_wrapper_v<ArgType>)
 					{
 						SASSERTM(m_query->m_writeAspect->contains(componentId),
-						        "Write<T> requested for a component not declared with with_write()!")
+						         "Write<T> requested for a component not declared with with_write()!")
 						m_currentChunk->markModifiedByIndex(component_idx_in_chunk, m_entityIndexInChunk);
 						return *static_cast<ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
 							component_idx_in_chunk,
@@ -274,7 +289,7 @@ namespace spite
 					else // is_read_wrapper_v<ArgType>
 					{
 						SASSERTM(m_query->m_readAspect->contains(componentId) || m_query->m_writeAspect->contains(
-							        componentId), "Read<T> requested for a component with no declared dependency!")
+							         componentId), "Read<T> requested for a component with no declared dependency!")
 						return *static_cast<const ComponentType*>(m_currentChunk->getComponentDataPtrByIndex(
 							component_idx_in_chunk,
 							m_entityIndexInChunk));

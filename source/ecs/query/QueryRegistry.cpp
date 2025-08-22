@@ -23,7 +23,6 @@ namespace spite
 		}
 
 		Query& query = it->second;
-
 		const u64 currentVersion = m_versionManager->getVersion(*descriptor.includeAspect);
 
 		if (query.m_includeVersion != currentVersion)

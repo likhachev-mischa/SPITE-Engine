@@ -72,7 +72,7 @@ namespace spite
 			SystemContext context(m_entityManager, commandBuffer, deltaTime,
 			                      &m_dependencyStorage.getDependencies(system));
 			tasks.emplace(system, SystemTask(system, context, deltaTime));
-			activeIncomingCounts[system] = 0; // Initialize active size
+			activeIncomingCounts[system] = 0; // Initialize active count
 		}
 
 		// Build active graph and set dependencies

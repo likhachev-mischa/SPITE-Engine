@@ -33,7 +33,7 @@ namespace spite
 
 		// Check if an aspect is registered
 		bool hasAspect(const Aspect& aspect) const;
-		// get count of registered aspects
+		// get size of registered aspects
 		sizet size() const;
 
 		// get the registered aspect (returns nullptr if not found)

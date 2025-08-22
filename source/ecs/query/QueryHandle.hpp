@@ -19,6 +19,7 @@ namespace spite
 		// Fetches the fresh, potentially rebuilt query from the registry.
 		Query* getQuery()
 		{
+			SASSERTM(m_queryRegistry, "QueryHandle was not initialized")
 			// This single call performs the lazy-rebuild check.
 			// The result is cached for the duration of the frame's operations.
 			m_cachedQuery = m_queryRegistry->findOrCreateQuery(m_descriptor);
@@ -42,8 +43,10 @@ namespace spite
 
 		QueryHandle(const QueryHandle& other) = default;
 		QueryHandle(QueryHandle&& other) noexcept = default;
-		QueryHandle& operator = (QueryHandle&& other) noexcept = default;
+		QueryHandle& operator =(QueryHandle&& other) noexcept = default;
 		QueryHandle& operator=(const QueryHandle& other) = default;
+
+		bool isValid() const { return m_queryRegistry != nullptr; }
 
 		// Expose the descriptor for advanced usage like prerequisite checks.
 		const QueryDescriptor& getDescriptor() const { return m_descriptor; }
@@ -52,8 +55,16 @@ namespace spite
 
 		sizet getEntityCount() { return getQuery()->getEntityCount(); }
 
-		template <typename TFunc>
-		void forEachChunk(TFunc& func) { getQuery()->forEachChunk(func); }
+		void forEachConstChunk(const std::function<void(const Chunk* chunk)>& func) const
+		{
+			const Query* query = getQuery();
+			return query->forEachChunk(func);
+		}
+
+		void forEachChunk(const std::function<void(Chunk* chunk)>& func)
+		{
+			return getQuery()->forEachChunk(func);
+		}
 
 		template <typename... TArgs>
 		auto view() { return getQuery()->view<TArgs...>(); }

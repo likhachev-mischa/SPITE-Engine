@@ -8,13 +8,14 @@
 #include "base/CollectionAliases.hpp"
 #include "base/memory/HeapAllocator.hpp"
 
+#include "ecs/core/ComponentMetadataRegistry.hpp"
 #include "ecs/storage/Aspect.hpp"
 
 namespace spite
 {
 	class ComponentMetadataRegistry;
-	constexpr sizet DEFAULT_CHUNK_CAPACITY = 64;
-	constexpr sizet DEFAULT_COMPONENTS_INLINE_CAPACITY = 16;
+	constexpr sizet DEFAULT_CHUNK_CAPACITY = 32;
+	constexpr sizet DEFAULT_COMPONENTS_INLINE_CAPACITY = 8;
 
 	class Chunk
 	{
@@ -53,11 +54,20 @@ namespace spite
 
 		[[nodiscard]] bool empty() const;
 
-		[[nodiscard]] sizet count() const;
+		[[nodiscard]] sizet size() const;
 
 		[[nodiscard]] sizet capacity() const;
 
 		[[nodiscard]] const Aspect& aspect() const;
+
+		//should be used for per-chunk iteration
+		template <typename T>
+		T* getComponents() const;
+
+		//should be used for per-chunk iteration
+		//marks components as modified
+		template <typename T>
+		T* getComponents();
 
 		// Adds an entity ID and returns the index within the chunk where its components will be stored.
 		// The caller is responsible for constructing/placing the component data.
@@ -95,26 +105,47 @@ namespace spite
 		                                             sizet entityIndexInChunk) const;
 	};
 
-	inline bool Chunk::wasModifiedLastFrameByIndex(const sizet componentIndexInChunk,
-	                                               const sizet entityIndexInChunk) const
+	template <typename T>
+	T* Chunk::getComponents() const
 	{
-		return m_modifiedBitsets[componentIndexInChunk].test(entityIndexInChunk);
+		auto id = ComponentMetadataRegistry::getComponentId<T>();
+		SASSERT(m_aspect->contains(id))
+
+		const auto& aspectIds = m_aspect->getComponentIds();
+		sizet componentIdx = 0;
+
+		for (sizet i = 0; i < aspectIds.size(); ++i)
+		{
+			if (aspectIds[i] == id)
+			{
+				componentIdx = i;
+				break;
+			}
+		}
+
+		return reinterpret_cast<T*>(m_componentDataStarts[componentIdx]);
 	}
 
-	inline void Chunk::enableComponentByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk)
+	template <typename T>
+	T* Chunk::getComponents()
 	{
-		m_enabledBitsets[componentIndexInChunk].set(entityIndexInChunk);
-	}
+		auto id = ComponentMetadataRegistry::getComponentId<T>();
+		SASSERT(m_aspect->contains(id))
 
-	inline void Chunk::disableComponentByIndex(sizet componentIndexInChunk,
-	                                           sizet entityIndexInChunk)
-	{
-		m_enabledBitsets[componentIndexInChunk].reset(entityIndexInChunk);
-	}
+		const auto& aspectIds = m_aspect->getComponentIds();
+		sizet componentIdx = 0;
 
-	inline bool Chunk::isComponentEnabledByIndex(sizet componentIndexInChunk,
-	                                             sizet entityIndexInChunk) const
-	{
-		return m_enabledBitsets[componentIndexInChunk].test(entityIndexInChunk);
+		for (sizet i = 0; i < aspectIds.size(); ++i)
+		{
+			if (aspectIds[i] == id)
+			{
+				componentIdx = i;
+				break;
+			}
+		}
+
+		m_modifiedBitsets[componentIdx].set();
+
+		return reinterpret_cast<T*>(m_componentDataStarts[componentIdx]);
 	}
 }

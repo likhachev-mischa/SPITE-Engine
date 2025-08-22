@@ -30,7 +30,7 @@ namespace spite
 		{
 			for (const auto& chunk : archetype->getChunks())
 			{
-				result += chunk->count();
+				result += chunk->size();
 			}
 		}
 		return result;

@@ -119,7 +119,7 @@ namespace spite
 		return m_count == 0;
 	}
 
-	sizet Chunk::count() const
+	sizet Chunk::size() const
 	{
 		return m_count;
 	}
@@ -232,5 +232,28 @@ namespace spite
 		SASSERT(componentIndexInChunk < m_aspect->getComponentIds().size())
 		SASSERT(entityIndexInChunk < m_count)
 		m_modifiedBitsets[componentIndexInChunk].set(entityIndexInChunk);
+	}
+
+	bool Chunk::wasModifiedLastFrameByIndex(const sizet componentIndexInChunk,
+	                                        const sizet entityIndexInChunk) const
+	{
+		return m_modifiedBitsets[componentIndexInChunk].test(entityIndexInChunk);
+	}
+
+	void Chunk::enableComponentByIndex(sizet componentIndexInChunk, sizet entityIndexInChunk)
+	{
+		m_enabledBitsets[componentIndexInChunk].set(entityIndexInChunk);
+	}
+
+	void Chunk::disableComponentByIndex(sizet componentIndexInChunk,
+	                                           sizet entityIndexInChunk)
+	{
+		m_enabledBitsets[componentIndexInChunk].reset(entityIndexInChunk);
+	}
+
+	bool Chunk::isComponentEnabledByIndex(sizet componentIndexInChunk,
+	                                             sizet entityIndexInChunk) const
+	{
+		return m_enabledBitsets[componentIndexInChunk].test(entityIndexInChunk);
 	}
 }

@@ -201,7 +201,7 @@ namespace spite
 
 				// Update the locations for all entities in the chunk that was just moved.
 				Chunk* movedChunk = m_chunks[chunkIdx];
-				for (sizet i = 0, size = movedChunk->count(); i < size; ++i)
+				for (sizet i = 0, size = movedChunk->size(); i < size; ++i)
 				{
 					Entity updEntity = movedChunk->entity(i);
 					if (updEntity != Entity::undefined())
@@ -331,7 +331,7 @@ namespace spite
 	void Archetype::destroyAllComponentsInChunk(Chunk* chunk, const DestructionContext& destructionContext) const
 	{
 		const auto& componentIds = m_aspect->getComponentIds();
-		for (sizet entityIdx = 0; entityIdx < chunk->count(); ++entityIdx)
+		for (sizet entityIdx = 0; entityIdx < chunk->size(); ++entityIdx)
 		{
 			for (size_t i = 0; i < componentIds.size(); ++i)
 			{
