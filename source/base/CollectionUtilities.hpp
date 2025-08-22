@@ -47,7 +47,17 @@ namespace spite
 	}
 
 	inline scratch_string8 makeScratchString(ScratchAllocator& allocator)
-	{
-		return scratch_string8(ScratchAllocatorAdapter<char>(allocator));
-	}
+    {
+        return scratch_string8(ScratchAllocatorAdapter<char>(allocator));
+    }
+
+    // A high-quality hash combine function to merge multiple hash values.
+    // Uses the golden ratio prime number for good distribution.
+    template <typename T, typename... Rest>
+    void hashCombine(sizet& seed, const T& v, const Rest&... rest)
+    {
+        eastl::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        (hashCombine(seed, rest), ...);
+    };
 }

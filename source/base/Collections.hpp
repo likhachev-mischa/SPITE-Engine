@@ -77,6 +77,9 @@ namespace spite
 		void resize(sizet new_size);
 		void resize(sizet new_size, const T& value);
 
+		T& back();
+		const T& back() const;
+
 		bool operator==(const sbo_vector& other) const;
 		bool operator!=(const sbo_vector& other) const;
 		bool operator<(const sbo_vector& other) const;
@@ -405,6 +408,18 @@ namespace spite
 			}
 		}
 		m_size = new_size;
+	}
+
+	template <typename T, sizet InlineCapacity, typename Allocator>
+	T& sbo_vector<T, InlineCapacity, Allocator>::back()
+	{
+		return operator[](m_size);
+	}
+
+	template <typename T, sizet InlineCapacity, typename Allocator>
+	const T& sbo_vector<T, InlineCapacity, Allocator>::back() const
+	{
+		return operator[](m_size);
 	}
 
 	template <typename T, sizet C, typename A>
