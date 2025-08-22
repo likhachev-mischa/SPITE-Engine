@@ -61,13 +61,13 @@ namespace spite
 		};
 
 		std::mutex m_bufferMutex;
-		scratch_vector<std::byte> m_commandBuffer;
+		heap_vector<std::byte> m_commandBuffer;
 		u32 m_nextProxyId;
 
 		void* writeCommand(CommandType type, u16 size);
 
 		public:
-		explicit CommandBuffer(ArchetypeManager* archetypeManager);
+		CommandBuffer(ArchetypeManager* archetypeManager, const HeapAllocator& allocator);
 
 		CommandBuffer(const CommandBuffer&) = delete;
 		CommandBuffer& operator=(const CommandBuffer&) = delete;

@@ -5,11 +5,10 @@
 
 namespace spite
 {
-	CommandBuffer::CommandBuffer(ArchetypeManager* archetypeManager)
+	CommandBuffer::CommandBuffer(ArchetypeManager* archetypeManager, const HeapAllocator& allocator)
 		: m_archetypeManager(archetypeManager),
-		   m_commandBuffer(makeScratchVector<std::byte>(FrameScratchAllocator::get())), m_nextProxyId(0)
+		  m_commandBuffer(makeHeapVector<std::byte>(allocator)), m_nextProxyId(0)
 	{
-		m_commandBuffer.reserve(1024);
 	}
 
 	CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
@@ -90,7 +89,8 @@ namespace spite
 				{
 					const auto* cmd = reinterpret_cast<const CreateEntityCmd*>(header);
 					decodedCmds.push_back({
-						Entity{cmd->proxyId, Entity::PROXY_GENERATION}, CommandType::eCreateEntity, INVALID_COMPONENT_ID, nullptr
+						Entity{cmd->proxyId, Entity::PROXY_GENERATION}, CommandType::eCreateEntity,
+						INVALID_COMPONENT_ID, nullptr
 					});
 					break;
 				}
@@ -186,7 +186,8 @@ namespace spite
 						{
 							it = componentsToAdd.emplace(currentEntity,
 							                             eastl::make_pair(
-								                             makeScratchVector<ComponentID>(FrameScratchAllocator::get()),
+								                             makeScratchVector<ComponentID>(
+									                             FrameScratchAllocator::get()),
 								                             makeScratchVector<void*>(FrameScratchAllocator::get()))).
 							                     first;
 						}
