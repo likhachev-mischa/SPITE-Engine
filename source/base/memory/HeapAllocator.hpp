@@ -84,6 +84,10 @@ namespace spite
 			using other = HeapAllocatorAdapter<U>;
 		};
 
+		HeapAllocatorAdapter() noexcept;
+
+		HeapAllocatorAdapter(const char*);
+
 		explicit HeapAllocatorAdapter(const HeapAllocator& allocator) noexcept;
 
 		template <typename U>
@@ -100,6 +104,7 @@ namespace spite
 		{
 			return *m_allocator == *b.m_allocator;
 		}
+
 		template <typename U>
 		bool operator!=(const HeapAllocatorAdapter<U>& b) const
 		{
@@ -198,6 +203,18 @@ namespace spite
 			obj->~T();
 			deallocate(obj, sizeof(T));
 		}
+	}
+
+	template <typename T>
+	HeapAllocatorAdapter<T>::HeapAllocatorAdapter() noexcept
+	{
+		m_allocator = &getGlobalAllocator();
+	}
+
+	template <typename T>
+	HeapAllocatorAdapter<T>::HeapAllocatorAdapter(const char*)
+	{
+		m_allocator = &getGlobalAllocator();
 	}
 
 	template <typename T>

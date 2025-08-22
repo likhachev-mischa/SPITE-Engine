@@ -13,7 +13,7 @@
 
 namespace spite
 {
-	constexpr sizet GLOBAL_ALLOCATOR_SIZE = 512 * MB;
+	constexpr sizet GLOBAL_ALLOCATOR_SIZE = 1024 * MB;
 
 	namespace
 	{

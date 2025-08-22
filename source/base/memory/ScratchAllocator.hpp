@@ -125,6 +125,10 @@ namespace spite
 		using const_reference = const T&;
 		using difference_type = ptrdiff_t;
 
+		ScratchAllocatorAdapter() noexcept;
+
+		ScratchAllocatorAdapter(const char[13]);
+
 		explicit ScratchAllocatorAdapter(ScratchAllocator& allocator) noexcept;
 
 		template <typename U>
@@ -192,6 +196,18 @@ namespace spite
 		{
 			obj->~T();
 		}
+	}
+
+	template <typename T>
+	ScratchAllocatorAdapter<T>::ScratchAllocatorAdapter() noexcept
+	{
+		m_allocator = &FrameScratchAllocator::get();
+	}
+
+	template <typename T>
+	ScratchAllocatorAdapter<T>::ScratchAllocatorAdapter(const char[13])
+	{
+		m_allocator = &FrameScratchAllocator::get();
 	}
 
 	template <typename T>
