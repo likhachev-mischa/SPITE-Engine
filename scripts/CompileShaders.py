@@ -25,7 +25,7 @@ def compile_shaders(vulkan_sdk_path=None, shader_dir=None):
     # Set default SDK path if not provided
     if not vulkan_sdk_path:
         # Default path from the batch file
-        vulkan_sdk_path = "C:/VulkanSDK/1.3.290.0"
+        vulkan_sdk_path = "C:/VulkanSDK"
     
     # Ensure the path exists
     if not os.path.exists(vulkan_sdk_path):
