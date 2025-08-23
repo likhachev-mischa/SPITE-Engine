@@ -10,17 +10,24 @@ def compile_shaders(vulkan_sdk_path=None, shader_dir=None):
     
     # Set default shader directory relative to script location
     if not shader_dir:
+        # This is now the base directory for shaders
         shader_dir = script_dir / "../shaders"
     
     # Resolve to absolute path
     shader_dir = Path(shader_dir).resolve()
     
-    # Check if shader directory exists
-    if not shader_dir.is_dir():
-        print(f"Error: Shader directory not found at {shader_dir}")
+    source_dir = shader_dir / "source"
+    output_dir = shader_dir / "bin"
+
+    # Create output directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check if source directory exists
+    if not source_dir.is_dir():
+        print(f"Error: Shader source directory not found at {source_dir}")
         return False
     
-    print(f"Compiling shaders from: {shader_dir}")
+    print(f"Compiling shaders from: {source_dir} to {output_dir}")
     
     # Set default SDK path if not provided
     if not vulkan_sdk_path:
@@ -39,61 +46,36 @@ def compile_shaders(vulkan_sdk_path=None, shader_dir=None):
         print(f"Error: glslc compiler not found at {glslc_path}")
         return False
     
-    # Change to shader directory to find shader files
-    original_cwd = os.getcwd()
-    os.chdir(shader_dir)
+    # Find all shader files
+    shader_files = glob.glob(str(source_dir / "*.vert")) + glob.glob(str(source_dir / "*.frag"))
     
-    try:
-        # Find all shader files
-        vert_shaders = glob.glob("*.vert")
-        frag_shaders = glob.glob("*.frag")
+    # Track success
+    success = True
+    compiled_count = 0
+    
+    # Compile all shaders
+    for shader_path_str in shader_files:
+        shader_path = Path(shader_path_str)
+        shader_filename = shader_path.name
+        output_file_path = output_dir / (shader_filename + ".spv")
         
-        # Track success
-        success = True
-        compiled_count = 0
+        print(f"Compiling {shader_filename} to {output_file_path}...")
         
-        # Compile all vertex shaders
-        for shader in vert_shaders:
-            output_file = Path(shader).stem + ".spv"
-            print(f"Compiling {shader} to {output_file}...")
+        try:
+            result = subprocess.run(
+                [glslc_path, str(shader_path), "-o", str(output_file_path)],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            compiled_count += 1
+        except subprocess.CalledProcessError as e:
+            print(f"Error compiling {shader_filename}:")
+            print(e.stderr)
+            success = False
             
-            try:
-                result = subprocess.run(
-                    [glslc_path, shader, "-o", output_file],
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-                compiled_count += 1
-            except subprocess.CalledProcessError as e:
-                print(f"Error compiling {shader}:")
-                print(e.stderr)
-                success = False
-        
-        # Compile all fragment shaders
-        for shader in frag_shaders:
-            output_file = Path(shader).stem + ".spv"
-            print(f"Compiling {shader} to {output_file}...")
-            
-            try:
-                result = subprocess.run(
-                    [glslc_path, shader, "-o", output_file],
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-                compiled_count += 1
-            except subprocess.CalledProcessError as e:
-                print(f"Error compiling {shader}:")
-                print(e.stderr)
-                success = False
-        
-        print(f"\nCompilation complete. {compiled_count} shader files compiled.")
-        return success
-        
-    finally:
-        # Always restore the original working directory
-        os.chdir(original_cwd)
+    print(f"Compilation complete. {compiled_count} shader files compiled.")
+    return success
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compile GLSL shaders to SPIR-V")

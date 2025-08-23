@@ -5,6 +5,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "RenderGraph.hpp"
+#include "ShaderPaths.hpp"
 
 #include "application/WindowManager.hpp"
 #include "application/vulkan/VulkanWindowBinding.hpp"
@@ -71,7 +72,7 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = "shaders/depthVert.spv", .stage = ShaderStage::VERTEX
+						.path = SPITE_SHADER_PATH("depth.vert"), .stage = ShaderStage::VERTEX
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
@@ -109,10 +110,10 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = "shaders/geometryVert.spv", .stage = ShaderStage::VERTEX
+						.path = SPITE_SHADER_PATH("geometry.vert"), .stage = ShaderStage::VERTEX
 					},
 					ShaderStageDescription{
-						.path = "shaders/geometryFrag.spv", .stage = ShaderStage::FRAGMENT
+						.path = SPITE_SHADER_PATH("geometry.frag"), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
@@ -145,10 +146,10 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = "shaders/lightVert.spv", .stage = ShaderStage::VERTEX
+						.path = SPITE_SHADER_PATH("light.vert"), .stage = ShaderStage::VERTEX
 					},
 					ShaderStageDescription{
-						.path = "shaders/lightFrag.spv", .stage = ShaderStage::FRAGMENT
+						.path = SPITE_SHADER_PATH("light.frag"), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
