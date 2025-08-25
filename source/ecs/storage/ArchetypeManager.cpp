@@ -5,6 +5,7 @@
 
 #include "base/CollectionUtilities.hpp"
 #include "base/memory/ScratchAllocator.hpp"
+#include "base/Logging.hpp"
 
 #include "ecs/core/ComponentMetadataRegistry.hpp"
 
@@ -247,16 +248,18 @@ namespace spite
 	heap_vector<Archetype*> ArchetypeManager::queryNonEmptyArchetypes(const Aspect& includeAspect,
 	                                                                  const Aspect& excludeAspect) const
 	{
+		// NON-LINEAR/DAG-BASED VERSION
 		auto result = makeHeapVector<Archetype*>(m_allocator);
-		auto* rootAspect = m_aspectRegistry->getAspect(includeAspect);
+		const auto* rootAspect = m_aspectRegistry->getAspect(includeAspect);
 		if (!rootAspect)
 		{
+			// If the includeAspect itself is not registered, no superset of it can exist.
 			return result;
 		}
 
-		auto allocMarker = FrameScratchAllocator::get().get_scoped_marker();
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
 		auto descendants = m_aspectRegistry->getDescendantAspects(includeAspect);
-		descendants.push_back(rootAspect);
+		descendants.push_back(rootAspect); // Include the base aspect itself in the check
 
 		for (auto* aspect : descendants)
 		{

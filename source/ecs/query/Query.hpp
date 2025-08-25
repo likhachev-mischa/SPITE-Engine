@@ -130,14 +130,18 @@ namespace spite
 
 						if (passedFilters && !m_modifiedIndicesInChunk.empty())
 						{
+							//SDEBUG_LOG("Query: Entity %u in chunk %p, checking for modifications.\n",
+							//           m_entityIndexInChunk, m_currentChunk)
 							for (const int componentIndex : m_modifiedIndicesInChunk)
 							{
 								if (!m_currentChunk->wasModifiedLastFrameByIndex(componentIndex,
 									m_entityIndexInChunk))
 								{
+									//SDEBUG_LOG("Query:  -> Component %d was NOT modified.\n", componentIndex)
 									passedFilters = false;
 									break;
 								}
+								//SDEBUG_LOG("Query:  -> Component %d was modified.\n", componentIndex)
 							}
 						}
 

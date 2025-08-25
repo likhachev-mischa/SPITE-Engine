@@ -167,9 +167,8 @@ namespace spite
 	}
 
 	SystemManager::SystemManager(const HeapAllocator& allocator, EntityManager* entityManager,
-	                             AspectRegistry* aspectRegistry, VersionManager* versionManager)
+	                             VersionManager* versionManager)
 		: m_entityManager(entityManager), m_dependencyStorage(allocator),
-		  m_aspectRegistry(aspectRegistry),
 		  m_versionManager(versionManager),
 		  m_allocator(allocator),
 		  m_commandBuffers(
@@ -221,7 +220,28 @@ namespace spite
 
 		for (sizet i = 0; i < m_executionStages.size(); ++i)
 		{
-			buildAndExecuteStage(m_executionStages[i], &m_commandBuffers[i], deltaTime);
+			//we need to reset modifications after the normal update stages, but before rendering
+			//TODO maybe move this somewhere else
+			if (m_executionStages[i] == CoreExecutionStages::PRE_RENDER)
+			{
+				m_entityManager->getArchetypeManager()->resetAllModificationTracking();
+			}
+
+			//parallel exec
+			//buildAndExecuteStage(m_executionStages[i], &m_commandBuffers[i], deltaTime);
+
+			//serial exec for debug
+			for (const auto& system : m_systems)
+			{
+				if (system->getExecutionStage() == m_executionStages[i])
+				{
+					SystemContext context(m_entityManager, &m_commandBuffers[i], deltaTime,
+					                      &m_dependencyStorage.getDependencies(system.get()));
+					system->prepareForUpdate(context, *m_versionManager);
+					system->onUpdate(context);
+				}
+			}
+
 			m_commandBuffers[i].commit(*m_entityManager);
 		}
 	}

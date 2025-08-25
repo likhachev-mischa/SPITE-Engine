@@ -20,6 +20,8 @@ namespace spite
 			                                         descriptor.readAspect, descriptor.writeAspect,
 			                                         descriptor.excludeAspect, descriptor.enabledAspect,
 			                                         descriptor.modifiedAspect)).first;
+			//SDEBUG_LOG("Creating new query (include aspect: %p).\n",
+			//(void*)descriptor.includeAspect)
 		}
 
 		Query& query = it->second;
@@ -27,6 +29,8 @@ namespace spite
 
 		if (query.m_includeVersion != currentVersion)
 		{
+			//SDEBUG_LOG("Rebuilding query (include aspect: %p) because version changed from %llu to %llu.\n",
+			//          (void*)descriptor.includeAspect, query.m_includeVersion, currentVersion)
 			query.rebuild(*m_archetypeManager);
 			query.m_includeVersion = currentVersion;
 		}
@@ -55,7 +59,8 @@ namespace spite
 
 	bool QueryDescriptor::operator==(const QueryDescriptor& other) const
 	{
-		return readAspect == other.readAspect &&
+		return includeAspect == other.includeAspect &&
+			readAspect == other.readAspect &&
 			writeAspect == other.writeAspect &&
 			excludeAspect == other.excludeAspect &&
 			enabledAspect == other.enabledAspect &&
@@ -66,6 +71,7 @@ namespace spite
 	{
 		sizet seed = 0;
 		eastl::hash<const Aspect*> hasher;
+		seed ^= hasher(desc.includeAspect) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		seed ^= hasher(desc.readAspect) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		seed ^= hasher(desc.writeAspect) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		seed ^= hasher(desc.excludeAspect) + 0x9e3779b9 + (seed << 6) + (seed >> 2);

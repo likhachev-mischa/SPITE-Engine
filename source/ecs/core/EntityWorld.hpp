@@ -36,7 +36,7 @@ namespace spite
 			m_singletonComponentRegistry(m_allocator),
 			m_entityManager(&m_archetypeManager, &m_sharedComponentManager, &m_singletonComponentRegistry,
 			                &m_aspectRegistry, &m_queryRegistry, m_allocator),
-			m_systemManager(m_allocator, &m_entityManager, &m_aspectRegistry, &m_versionManager)
+			m_systemManager(m_allocator, &m_entityManager, &m_versionManager)
 		{
 		}
 

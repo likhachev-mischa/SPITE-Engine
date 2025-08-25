@@ -1,6 +1,7 @@
 #include "Query.hpp"
 #include "ecs/storage/Archetype.hpp"
 #include "base/memory/ScratchAllocator.hpp"
+#include "base/Logging.hpp"
 
 namespace spite
 {
@@ -19,6 +20,7 @@ namespace spite
 		                                                  *m_includeAspect,
 		                                                  *m_excludeAspect))
 	{
+		//SDEBUG_LOG("Query (include aspect: %p) created. Found %zu matching archetypes. Total entities: %zu\n", (void*)m_includeAspect, m_archetypes.size(), getEntityCount());
 		SASSERTM(!includeAspect->intersects(*m_excludeAspect),
 		         "Included aspect intersects with excluded aspect!\n")
 	}
@@ -39,5 +41,6 @@ namespace spite
 	void Query::rebuild(const ArchetypeManager& archetypeManager)
 	{
 		m_archetypes = archetypeManager.queryNonEmptyArchetypes(*m_includeAspect, *m_excludeAspect);
+		//SDEBUG_LOG("Query (include aspect: %p) rebuilt. Found %zu matching archetypes. Total entities: %zu\n", (void*)m_includeAspect, m_archetypes.size(), getEntityCount());
 	}
 }

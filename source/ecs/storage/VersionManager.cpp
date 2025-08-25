@@ -4,7 +4,10 @@
 
 namespace spite
 {
-	VersionManager::VersionManager(const HeapAllocator& allocator,const AspectRegistry* aspectRegistry) : m_registry(aspectRegistry),m_versions(makeHeapMap<const Aspect*, u64>(allocator)) {}
+	VersionManager::VersionManager(const HeapAllocator& allocator, const AspectRegistry* aspectRegistry) :
+		m_registry(aspectRegistry), m_versions(makeHeapMap<const Aspect*, u64>(allocator))
+	{
+	}
 
 	void VersionManager::makeDirty(const Aspect& aspect)
 	{
@@ -13,6 +16,8 @@ namespace spite
 
 		const u64 newVersion = m_nextVersion++;
 
+		//SDEBUG_LOG("VersionManager: Making aspect %p dirty with version %llu\n", canonicalAspect, newVersion)
+
 		// Dirty the aspect itself
 		m_versions[canonicalAspect] = newVersion;
 
@@ -20,6 +25,7 @@ namespace spite
 		scratch_vector<const Aspect*> ancestors = m_registry->getAncestorsAspects(*canonicalAspect);
 		for (const Aspect* ancestor : ancestors)
 		{
+			//SDEBUG_LOG("VersionManager: dirtying ancestor %p\n", ancestor)
 			m_versions[ancestor] = newVersion;
 		}
 	}

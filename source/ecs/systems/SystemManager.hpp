@@ -67,7 +67,6 @@ namespace spite
 	private:
 		EntityManager* m_entityManager;
 		SystemDependencyStorage m_dependencyStorage;
-		AspectRegistry* m_aspectRegistry;
 		VersionManager* m_versionManager;
 		HeapAllocator m_allocator;
 
@@ -87,8 +86,7 @@ namespace spite
 		                          SystemGraph& systemGraph);
 
 	public:
-		SystemManager(const HeapAllocator& allocator, EntityManager* entityManager,
-		              AspectRegistry* aspectRegistry, VersionManager* versionManager);
+		SystemManager(const HeapAllocator& allocator, EntityManager* entityManager, VersionManager* versionManager);
 
 		void registerSystem(std::unique_ptr<SystemBase> system);
 
@@ -101,7 +99,7 @@ namespace spite
 			registerSystem(std::make_unique<T>());
 		}
 
-		template <typename ...T>
+		template <typename... T>
 		void registerSystems()
 		{
 			(registerSystem<T>(), ...);

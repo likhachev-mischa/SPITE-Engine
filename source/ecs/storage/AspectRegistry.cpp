@@ -1,14 +1,15 @@
 #include "AspectRegistry.hpp"
 
 #include "base/CollectionUtilities.hpp"
+#include <algorithm>
 
 namespace spite
 {
 	AspectRegistry::AspectNode::AspectNode(const HeapAllocator& allocator,
-	                                       Aspect asp,
-	                                       AspectNode* par): aspect(std::move(asp)),
-	                                                         children(makeHeapVector<AspectNode*>(
-		                                                         allocator)), parent(par)
+	                                       Aspect asp)
+		: aspect(std::move(asp)),
+		  children(makeHeapVector<AspectNode*>(allocator)),
+		  parents(makeHeapVector<AspectNode*>(allocator))
 	{
 	}
 
@@ -23,109 +24,100 @@ namespace spite
 
 	AspectRegistry::~AspectRegistry()
 	{
-		destroyNode(m_root);
+		// With a DAG, recursive deletion is risky. Iterate and delete from the map directly.
+		for (auto const& [aspect, node] : m_aspectToNode)
+		{
+			delete node;
+		}
 	}
 
 	AspectRegistry::AspectNode* AspectRegistry::addOrGetAspectNode(const Aspect& aspect)
 	{
-		// Check if aspect already exists
 		auto it = m_aspectToNode.find(aspect);
 		if (it != m_aspectToNode.end())
 		{
 			return it->second;
 		}
 
-		AspectNode* bestParent = findBestParent(aspect);
-
-		auto newNode = new AspectNode(m_allocator, aspect, bestParent);
+		// 1. Create the new node
+		auto newNode = new AspectNode(m_allocator, aspect);
 		m_aspectToNode.emplace(aspect, newNode);
 
-		bestParent->children.push_back(newNode);
+		// 2. Find its parents and link them
+		auto parents = findBestParents(aspect);
+		for (AspectNode* parent : parents)
+		{
+			newNode->parents.push_back(parent);
+			parent->children.push_back(newNode);
+		}
 
-		reparentChildren(newNode);
+		// 3. Find children and reparent them. A child `c` of a parent `p` of `newNode` 
+		// might now need to become a child of `newNode` if `c` is a superset of `newNode`.
+		for (AspectNode* p : parents)
+		{
+			auto p_children_copy = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
+			p_children_copy.assign(p->children.begin(), p->children.end());
+
+			for (AspectNode* c : p_children_copy)
+			{
+				if (c != newNode && c->aspect.contains(newNode->aspect))
+				{
+					// c should be a child of newNode, and the direct link from p to c is now redundant.
+					// Remove p <-> c link
+					p->children.erase(std::remove(p->children.begin(), p->children.end(), c), p->children.end());
+					c->parents.erase(std::remove(c->parents.begin(), c->parents.end(), p), c->parents.end());
+
+					// Add newNode <-> c link
+					newNode->children.push_back(c);
+					c->parents.push_back(newNode);
+				}
+			}
+		}
 
 		return newNode;
 	}
 
-	AspectRegistry::AspectNode* AspectRegistry::getNode(const Aspect& aspect) const
+	scratch_vector<AspectRegistry::AspectNode*> AspectRegistry::findBestParents(const Aspect& newAspect)
 	{
-		auto it = m_aspectToNode.find(aspect);
-		return (it != m_aspectToNode.end()) ? it->second : nullptr;
-	}
+		auto marker = FrameScratchAllocator::get().get_scoped_marker();
+		auto candidates = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
 
-	heap_vector<AspectRegistry::AspectNode*> AspectRegistry::getChildren(const Aspect& aspect) const
-	{
-		AspectNode* node = getNode(aspect);
-		SASSERT(node)
-		return node->children;
-	}
-
-	AspectRegistry::AspectNode* AspectRegistry::getParent(const Aspect& aspect) const
-	{
-		AspectNode* node = getNode(aspect);
-		return node ? node->parent : nullptr;
-	}
-
-	scratch_vector<AspectRegistry::AspectNode*> AspectRegistry::getDescendantsNodes(
-		const Aspect& aspect) const
-	{
-		auto descendants = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
-		AspectNode* node = getNode(aspect);
-		if (node)
+		// 1. Find all proper subsets of newAspect
+		for (const auto& [aspect, node] : m_aspectToNode)
 		{
-			collectDescendants(node, descendants);
-		}
-		return descendants;
-	}
-
-	scratch_vector<AspectRegistry::AspectNode*> AspectRegistry::getAncestorsNodes(
-		const Aspect& aspect) const
-	{
-		auto ancestors = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
-		AspectNode* node = getNode(aspect);
-		while (node && node->parent)
-		{
-			ancestors.push_back(node->parent);
-			node = node->parent;
-		}
-		return ancestors;
-	}
-
-	bool AspectRegistry::removeAspect(const Aspect& aspect)
-	{
-		if (aspect.empty())
-		{
-			return false; // Cannot remove root
-		}
-
-		AspectNode* node = getNode(aspect);
-		if (!node)
-		{
-			return false;
-		}
-
-		// Reparent children to this node's parent
-		for (AspectNode* child : node->children)
-		{
-			child->parent = node->parent;
-			if (node->parent)
+			if (newAspect.contains(aspect) && aspect != newAspect)
 			{
-				node->parent->children.push_back(child);
+				candidates.push_back(node);
 			}
 		}
 
-		// Remove from parent's children list
-		if (node->parent)
+		auto bestParents = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
+
+		// 2. Filter for maximal subsets (remove candidates that are subsets of other candidates)
+		for (AspectNode* candidate : candidates)
 		{
-			auto& parentChildren = node->parent->children;
-			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), node),
-			                     parentChildren.end());
+			bool isMaximal = true;
+			for (AspectNode* other : candidates)
+			{
+				if (candidate != other && other->aspect.contains(candidate->aspect))
+				{
+					isMaximal = false;
+					break;
+				}
+			}
+			if (isMaximal)
+			{
+				bestParents.push_back(candidate);
+			}
 		}
 
-		// Remove from map and delete
-		m_aspectToNode.erase(aspect);
-		delete node;
-		return true;
+		// If no subsets were found, the root is the parent.
+		if (bestParents.empty() && !newAspect.empty())
+		{
+			bestParents.push_back(m_root);
+		}
+
+		return bestParents;
 	}
 
 	scratch_vector<const Aspect*> AspectRegistry::getDescendantAspects(const Aspect& aspect) const
@@ -134,25 +126,95 @@ namespace spite
 		AspectNode* node = getNode(aspect);
 		if (node)
 		{
-			collectDescendants(node, descendants);
+			auto visited = makeScratchSet<const AspectNode*>(FrameScratchAllocator::get());
+			collectDescendants(node, descendants, visited);
 		}
 		return descendants;
+	}
+
+	void AspectRegistry::collectDescendants(AspectNode* node, scratch_vector<const Aspect*>& descendants,
+	                                        scratch_set<const AspectNode*>& visited) const
+	{
+		for (AspectNode* child : node->children)
+		{
+			if (visited.find(child) == visited.end())
+			{
+				visited.insert(child);
+				descendants.push_back(&child->aspect);
+				collectDescendants(child, descendants, visited);
+			}
+		}
 	}
 
 	scratch_vector<const Aspect*> AspectRegistry::getAncestorsAspects(const Aspect& aspect) const
 	{
 		auto ancestors = makeScratchVector<const Aspect*>(FrameScratchAllocator::get());
 		AspectNode* node = getNode(aspect);
-		while (node && node->parent)
+		if (node)
 		{
-			ancestors.push_back(&node->parent->aspect);
-			node = node->parent;
+			auto visited = makeScratchSet<const AspectNode*>(FrameScratchAllocator::get());
+			collectAncestors(node, ancestors, visited);
 		}
 		return ancestors;
 	}
 
-	scratch_vector<const Aspect*> AspectRegistry::findIntersectingAspects(
-		const Aspect& aspect) const
+	void AspectRegistry::collectAncestors(AspectNode* node, scratch_vector<const Aspect*>& ancestors,
+	                                      scratch_set<const AspectNode*>& visited) const
+	{
+		for (AspectNode* parent : node->parents)
+		{
+			if (visited.find(parent) == visited.end())
+			{
+				visited.insert(parent);
+				ancestors.push_back(&parent->aspect);
+				collectAncestors(parent, ancestors, visited);
+			}
+		}
+	}
+
+	bool AspectRegistry::removeAspect(const Aspect& aspect)
+	{
+		if (aspect.empty()) return false; // Cannot remove root
+
+		AspectNode* node = getNode(aspect);
+		if (!node) return false;
+
+		// For each child, connect it to all of this node's parents.
+		for (AspectNode* child : node->children)
+		{
+			child->parents.erase(std::remove(child->parents.begin(), child->parents.end(), node), child->parents.end());
+			for (AspectNode* parent : node->parents)
+			{
+				child->parents.push_back(parent);
+				parent->children.push_back(child);
+			}
+		}
+
+		// For each parent, remove this node from its children.
+		for (AspectNode* parent : node->parents)
+		{
+			parent->children.erase(std::remove(parent->children.begin(), parent->children.end(), node),
+			                       parent->children.end());
+		}
+
+		m_aspectToNode.erase(aspect);
+		delete node;
+		return true;
+	}
+
+	AspectRegistry::AspectNode* AspectRegistry::getNode(const Aspect& aspect) const
+	{
+		auto it = m_aspectToNode.find(aspect);
+		return (it != m_aspectToNode.end()) ? it->second : nullptr;
+	}
+
+	heap_vector<AspectRegistry::AspectNode*> AspectRegistry::getParents(const Aspect& aspect) const
+	{
+		AspectNode* node = getNode(aspect);
+		return node ? node->parents : heap_vector<AspectNode*>();
+	}
+
+	scratch_vector<const Aspect*> AspectRegistry::findIntersectingAspects(const Aspect& aspect) const
 	{
 		auto intersecting = makeScratchVector<const Aspect*>(FrameScratchAllocator::get());
 		for (const auto& [storedAspect, node] : m_aspectToNode)
@@ -163,21 +225,6 @@ namespace spite
 			}
 		}
 		return intersecting;
-	}
-
-	AspectRegistry::AspectNode* AspectRegistry::getRoot() const
-	{
-		return m_root;
-	}
-
-	bool AspectRegistry::hasAspect(const Aspect& aspect) const
-	{
-		return m_aspectToNode.find(aspect) != m_aspectToNode.end();
-	}
-
-	size_t AspectRegistry::size() const
-	{
-		return m_aspectToNode.size();
 	}
 
 	const Aspect* AspectRegistry::getAspect(const Aspect& aspect) const
@@ -196,109 +243,13 @@ namespace spite
 		return node ? &node->aspect : nullptr;
 	}
 
-	scratch_vector<AspectRegistry::AspectNode*> AspectRegistry::findIntersectingNodes(
-		const Aspect& aspect) const
+	bool AspectRegistry::hasAspect(const Aspect& aspect) const
 	{
-		auto intersecting = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
-		for (const auto& [storedAspect, node] : m_aspectToNode)
-		{
-			if (storedAspect.intersects(aspect) && storedAspect != aspect)
-			{
-				intersecting.push_back(node);
-			}
-		}
-		return intersecting;
+		return m_aspectToNode.find(aspect) != m_aspectToNode.end();
 	}
 
-	scratch_vector<AspectRegistry::AspectNode*> AspectRegistry::getAllAspectNodes() const
+	sizet AspectRegistry::size() const
 	{
-		auto allAspects = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
-		allAspects.reserve(m_aspectToNode.size());
-		for (const auto& [aspect, node] : m_aspectToNode)
-		{
-			allAspects.push_back(node);
-		}
-		return allAspects;
-	}
-
-	AspectRegistry::AspectNode* AspectRegistry::findBestParent(const Aspect& newAspect)
-	{
-		AspectNode* bestParent = m_root;
-
-		// Search for the most specific aspect that contains newAspect
-		for (const auto& [aspect, node] : m_aspectToNode)
-		{
-			if (newAspect.contains(aspect) && aspect != newAspect)
-			{
-				// This aspect contains the new one, check if it's more specific than current best
-				if (bestParent->aspect.size() < aspect.size())
-				{
-					bestParent = node;
-				}
-			}
-		}
-
-		return bestParent;
-	}
-
-	void AspectRegistry::reparentChildren(AspectNode* newNode)
-	{
-		if (!newNode->parent) return;
-
-		auto& parentChildren = newNode->parent->children;
-		auto allocatorMarker = FrameScratchAllocator::get().get_scoped_marker();
-		auto toReparent = makeScratchVector<AspectNode*>(FrameScratchAllocator::get());
-
-		// Find children that should be reparented to the new node
-		for (AspectNode* child : parentChildren)
-		{
-			if (child != newNode && child->aspect.contains(newNode->aspect))
-			{
-				toReparent.push_back(child);
-			}
-		}
-
-		// Reparent the children
-		for (AspectNode* child : toReparent)
-		{
-			// Remove from current parent
-			parentChildren.erase(eastl::remove(parentChildren.begin(), parentChildren.end(), child),
-			                     parentChildren.end());
-
-			// Add to new parent
-			child->parent = newNode;
-			newNode->children.push_back(child);
-		}
-	}
-
-	void AspectRegistry::collectDescendants(AspectNode* node,
-	                                        scratch_vector<const Aspect*>& descendants) const
-	{
-		for (AspectNode* child : node->children)
-		{
-			descendants.push_back(&child->aspect);
-			collectDescendants(child, descendants);
-		}
-	}
-
-	void AspectRegistry::collectDescendants(AspectNode* node,
-	                                        scratch_vector<AspectNode*>& descendants) const
-	{
-		for (AspectNode* child : node->children)
-		{
-			descendants.push_back(child);
-			collectDescendants(child, descendants);
-		}
-	}
-
-	void AspectRegistry::destroyNode(AspectNode* node)
-	{
-		if (!node) return;
-
-		for (AspectNode* child : node->children)
-		{
-			destroyNode(child);
-		}
-		delete node;
+		return m_aspectToNode.size();
 	}
 }

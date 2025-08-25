@@ -105,6 +105,9 @@ namespace spite
 		const T& getComponent(Entity entity) const;
 
 		template <t_component T>
+		T* tryGetComponent(Entity entity);
+
+		template <t_component T>
 		bool hasComponent(Entity entity) const;
 
 		bool hasComponent(Entity entity, ComponentID id) const;
@@ -308,6 +311,17 @@ namespace spite
 
 		const auto [chunk, entityIndexInChunk] = archetype.getEntityLocation(entity);
 		return *static_cast<const T*>(chunk->getComponentDataPtrByIndex(componentIndexInChunk, entityIndexInChunk));
+	}
+
+	template <t_component T>
+	T* EntityManager::tryGetComponent(Entity entity)
+	{
+		if (!hasComponent<T>(entity))
+		{
+			return nullptr;
+		}
+
+		return &getComponent<T>(entity);
 	}
 
 	template <t_component T>

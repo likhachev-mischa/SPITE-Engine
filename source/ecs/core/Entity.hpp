@@ -1,6 +1,7 @@
 #pragma once
 #include "Base/Platform.hpp"
 #include <limits>
+#include <functional>
 
 namespace spite
 {

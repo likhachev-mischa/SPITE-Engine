@@ -76,7 +76,8 @@ namespace spite
 	bool EntityManager::isValid(Entity entity) const
 	{
 		const u32 index = entity.index();
-		return index < m_generations.size() && m_generations[index] == entity.generation();
+		return (entity != Entity::undefined()) && (index < m_generations.size() && m_generations[index] == entity.
+			generation());
 	}
 
 	void EntityManager::addComponents(eastl::span<const Entity> entities,

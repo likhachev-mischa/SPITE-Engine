@@ -267,6 +267,7 @@ namespace spite
 		// Execute creations
 		for (auto const& [aspect, proxyEntities] : creations)
 		{
+			//SDEBUG_LOG("CommandBuffer: Creating %zu entities with aspect size %zu\n", proxyEntities.size(), aspect.size());
 			scratch_vector<Entity> realEntities = makeScratchVector<Entity>(FrameScratchAllocator::get());
 			entityManager.createEntities(proxyEntities.size(), realEntities, aspect);
 			for (sizet i = 0; i < proxyEntities.size(); ++i)
@@ -278,6 +279,7 @@ namespace spite
 		// Execute moves
 		for (auto const& [aspect, entities] : moves)
 		{
+			//SDEBUG_LOG("CommandBuffer: Moving %zu entities to aspect size %zu\n", entities.size(), aspect.size());
 			entityManager.moveEntities(aspect, entities);
 		}
 
@@ -298,6 +300,10 @@ namespace spite
 		}
 
 		// Execute deletions
+		//if (!deletions.empty())
+		//{
+		//	SDEBUG_LOG("CommandBuffer: Deleting %zu entities\n", deletions.size());
+		//}
 		entityManager.destroyEntities(deletions);
 
 		// --- Cleanup ---
