@@ -283,18 +283,24 @@ namespace spite
 				pass->m_depthAttachmentFormat = Format::UNDEFINED;
 				SDEBUG_LOG("  Determining attachments:\n")
 
+				bool renderAreaSet = false;
 				if (!pass->m_writes.empty())
 				{
-					const auto& firstWrite = pass->m_writes[0];
-					const auto& resource = m_resources[firstWrite.resource.handle.id];
-					if (std::holds_alternative<TextureDesc>(resource.desc))
+					for (const auto& write : pass->m_writes)
 					{
-						const auto& texDesc = std::get<TextureDesc>(resource.desc);
-						pass->m_renderArea.extent.width = texDesc.width;
-						pass->m_renderArea.extent.height = texDesc.height;
+						const auto& resource = m_resources[write.resource.handle.id];
+						if (std::holds_alternative<TextureDesc>(resource.desc))
+						{
+							const auto& texDesc = std::get<TextureDesc>(resource.desc);
+							pass->m_renderArea.extent.width = texDesc.width;
+							pass->m_renderArea.extent.height = texDesc.height;
+							renderAreaSet = true;
+							break; // Found a texture, we're done.
+						}
 					}
 				}
-				else if (pass->m_writesToSwapchain)
+
+				if (!renderAreaSet && pass->m_writesToSwapchain)
 				{
 					pass->m_renderArea.extent = swapchainExtent;
 				}
@@ -539,6 +545,11 @@ namespace spite
 				}
 
 				cmd.beginRendering(colorAttachmentHandles, depthAttachmentHandle, pass->m_renderArea, clearValues);
+			}
+
+			if (pass->m_execute)
+			{
+				pass->m_execute(cmd);
 			}
 
 			// Execute the pass's pre-recorded secondary command buffer

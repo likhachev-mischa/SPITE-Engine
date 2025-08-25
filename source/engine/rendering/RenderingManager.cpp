@@ -5,13 +5,21 @@
 #include "RenderGraph.hpp"
 #include "RenderResourceHandles.hpp"
 #include "Synchronization.hpp"
+#include "application/WindowManager.hpp"
+
+#include "engine/ui/UIInspectorManager.hpp"
 
 namespace spite
 {
-	RenderingManager::RenderingManager(GraphicsApi api, WindowManager& windowManager, const HeapAllocator& allocator):
-		m_apiManager(
-			api, windowManager, allocator)
+	RenderingManager::RenderingManager(GraphicsApi api, WindowManager& windowManager,
+	                                   const HeapAllocator& allocator)
+		: m_apiManager(api, windowManager, allocator)
 	{
+	}
+
+	RenderingManager::~RenderingManager()
+	{
+		UIInspectorManager::shutdown();
 	}
 
 	void RenderingManager::beginFrame()
@@ -21,6 +29,11 @@ namespace spite
 		if (m_apiManager.renderer()->wasSwapchainRecreated())
 		{
 			m_apiManager.recreateRenderGraph();
+		}
+
+		if (m_cb)
+		{
+			UIInspectorManager::get()->beginFrame();
 		}
 	}
 

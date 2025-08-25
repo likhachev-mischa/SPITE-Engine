@@ -399,4 +399,9 @@ namespace spite
 	{
 		return vulkan::from_vulkan_format(m_swapchain.getImageFormat());
 	}
+
+	u32 VulkanRenderer::getSwapchainImageCount() const
+	{
+		return static_cast<u32>(m_swapchain.getImages().size());
+	}
 }

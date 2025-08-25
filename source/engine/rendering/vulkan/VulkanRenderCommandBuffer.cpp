@@ -82,7 +82,7 @@ namespace spite
 		}
 
 		vk::RenderingInfo renderingInfo{};
-		renderingInfo.flags = vk::RenderingFlagBits::eContentsSecondaryCommandBuffers;
+		renderingInfo.flags = vk::RenderingFlagBits::eContentsSecondaryCommandBuffers | vk::RenderingFlagBits::eContentsInlineEXT;
 		renderingInfo.renderArea = vulkan::to_vulkan_rect_2d(renderArea);
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = static_cast<u32>(vkColorAttachments.size());

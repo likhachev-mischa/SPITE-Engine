@@ -14,6 +14,8 @@
 #include "base/Logging.hpp"
 #include "base/Math.hpp"
 
+#include "engine/ui/UIInspectorManager.hpp"
+
 #include "vulkan/VulkanRenderContext.hpp"
 #include "vulkan/VulkanRenderer.hpp"
 
@@ -28,6 +30,7 @@ namespace spite
 			{
 			};
 
+			// G-Buffer texture descriptions
 			TextureDesc depthDesc =
 			{
 				.width = width, .height = height, .format = Format::D32_SFLOAT,
@@ -46,11 +49,22 @@ namespace spite
 				.usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLED
 			};
 
+			// Offscreen texture description for scene + UI
+			TextureDesc offscreenDesc =
+			{
+				.width = width, .height = height, .format = Format::B8G8R8A8_SRGB,
+				.usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLED
+			};
+
 			RGResourceHandle positionHandle;
 			RGResourceHandle normalHandle;
 			RGResourceHandle albedoHandle;
 			RGResourceHandle depthHandle;
+			RGResourceHandle sceneColorHandle;
+			RGResourceHandle uiTextureHandle;
 
+			//TODO check depthchecks correctness
+			// Depth Pass
 			renderGraph.addPass<PassData>("Depth", [&](RGBuilder& builder, PassData& data)
 			{
 				depthHandle = builder.createTexture("DepthBuffer", depthDesc);
@@ -78,6 +92,7 @@ namespace spite
 				builder.setGraphicsPipeline(shaders, psoDesc);
 			});
 
+			// Geometry Pass
 			renderGraph.addPass<PassData>("Geometry", [&](RGBuilder& builder, PassData& data)
 			{
 				positionHandle = builder.createTexture("PositionBuffer", gbufferFormatDesc);
@@ -97,7 +112,7 @@ namespace spite
 					              .loadOp = AttachmentLoadOp::CLEAR,
 				              });
 
-				builder.read(depthHandle, RGUsage::DepthStencilAttachmentWrite);
+				builder.read(depthHandle, RGUsage::DepthStencilAttachmentRead);
 
 				builder.useUbo("cameraUBO");
 
@@ -119,29 +134,26 @@ namespace spite
 				builder.setGraphicsPipeline(shaders, psoDesc);
 			});
 
-
+			// Light Pass (renders to offscreen texture)
 			renderGraph.addPass<PassData>("Light", [&](RGBuilder& builder, PassData& data)
 			{
-				// Declare reads from all G-Buffer textures and the depth buffer.
-				// The graph uses this to ensure this pass runs after the Geometry Pass
-				// and to set up the correct resource barriers.
 				builder.read(positionHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(normalHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(albedoHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(depthHandle, RGUsage::FragmentShaderReadSampled);
 
-				// Declare the final write to the imported swapchain image.
-				builder.writeToSwapchain(
-					{
-						.loadOp = AttachmentLoadOp::CLEAR,
-						.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f}
-					});
+				sceneColorHandle = builder.createTexture("SceneColor", offscreenDesc);
+				builder.write(sceneColorHandle, RGUsage::ColorAttachmentWrite,
+				              {
+					              .loadOp = AttachmentLoadOp::CLEAR,
+					              .clearValue = ClearColorValue{0.1f, 0.1f, 0.1f, 1.0f}
+				              });
 
-				// Define the pipeline for this pass.
 				PipelineDescription psoDesc{};
-				psoDesc.depthTestEnable = false; // No depth testing needed
+				psoDesc.depthTestEnable = false;
 				psoDesc.depthWriteEnable = false;
-				psoDesc.blendStates = {{}}; // One blend state for the final color attachment
+				psoDesc.cullMode = CullMode::NONE;
+				psoDesc.blendStates = {{}};
 
 				eastl::array shaders =
 				{
@@ -150,6 +162,63 @@ namespace spite
 					},
 					ShaderStageDescription{
 						.path = SPITE_SHADER_PATH("light.frag"), .stage = ShaderStage::FRAGMENT
+					}
+				};
+				builder.setGraphicsPipeline(shaders, psoDesc);
+			});
+
+			// UI Pass (renders to offscreen texture)
+			renderGraph.addPass<PassData>("UI", [&](RGBuilder& builder, PassData& data)
+			                              {
+				                              builder.read(sceneColorHandle, RGUsage::FragmentShaderReadSampled);
+				                              // Dependency
+
+				                              uiTextureHandle = builder.createTexture("UIColor", offscreenDesc);
+				                              builder.write(uiTextureHandle, RGUsage::ColorAttachmentWrite,
+				                                            {
+					                                            .loadOp = AttachmentLoadOp::CLEAR,
+					                                            .clearValue = ClearColorValue{
+						                                            0.0f, 0.0f, 0.0f, 0.0f
+					                                            } // Clear to transparent
+				                                            });
+
+				                              PipelineDescription uiPipelineDesc{};
+				                              uiPipelineDesc.blendStates.push_back({
+					                              .blendEnable = true,
+					                              .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
+					                              .dstColorBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+					                              .colorBlendOp = BlendOp::ADD,
+					                              .srcAlphaBlendFactor = BlendFactor::ONE,
+					                              .dstAlphaBlendFactor = BlendFactor::ZERO,
+					                              .alphaBlendOp = BlendOp::ADD
+				                              });
+				                              uiPipelineDesc.depthTestEnable = false;
+				                              uiPipelineDesc.depthWriteEnable = false;
+
+				                              builder.setGraphicsPipeline({}, uiPipelineDesc);
+			                              }, [](IRenderCommandBuffer& cmd) { UIInspectorManager::get()->render(cmd); });
+
+			// Composite Pass (blends scene and UI to swapchain)
+			renderGraph.addPass<PassData>("Composite", [&](RGBuilder& builder, PassData& data)
+			{
+				builder.read(sceneColorHandle, RGUsage::FragmentShaderReadSampled);
+				builder.read(uiTextureHandle, RGUsage::FragmentShaderReadSampled);
+
+				builder.writeToSwapchain({.loadOp = AttachmentLoadOp::DONT_CARE});
+
+				PipelineDescription psoDesc{};
+				psoDesc.depthTestEnable = false;
+				psoDesc.depthWriteEnable = false;
+				psoDesc.cullMode = CullMode::NONE;
+				psoDesc.blendStates = {{}};
+
+				eastl::array shaders =
+				{
+					ShaderStageDescription{
+						.path = SPITE_SHADER_PATH("light.vert"), .stage = ShaderStage::VERTEX
+					},
+					ShaderStageDescription{
+						.path = SPITE_SHADER_PATH("composite.frag"), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);

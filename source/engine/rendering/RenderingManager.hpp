@@ -4,6 +4,8 @@
 namespace spite
 {
 	class IRenderCommandBuffer;
+	class WindowManager;
+	enum class GraphicsApi;
 
 	class RenderingManager
 	{
@@ -11,7 +13,9 @@ namespace spite
 		IRenderCommandBuffer* m_cb{};
 
 	public:
-		RenderingManager(GraphicsApi api, WindowManager& windowManager, const HeapAllocator& allocator);
+		RenderingManager(GraphicsApi api, WindowManager& windowManager,
+		                 const HeapAllocator& allocator);
+		~RenderingManager();
 
 		void beginFrame();
 

@@ -52,6 +52,12 @@ namespace spite
 			.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 		};
 
+		inline constexpr RGResourceUsage DepthStencilAttachmentRead = {
+			.access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_READ,
+			.stage = PipelineStage::EARLY_FRAGMENT_TESTS,
+			.layout = ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL
+		};
+
 		inline constexpr RGResourceUsage FragmentShaderReadSampled = {
 			.access = AccessFlags::SHADER_READ,
 			.stage = PipelineStage::FRAGMENT_SHADER,

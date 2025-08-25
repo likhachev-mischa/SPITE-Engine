@@ -125,26 +125,24 @@ namespace spite
 			return indices;
 		}
 
+		namespace
+		{
+			constexpr eastl::array deviceExtensions = {
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+				VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME,
+				VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+#ifndef  SPITE_USE_DESCRIPTOR_SETS
+				VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME
+#endif
+			};
+		}
+
 		bool checkDeviceExtensionSupport(vk::PhysicalDevice device)
 		{
 			auto [res, availableExtensions] = device.enumerateDeviceExtensionProperties();
 			SASSERT_VULKAN(res)
-#if defined (SPITE_USE_DESCRIPTOR_SETS)
-			constexpr eastl::array<const char*, 2> requiredExtensions = {
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
-			};
-#else
 
-			constexpr eastl::array<const char*, 3> requiredExtensions = {
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-				VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME
-			};
-#endif
-
-
-			for (const char* extension : requiredExtensions)
+			for (const char* extension : deviceExtensions)
 			{
 				bool found = false;
 				for (const auto& availableExtension : availableExtensions)
@@ -307,15 +305,17 @@ namespace spite
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
+		vk::PhysicalDeviceNestedCommandBufferFeaturesEXT nestedCbFeatures{};
+		nestedCbFeatures.nestedCommandBuffer = true;
+
 		vk::PhysicalDeviceDescriptorBufferFeaturesEXT descriptorBufferFeatures{};
-		descriptorBufferFeatures.pNext = nullptr;
+		descriptorBufferFeatures.pNext = &nestedCbFeatures;
 
 #if defined (SPITE_USE_DESCRIPTOR_SETS)
 		descriptorBufferFeatures.descriptorBuffer = VK_FALSE;
 #else
 		descriptorBufferFeatures.descriptorBuffer = VK_TRUE;
 #endif
-
 
 		vk::PhysicalDeviceVulkan14Features features14 = {};
 		features14.pNext = &descriptorBufferFeatures;
@@ -340,19 +340,6 @@ namespace spite
 		deviceCreateInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 		deviceCreateInfo.pEnabledFeatures = nullptr;
-
-#if defined (SPITE_USE_DESCRIPTOR_SETS)
-		constexpr eastl::array<const char*, 2> deviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
-		};
-#else
-		constexpr eastl::array<const char*, 3> deviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-			VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME
-		};
-#endif
 
 		deviceCreateInfo.enabledExtensionCount = static_cast<u32>(deviceExtensions.size());
 		deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();

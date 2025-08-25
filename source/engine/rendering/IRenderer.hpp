@@ -27,5 +27,6 @@ namespace spite
 		virtual ImageViewHandle getCurrentSwapchainImageView() const = 0;
 		virtual TextureHandle getCurrentSwapchainTextureHandle() const = 0;
 		virtual Format getSwapchainFormat() const = 0;
+		virtual u32 getSwapchainImageCount() const = 0;
 	};
 }

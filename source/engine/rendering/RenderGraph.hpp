@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <variant>
 
 #include <EASTL/span.h>
@@ -77,7 +78,8 @@ namespace spite
 
 		std::function<void(RGBuilder&, std::any&)> m_setup;
 		std::function<void(const std::any&, ISecondaryRenderCommandBuffer&, IRenderer*, PipelineLayoutHandle)>
-		m_execute;
+		m_executeOld;
+		std::function<void(IRenderCommandBuffer&)> m_execute;
 
 		u32 m_inDegree = 0;
 		bool m_isCulled = true;
@@ -169,7 +171,8 @@ namespace spite
 		template <typename PassData>
 		RGPass& addPass(
 			heap_string name,
-			std::function<void(RGBuilder&, PassData&)> setup
+			std::function<void(RGBuilder&, PassData&)> setup,
+			std::function<void(IRenderCommandBuffer&)> execute = nullptr
 		);
 
 		void compile(NamedBufferRegistry& namedBufferRegistry, Format swapchainFormat, Extent2D swapchainExtent);
@@ -205,7 +208,8 @@ namespace spite
 	template <typename PassData>
 	RGPass& RenderGraph::addPass(
 		heap_string name,
-		std::function<void(RGBuilder&, PassData&)> setup)
+		std::function<void(RGBuilder&, PassData&)> setup,
+		std::function<void(IRenderCommandBuffer&)> execute)
 	{
 		auto newPass = std::make_unique<RGPass>(name);
 		RGPass& pass = *newPass;
@@ -219,6 +223,8 @@ namespace spite
 		{
 			setup(builder, std::any_cast<PassData&>(data));
 		};
+
+		pass.m_execute = std::move(execute);
 
 		RGBuilder builder(*this, pass);
 		pass.m_setup(builder, pass.m_passData);

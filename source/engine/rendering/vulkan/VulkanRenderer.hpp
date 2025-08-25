@@ -93,5 +93,6 @@ namespace spite
 		ImageViewHandle getCurrentSwapchainImageView() const override;
 		TextureHandle getCurrentSwapchainTextureHandle() const override;
 		Format getSwapchainFormat() const override;
+		u32 getSwapchainImageCount() const override;
 	};
 }
