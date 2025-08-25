@@ -16,6 +16,7 @@
 #include "engine/rendering/RenderingManager.hpp"
 #include "engine/systems/BeginFrameSystem.hpp"
 #include "engine/systems/CameraMatricesUpdateSystem.hpp"
+#include "engine/systems/CompositePassSystem.hpp"
 #include "engine/systems/DepthPassSystem.hpp"
 #include "engine/systems/EventCleanupSystem.hpp"
 #include "engine/systems/GeometryPassSystem.hpp"
@@ -23,6 +24,9 @@
 #include "engine/systems/ModelLoadSystem.hpp"
 #include "engine/systems/RenderSystem.hpp"
 #include "engine/systems/TransformMatrixCalculateSystem.hpp"
+#include "engine/ui/ReflectedComponents.hpp"
+#include "engine/ui/TypeInspectorRegistry.hpp"
+#include "engine/ui/UIInspectorManager.hpp"
 
 
 int main(int argc, char* argv[])
@@ -45,47 +49,64 @@ int main(int argc, char* argv[])
 		world.getSystemManager().registerSystems<
 			ModelLoadSystem, CameraMatricesUpdateSystem, TransformMatrixCalculateSystem,
 			BeginFrameSystem,
-			DepthPassSystem, GeometryPassSystem, LightPassSystem, RenderSystem, EventCleanupSystem>();
+			DepthPassSystem, GeometryPassSystem, LightPassSystem, CompositePassSystem, RenderSystem,
+			EventCleanupSystem>();
 
 
-		RenderingManager renderer(GraphicsApi::Vulkan, *windowManager, getGlobalAllocator());
+		RenderingManager renderingManager(GraphicsApi::Vulkan, *windowManager, getGlobalAllocator());
 
 		world.getEntityManager().registerSingletonComponent(
 			std::make_unique<RenderGraphSingleton>(RenderGraphSingleton{
-				.renderGraph = renderer.getApiManager().renderGraph()
+				.renderGraph = renderingManager.getApiManager().renderGraph()
 			}));
 		world.getEntityManager().registerSingletonComponent(
-			std::make_unique<RenderingManagerSingleton>(RenderingManagerSingleton{.renderingManager = &renderer}));
+			std::make_unique<RenderingManagerSingleton>(
+				RenderingManagerSingleton{.renderingManager = &renderingManager}));
 		world.getEntityManager().registerSingletonComponent(
-			std::make_unique<RendererSingleton>(RendererSingleton{.renderer = renderer.getApiManager().renderer()}));
+			std::make_unique<RendererSingleton>(RendererSingleton{
+				.renderer = renderingManager.getApiManager().renderer()
+			}));
 		world.getEntityManager().registerSingletonComponent(
 			std::make_unique<RenderDeviceSingleton>(RenderDeviceSingleton{
-				.renderDevice = &renderer.getApiManager().renderer()->getDevice()
+				.renderDevice = &renderingManager.getApiManager().renderer()->getDevice()
 			}));
 		world.getEntityManager().registerSingletonComponent(std::make_unique<RenderResourceManagerSingleton>(
 			RenderResourceManagerSingleton{
-				.resourceManager = &renderer.getApiManager().renderer()->getDevice().getResourceManager()
+				.resourceManager = &renderingManager.getApiManager().renderer()->getDevice().getResourceManager()
 			}));
 
 		world.initialize();
+
+		UIInspectorManager::init(*windowManager, *renderingManager.getApiManager().renderer(), world.getEntityManager());
 
 		world.getEntityManager().getEventManager().fire<ModelLoadRequest>(ModelLoadRequest{
 			.filePath = "models/cube2.obj"
 		});
 
+		world.getEntityManager().getEventManager().fire<ModelLoadRequest>(ModelLoadRequest{
+			.filePath = "models/cube2.obj"
+		});
+
+		//TODO clean main
+		ReflectionRegistry::init(getGlobalAllocator());
+		TypeInspectorRegistry::init(getGlobalAllocator());
+		registerReflectedComponents();
+
 		sizet update = 1;
 		while (!windowManager->shouldTerminate())
 		{
-			SDEBUG_LOG("Frame %zu start\n", update)
+			//SDEBUG_LOG("Frame %zu start\n", update)
 			world.getEntityManager().getEventManager().commit();
 			eventDispatcher.pollEvents();
 			world.update(0.1f);
-			world.getEntityManager().getArchetypeManager()->resetAllModificationTracking();
 			FrameScratchAllocator::resetFrame();
-			SDEBUG_LOG("Frame %zu finish\n", update)
+			//SDEBUG_LOG("Frame %zu finish\n", update)
 			++update;
 		}
 	}
+	ReflectionRegistry::destroy();
+	TypeInspectorRegistry::destroy();
+
 	FrameScratchAllocator::shutdown();
 	ComponentMetadataRegistry::destroy();
 	spite::shutdownGlobalAllocator();
