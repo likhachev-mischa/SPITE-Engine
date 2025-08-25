@@ -18,7 +18,8 @@ namespace spite
 
 	void TransformMatrixCalculateSystem::onUpdate(SystemContext ctx)
 	{
-		for (auto [matrix, transform] : query.view<Write<TransformMatrixComponent>, Read<TransformComponent>>())
+		for (auto [matrix, transform] : query.view<
+			     Write<TransformMatrixComponent>, Read<TransformComponent>>())
 		{
 			matrix.matrix = glm::mat4(1.0f);
 

@@ -7,7 +7,7 @@ namespace spite
 {
 	void BeginFrameSystem::onInitialize(SystemContext ctx, SystemDependencyStorage& dependencyStorage)
 	{
-		setExecutionStage(CoreExecutionStages::POST_UPDATE);
+		setExecutionStage(CoreExecutionStages::PRE_RENDER);
 	}
 
 	void BeginFrameSystem::onUpdate(SystemContext ctx)

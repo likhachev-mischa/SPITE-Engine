@@ -13,7 +13,7 @@ namespace spite
 
 		ctx.accessSingleton<CameraMatricesSingleton>([&viewProjection](CameraMatricesSingleton& singleton)
 		{
-			singleton.view = glm::lookAt(glm::vec3(0.f), glm::vec3(0.f), glm::vec3{0.f, 1.f, 0.f});
+			singleton.view = glm::mat4(1);
 			singleton.projection = glm::perspective(90.f, 4.f / 3.f, 1.f, 1000.f);
 
 			viewProjection = singleton.view * singleton.projection;

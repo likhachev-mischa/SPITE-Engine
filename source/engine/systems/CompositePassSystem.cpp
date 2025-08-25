@@ -1,20 +1,20 @@
-﻿#include "LightPassSystem.hpp"
+﻿#include "CompositePassSystem.hpp"
 
 #include "engine/components/RenderingComponents.hpp"
-#include "engine/rendering/ISecondaryRenderCommandBuffer.hpp"
 #include "engine/rendering/IRenderer.hpp"
+#include "engine/rendering/ISecondaryRenderCommandBuffer.hpp"
 #include "engine/rendering/RenderGraph.hpp"
 
 namespace spite
 {
-	void LightPassSystem::onInitialize(SystemContext ctx, SystemDependencyStorage& dependencyStorage)
+	void CompositePassSystem::onInitialize(SystemContext ctx, SystemDependencyStorage& dependencyStorage)
 	{
 		setExecutionStage(CoreExecutionStages::PRE_RENDER);
 	}
 
-	void LightPassSystem::onUpdate(SystemContext ctx)
+	void CompositePassSystem::onUpdate(SystemContext ctx)
 	{
-		const heap_string passName = "Light";
+		const heap_string passName = "Composite";
 
 		ISecondaryRenderCommandBuffer* cb;
 		ctx.accessSingleton<RendererSingleton>([&cb,&passName](const RendererSingleton& singleton)
