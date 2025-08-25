@@ -75,6 +75,16 @@ namespace spite
 		return m_shouldTerminate;
 	}
 
+	IWindowApiBinding* WindowManager::getBinding() const
+	{
+		return m_binding.get();
+	}
+
+	SDL_Window* WindowManager::getWindow() const
+	{
+		return m_window;
+	}
+
 	WindowManager::~WindowManager()
 	{
 		SDL_DestroyWindow(m_window);

@@ -30,7 +30,9 @@ namespace spite
 
 		[[nodiscard]] bool shouldTerminate() const;
 
-        [[nodiscard]] IWindowApiBinding* getBinding() const { return m_binding.get(); }
+        [[nodiscard]] IWindowApiBinding* getBinding() const;
+
+		[[nodiscard]] SDL_Window* getWindow() const;
 
 		~WindowManager();
 
