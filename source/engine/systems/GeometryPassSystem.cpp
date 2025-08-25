@@ -19,7 +19,7 @@ namespace spite
 
 	void GeometryPassSystem::onUpdate(SystemContext ctx)
 	{
-		const heap_string passName = "Geometry";
+		auto passName = toHashedString("Geometry");
 
 		ISecondaryRenderCommandBuffer* cb;
 		ctx.accessSingleton<RendererSingleton>([&cb,&passName](const RendererSingleton& singleton)

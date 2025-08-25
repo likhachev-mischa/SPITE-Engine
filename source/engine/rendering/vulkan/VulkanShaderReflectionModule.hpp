@@ -8,38 +8,40 @@
 
 namespace spite
 {
-    // Holds all the data extracted from a single shader module.
-    struct ShaderReflectionData
-    {
-        // Using a map to keep layouts organized by their set number.
-        heap_unordered_map<u32, ResourceSetLayoutDescription> resourceSetLayouts;
-        sbo_vector<VertexInputAttributeDesc> vertexInputAttributes;
-        sbo_vector<PushConstantRange> pushConstantRanges; 
-    };
+	//TODO move all shader reflection outside of engine to pre-build stage 
 
-    // A wrapper around the SPIRV-Reflect library to extract pipeline layout
-    // information from SPIR-V bytecode.
-    class VulkanShaderReflectionModule
-    {
-    public:
-        // The constructor takes the raw SPIR-V bytecode.
-        VulkanShaderReflectionModule(const std::vector<char>& spirvBinary, ShaderStage shaderStage);
-        ~VulkanShaderReflectionModule();
+	// Holds all the data extracted from a single shader module.
+	struct ShaderReflectionData
+	{
+		// Using a map to keep layouts organized by their set number.
+		heap_unordered_map<u32, ResourceSetLayoutDescription> resourceSetLayouts;
+		sbo_vector<VertexInputAttributeDesc> vertexInputAttributes;
+		sbo_vector<PushConstantRange> pushConstantRanges;
+	};
 
-        VulkanShaderReflectionModule(const VulkanShaderReflectionModule&) = delete;
-        VulkanShaderReflectionModule& operator=(const VulkanShaderReflectionModule&) = delete;
-        VulkanShaderReflectionModule(VulkanShaderReflectionModule&&) = delete;
-        VulkanShaderReflectionModule& operator=(VulkanShaderReflectionModule&&) = delete;
+	// A wrapper around the SPIRV-Reflect library to extract pipeline layout
+	// information from SPIR-V bytecode.
+	class VulkanShaderReflectionModule
+	{
+	public:
+		// The constructor takes the raw SPIR-V bytecode.
+		VulkanShaderReflectionModule(const std::vector<char>& spirvBinary, ShaderStage shaderStage);
+		~VulkanShaderReflectionModule();
 
-        // Performs the reflection and returns the extracted data in engine-native structs.
-        ShaderReflectionData reflect() const;
+		VulkanShaderReflectionModule(const VulkanShaderReflectionModule&) = delete;
+		VulkanShaderReflectionModule& operator=(const VulkanShaderReflectionModule&) = delete;
+		VulkanShaderReflectionModule(VulkanShaderReflectionModule&&) = delete;
+		VulkanShaderReflectionModule& operator=(VulkanShaderReflectionModule&&) = delete;
 
-    private:
-        SpvReflectShaderModule m_reflectionModule;
-        ShaderStage m_shaderStage;
+		// Performs the reflection and returns the extracted data in engine-native structs.
+		ShaderReflectionData reflect() const;
 
-        // Helper methods to translate from SPIRV-Reflect types to our engine types.
-        static DescriptorType to_engine_descriptor_type(u32 spvReflectType);
-        static Format to_engine_format(u32 spvReflectFormat);
-    };
+	private:
+		SpvReflectShaderModule m_reflectionModule;
+		ShaderStage m_shaderStage;
+
+		// Helper methods to translate from SPIRV-Reflect types to our engine types.
+		static DescriptorType to_engine_descriptor_type(u32 spvReflectType);
+		static Format to_engine_format(u32 spvReflectFormat);
+	};
 }

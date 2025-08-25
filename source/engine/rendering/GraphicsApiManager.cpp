@@ -65,9 +65,9 @@ namespace spite
 
 			//TODO check depthchecks correctness
 			// Depth Pass
-			renderGraph.addPass<PassData>("Depth", [&](RGBuilder& builder, PassData& data)
+			renderGraph.addPass<PassData>(toHashedString("Depth"), [&](RGBuilder& builder, PassData& data)
 			{
-				depthHandle = builder.createTexture("DepthBuffer", depthDesc);
+				depthHandle = builder.createTexture(toHashedString("DepthBuffer"), depthDesc);
 
 				builder.write(depthHandle, RGUsage::DepthStencilAttachmentWrite,
 				              {
@@ -76,7 +76,7 @@ namespace spite
 					              .clearValue = ClearDepthStencilValue{1.0f, 0}
 				              });
 
-				builder.useUbo("cameraUBO");
+				builder.useUbo(toHashedString("cameraUBO"));
 
 				PipelineDescription psoDesc{};
 				psoDesc.depthTestEnable = true;
@@ -86,18 +86,18 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("depth.vert"), .stage = ShaderStage::VERTEX
+						.path = toHashedString(SPITE_SHADER_PATH("depth.vert")), .stage = ShaderStage::VERTEX
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
 			});
 
 			// Geometry Pass
-			renderGraph.addPass<PassData>("Geometry", [&](RGBuilder& builder, PassData& data)
+			renderGraph.addPass<PassData>(toHashedString("Geometry"), [&](RGBuilder& builder, PassData& data)
 			{
-				positionHandle = builder.createTexture("PositionBuffer", gbufferFormatDesc);
-				normalHandle = builder.createTexture("NormalBuffer", gbufferFormatDesc);
-				albedoHandle = builder.createTexture("AlbedoBuffer", albedoDesc);
+				positionHandle = builder.createTexture(toHashedString("PositionBuffer"), gbufferFormatDesc);
+				normalHandle = builder.createTexture(toHashedString("NormalBuffer"), gbufferFormatDesc);
+				albedoHandle = builder.createTexture(toHashedString("AlbedoBuffer"), albedoDesc);
 
 				builder.write(positionHandle, RGUsage::ColorAttachmentWrite,
 				              {
@@ -114,7 +114,7 @@ namespace spite
 
 				builder.read(depthHandle, RGUsage::DepthStencilAttachmentRead);
 
-				builder.useUbo("cameraUBO");
+				builder.useUbo(toHashedString("cameraUBO"));
 
 				PipelineDescription psoDesc{};
 				psoDesc.depthTestEnable = true;
@@ -125,24 +125,24 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("geometry.vert"), .stage = ShaderStage::VERTEX
+						.path = toHashedString(SPITE_SHADER_PATH("geometry.vert")), .stage = ShaderStage::VERTEX
 					},
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("geometry.frag"), .stage = ShaderStage::FRAGMENT
+						.path = toHashedString(SPITE_SHADER_PATH("geometry.frag")), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
 			});
 
 			// Light Pass (renders to offscreen texture)
-			renderGraph.addPass<PassData>("Light", [&](RGBuilder& builder, PassData& data)
+			renderGraph.addPass<PassData>(toHashedString("Light"), [&](RGBuilder& builder, PassData& data)
 			{
 				builder.read(positionHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(normalHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(albedoHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(depthHandle, RGUsage::FragmentShaderReadSampled);
 
-				sceneColorHandle = builder.createTexture("SceneColor", offscreenDesc);
+				sceneColorHandle = builder.createTexture(toHashedString("SceneColor"), offscreenDesc);
 				builder.write(sceneColorHandle, RGUsage::ColorAttachmentWrite,
 				              {
 					              .loadOp = AttachmentLoadOp::CLEAR,
@@ -158,22 +158,23 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("light.vert"), .stage = ShaderStage::VERTEX
+						.path = toHashedString(SPITE_SHADER_PATH("light.vert")), .stage = ShaderStage::VERTEX
 					},
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("light.frag"), .stage = ShaderStage::FRAGMENT
+						.path = toHashedString(SPITE_SHADER_PATH("light.frag")), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);
 			});
 
 			// UI Pass (renders to offscreen texture)
-			renderGraph.addPass<PassData>("UI", [&](RGBuilder& builder, PassData& data)
+			renderGraph.addPass<PassData>(toHashedString("UI"), [&](RGBuilder& builder, PassData& data)
 			                              {
 				                              builder.read(sceneColorHandle, RGUsage::FragmentShaderReadSampled);
 				                              // Dependency
 
-				                              uiTextureHandle = builder.createTexture("UIColor", offscreenDesc);
+				                              uiTextureHandle = builder.createTexture(
+					                              toHashedString("UIColor"), offscreenDesc);
 				                              builder.write(uiTextureHandle, RGUsage::ColorAttachmentWrite,
 				                                            {
 					                                            .loadOp = AttachmentLoadOp::CLEAR,
@@ -199,7 +200,7 @@ namespace spite
 			                              }, [](IRenderCommandBuffer& cmd) { UIInspectorManager::get()->render(cmd); });
 
 			// Composite Pass (blends scene and UI to swapchain)
-			renderGraph.addPass<PassData>("Composite", [&](RGBuilder& builder, PassData& data)
+			renderGraph.addPass<PassData>(toHashedString("Composite"), [&](RGBuilder& builder, PassData& data)
 			{
 				builder.read(sceneColorHandle, RGUsage::FragmentShaderReadSampled);
 				builder.read(uiTextureHandle, RGUsage::FragmentShaderReadSampled);
@@ -215,10 +216,10 @@ namespace spite
 				eastl::array shaders =
 				{
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("light.vert"), .stage = ShaderStage::VERTEX
+						.path = toHashedString(SPITE_SHADER_PATH("light.vert")), .stage = ShaderStage::VERTEX
 					},
 					ShaderStageDescription{
-						.path = SPITE_SHADER_PATH("composite.frag"), .stage = ShaderStage::FRAGMENT
+						.path = toHashedString(SPITE_SHADER_PATH("composite.frag")), .stage = ShaderStage::FRAGMENT
 					}
 				};
 				builder.setGraphicsPipeline(shaders, psoDesc);

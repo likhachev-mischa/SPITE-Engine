@@ -14,7 +14,7 @@ namespace spite
 
 	void CompositePassSystem::onUpdate(SystemContext ctx)
 	{
-		const heap_string passName = "Composite";
+		auto passName = toHashedString("Composite");
 
 		ISecondaryRenderCommandBuffer* cb;
 		ctx.accessSingleton<RendererSingleton>([&cb,&passName](const RendererSingleton& singleton)

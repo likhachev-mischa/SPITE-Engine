@@ -1,4 +1,6 @@
 #pragma once
+#include "base/HashedString.hpp"
+
 #include "ecs/core/IComponent.hpp"
 
 #include "engine/rendering/RenderResourceHandles.hpp"
@@ -45,6 +47,6 @@ namespace spite
 
 	struct ModelLoadRequest : IEventComponent
 	{
-		heap_string filePath;
+		HashedString filePath;
 	};
 }

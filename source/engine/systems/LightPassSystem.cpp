@@ -14,7 +14,7 @@ namespace spite
 
 	void LightPassSystem::onUpdate(SystemContext ctx)
 	{
-		const heap_string passName = "Light";
+		auto passName = toHashedString("Light");
 
 		ISecondaryRenderCommandBuffer* cb;
 		ctx.accessSingleton<RendererSingleton>([&cb,&passName](const RendererSingleton& singleton)

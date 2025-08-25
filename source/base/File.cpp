@@ -19,7 +19,7 @@
 
 namespace spite
 {
-	std::vector<char> readBinaryFile(const cstring filename)
+	std::vector<char> readBinaryFile(cstring filename)
 
 	{
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -42,7 +42,7 @@ namespace spite
 		return buffer;
 	}
 
-	void writeBinaryFile(const cstring filename, const void* data, sizet size)
+	void writeBinaryFile(cstring filename, void* data, sizet size)
 	{
 		std::ofstream file(filename, std::ios::out | std::ios::binary);
 		if (!file.is_open())
@@ -55,7 +55,7 @@ namespace spite
 		file.close();
 	}
 
-	u8* loadTexture(const cstring path, int& width, int& height, int& channels)
+	u8* loadTexture(cstring path, int& width, int& height, int& channels)
 	{
 		//stbi_set_flip_vertically_on_load(true);
 		u8* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
@@ -73,7 +73,7 @@ namespace spite
 		stbi_image_free(pixels);
 	}
 
-	void importModelAssimp(const cstring filename,
+	void importModelAssimp(cstring filename,
 	                       scratch_vector<Vertex>& vertices,
 	                       scratch_vector<u32>& indices)
 	{
@@ -139,7 +139,7 @@ namespace spite
 		}
 	}
 
-	void readModelInfoFile(const cstring filename,
+	void readModelInfoFile(cstring filename,
 	                       eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 	                       eastl::vector<u32, spite::HeapAllocator>& indices,
 	                       const spite::HeapAllocator& allocator)

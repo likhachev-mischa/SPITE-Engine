@@ -12,6 +12,9 @@
 
 #include "engine/components/RenderingComponents.hpp"
 #include <engine/rendering/IRenderDevice.hpp>
+
+#include "base/StringInterner.hpp"
+
 #include "engine/rendering/IRenderer.hpp"
 #include "engine/rendering/RenderingManager.hpp"
 #include "engine/systems/BeginFrameSystem.hpp"
@@ -34,6 +37,7 @@ int main(int argc, char* argv[])
 	using namespace spite;
 	tracy::InitCallstack();
 	spite::initGlobalAllocator();
+	StringInterner::init(getGlobalAllocator());
 	{
 		FrameScratchAllocator::init();
 		ComponentMetadataRegistry::init(spite::getGlobalAllocator());
@@ -77,14 +81,15 @@ int main(int argc, char* argv[])
 
 		world.initialize();
 
-		UIInspectorManager::init(*windowManager, *renderingManager.getApiManager().renderer(), world.getEntityManager());
+		UIInspectorManager::init(*windowManager, *renderingManager.getApiManager().renderer(),
+		                         world.getEntityManager());
 
 		world.getEntityManager().getEventManager().fire<ModelLoadRequest>(ModelLoadRequest{
-			.filePath = "models/cube2.obj"
+			.filePath = toHashedString("models/cube2.obj")
 		});
 
 		world.getEntityManager().getEventManager().fire<ModelLoadRequest>(ModelLoadRequest{
-			.filePath = "models/cube2.obj"
+			.filePath = toHashedString("models/cube2.obj")
 		});
 
 		//TODO clean main
@@ -109,5 +114,6 @@ int main(int argc, char* argv[])
 
 	FrameScratchAllocator::shutdown();
 	ComponentMetadataRegistry::destroy();
+	StringInterner::destroy();
 	spite::shutdownGlobalAllocator();
 }

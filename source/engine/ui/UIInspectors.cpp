@@ -94,7 +94,7 @@ namespace spite
 			entity = singleton.entity;
 		});
 
-		if (!entityManager.isValid(entity))
+		if (!entityManager.isEntityValid(entity))
 		{
 			ImGui::Text("Invalid Entity");
 			return;

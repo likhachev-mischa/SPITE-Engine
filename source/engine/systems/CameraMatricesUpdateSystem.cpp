@@ -1,5 +1,7 @@
 ﻿#include "CameraMatricesUpdateSystem.hpp"
 
+#include "base/StringInterner.hpp"
+
 #include "engine/components/CoreComponents.hpp"
 #include "engine/components/RenderingComponents.hpp"
 #include "engine/rendering/NamedBufferRegistry.hpp"
@@ -22,7 +24,7 @@ namespace spite
 		ctx.accessSingleton<RendererSingleton>([&viewProjection](const RendererSingleton& singleton)
 		{
 			auto& registry = singleton.renderer->getNamedBufferRegistry();
-			registry.updateBuffer("cameraUBO", &viewProjection, sizeof(viewProjection));
+			registry.updateBuffer(toHashedString("cameraUBO"), &viewProjection, sizeof(viewProjection));
 		});
 	}
 }

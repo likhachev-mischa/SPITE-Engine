@@ -19,8 +19,8 @@
 
 namespace spite
 {
-	RGPass::RGPass(heap_string name)
-		: m_name(std::move(name))
+	RGPass::RGPass(HashedString name)
+		: m_name(name)
 	{
 	}
 
@@ -31,8 +31,8 @@ namespace spite
 		  m_passBarriers(
 			  makeHeapVector<sbo_vector<std::variant<MemoryBarrier2, BufferBarrier2, TextureBarrier2>>>(allocator)),
 		  m_physicalResourceStates(makeHeapMap<u32, PhysicalResourceState>(allocator)),
-		  m_passLookup(makeHeapMap<heap_string, RGPass*>(allocator)),
-		  m_resourceNameLookup(makeHeapMap<heap_string, RGResourceHandle>(allocator)),
+		  m_passLookup(makeHeapMap<HashedString, RGPass*>(allocator)),
+		  m_resourceNameLookup(makeHeapMap<HashedString, RGResourceHandle>(allocator)),
 		  m_managedImageViews(makeHeapMap<u32, ImageViewHandle>(allocator))
 	{
 	}
@@ -42,18 +42,18 @@ namespace spite
 		clear();
 	}
 
-	RGResourceHandle RenderGraph::importTexture(heap_string name, TextureHandle handle, const TextureDesc& desc)
+	RGResourceHandle RenderGraph::importTexture(HashedString name, TextureHandle handle, const TextureDesc& desc)
 	{
 		u32 id = static_cast<u32>(m_resources.size());
 		RGResource& res = m_resources.emplace_back();
-		res.name = std::move(name);
+		res.name = name;
 		res.isImported = true;
 		res.physicalHandle = handle;
 		res.desc = desc;
 		return {id};
 	}
 
-	RGResourceHandle RenderGraph::importBuffer(const heap_string& name, BufferHandle handle, const BufferDesc& desc)
+	RGResourceHandle RenderGraph::importBuffer(HashedString name, BufferHandle handle, const BufferDesc& desc)
 	{
 		auto it = m_resourceNameLookup.find(name);
 		if (it != m_resourceNameLookup.end())
@@ -73,18 +73,18 @@ namespace spite
 		return rgHandle;
 	}
 
-	RGResourceHandle RenderGraph::createManagedTexture(heap_string name, const TextureDesc& desc)
+	RGResourceHandle RenderGraph::createManagedTexture(HashedString name, const TextureDesc& desc)
 	{
 		u32 id = static_cast<u32>(m_resources.size());
 		RGResource& res = m_resources.emplace_back();
-		res.name = std::move(name);
+		res.name = name;
 		res.isImported = false; // The key difference
 		res.physicalHandle = {}; // Invalid handle initially
 		res.desc = desc;
 		return {id};
 	}
 
-	RGResourceHandle RenderGraph::createManagedBuffer(const heap_string& name, const BufferDesc& desc)
+	RGResourceHandle RenderGraph::createManagedBuffer(HashedString name, const BufferDesc& desc)
 	{
 		auto it = m_resourceNameLookup.find(name);
 		if (it != m_resourceNameLookup.end())
@@ -104,7 +104,7 @@ namespace spite
 		return rgHandle;
 	}
 
-	RGPass* RenderGraph::getPass(const heap_string& name)
+	RGPass* RenderGraph::getPass(HashedString name)
 	{
 		auto it = m_passLookup.find(name);
 		if (it != m_passLookup.end())
@@ -114,7 +114,7 @@ namespace spite
 		return nullptr;
 	}
 
-	const RGPass* RenderGraph::getPass(const heap_string& name) const
+	const RGPass* RenderGraph::getPass(HashedString name) const
 	{
 		auto it = m_passLookup.find(name);
 		if (it != m_passLookup.end())
@@ -124,7 +124,7 @@ namespace spite
 		return nullptr;
 	}
 
-	PassRenderingInfo RenderGraph::getPassRenderingInfo(const heap_string& passName) const
+	PassRenderingInfo RenderGraph::getPassRenderingInfo(HashedString passName) const
 	{
 		const RGPass* pass = getPass(passName);
 		SASSERTM(pass, "Pass %s not found", passName.c_str())
@@ -136,14 +136,14 @@ namespace spite
 		};
 	}
 
-	const sbo_vector<ResourceSetHandle>& RenderGraph::getPassResourceSets(const heap_string& passName)
+	const sbo_vector<ResourceSetHandle>& RenderGraph::getPassResourceSets(HashedString passName)
 	{
 		const RGPass* pass = getPass(passName);
 		SASSERT(pass)
 		return pass->m_resourceSets;
 	}
 
-	PipelineLayoutHandle RenderGraph::getPipelineLayoutForPass(const heap_string& passName)
+	PipelineLayoutHandle RenderGraph::getPipelineLayoutForPass(HashedString passName)
 	{
 		RGPass* pass = getPass(passName);
 		SASSERTM(pass, "Pass %s not found", passName.c_str())
@@ -351,7 +351,7 @@ namespace spite
 
 					// Build a lookup map for the pass's reads by their symbolic name
 					auto marker = FrameScratchAllocator::get().get_scoped_marker();
-					auto readsByName = makeScratchMap<heap_string, const RGResourceAccess*>(
+					auto readsByName = makeScratchMap<HashedString, const RGResourceAccess*>(
 						FrameScratchAllocator::get());
 					for (const auto& read : pass->m_reads)
 					{
@@ -575,22 +575,22 @@ namespace spite
 	{
 	}
 
-	RGResourceHandle RGBuilder::createTexture(heap_string name, const TextureDesc& desc) const
+	RGResourceHandle RGBuilder::createTexture(HashedString name, const TextureDesc& desc) const
 	{
-		return m_graph.createManagedTexture(std::move(name), desc);
+		return m_graph.createManagedTexture(name, desc);
 	}
 
-	RGResourceHandle RGBuilder::createBuffer(heap_string name, const BufferDesc& desc) const
+	RGResourceHandle RGBuilder::createBuffer(HashedString name, const BufferDesc& desc) const
 	{
-		return m_graph.createManagedBuffer(std::move(name), desc);
+		return m_graph.createManagedBuffer(name, desc);
 	}
 
-	RGResourceHandle RGBuilder::importBuffer(heap_string name, BufferHandle handle, const BufferDesc& desc) const
+	RGResourceHandle RGBuilder::importBuffer(HashedString name, BufferHandle handle, const BufferDesc& desc) const
 	{
-		return m_graph.importBuffer(std::move(name), handle, desc);
+		return m_graph.importBuffer(name, handle, desc);
 	}
 
-	void RGBuilder::useUbo(const heap_string& uboName) const
+	void RGBuilder::useUbo(HashedString uboName) const
 	{
 		m_pass.m_usedUbos.push_back(uboName);
 	}

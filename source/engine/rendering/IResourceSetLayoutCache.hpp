@@ -2,6 +2,7 @@
 #include "RenderResourceHandles.hpp"
 #include "GraphicsTypes.hpp"
 #include "base/CollectionAliases.hpp"
+#include "base/HashedString.hpp"
 
 namespace spite
 {
@@ -13,7 +14,7 @@ namespace spite
         DescriptorType type;
         u32 descriptorCount = 1; // For arrays of resources
         ShaderStage shaderStages = ShaderStage::NONE;
-        heap_string name; // For UBOs, this is the block name from the shader
+        HashedString name; // For UBOs, this is the block name from the shader
         sizet size = 0;
 
         bool operator==(const ResourceBinding& other) const = default;

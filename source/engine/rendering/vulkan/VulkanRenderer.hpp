@@ -49,8 +49,8 @@ namespace spite
 		eastl::array<vk::Fence, MAX_FRAMES_IN_FLIGHT> m_inFlightFences;
 
 		vk::CommandPool m_commandPool; // For primary command buffers
-		eastl::array<heap_unordered_map<heap_string, vk::CommandPool>, MAX_FRAMES_IN_FLIGHT> m_secondaryCommandPools;
-		eastl::array<heap_unordered_map<heap_string, std::unique_ptr<VulkanSecondaryRenderCommandBuffer>>,
+		eastl::array<heap_unordered_map<HashedString, vk::CommandPool>, MAX_FRAMES_IN_FLIGHT> m_secondaryCommandPools;
+		eastl::array<heap_unordered_map<HashedString, std::unique_ptr<VulkanSecondaryRenderCommandBuffer>>,
 		             MAX_FRAMES_IN_FLIGHT> m_secondaryCommandBuffers;
 		std::mutex m_poolCreationMutex;
 
@@ -83,7 +83,7 @@ namespace spite
 		void endFrameAndSubmit(IRenderCommandBuffer& commandBuffer) override;
 
 		// --- Command Buffer Management ---
-		ISecondaryRenderCommandBuffer* acquireSecondaryCommandBuffer(const heap_string& passName) override;
+		ISecondaryRenderCommandBuffer* acquireSecondaryCommandBuffer(HashedString passName) override;
 
 		void setRenderGraph(RenderGraph* renderGraph) override { m_renderGraph = renderGraph; }
 		bool wasSwapchainRecreated() override;

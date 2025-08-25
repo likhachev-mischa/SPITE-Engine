@@ -171,7 +171,7 @@ namespace spite
 
 		bool isEntityValid(Entity entity) const
 		{
-			return m_entityManager->isValid(entity);
+			return m_entityManager->isEntityValid(entity);
 		}
 
 		template <t_component T>

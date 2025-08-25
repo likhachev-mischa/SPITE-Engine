@@ -23,16 +23,16 @@ namespace spite
 		  m_context(context),
 		  m_windowManager(windowManager),
 		  m_renderGraph(renderGraph),
-		  m_namedBufferRegistry(*m_renderDevice),
+		  m_namedBufferRegistry(*m_renderDevice, allocator),
 		  m_renderFinishedSemaphores(makeHeapVector<vk::Semaphore>(allocator)),
 		  m_swapchainTextureHandles(makeHeapVector<TextureHandle>(allocator)),
 		  m_swapchainImageViewHandles(makeHeapVector<ImageViewHandle>(allocator))
 	{
 		for (sizet i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{
-			m_secondaryCommandPools[i] = makeHeapMap<heap_string, vk::CommandPool>(allocator);
+			m_secondaryCommandPools[i] = makeHeapMap<HashedString, vk::CommandPool>(allocator);
 			m_secondaryCommandBuffers[i] = makeHeapMap<
-				heap_string, std::unique_ptr<VulkanSecondaryRenderCommandBuffer>>(allocator);
+				HashedString, std::unique_ptr<VulkanSecondaryRenderCommandBuffer>>(allocator);
 		}
 
 		SASSERT(m_renderDevice)
@@ -181,7 +181,7 @@ namespace spite
 		return &m_commandBuffers[m_currentFrame];
 	}
 
-	ISecondaryRenderCommandBuffer* VulkanRenderer::acquireSecondaryCommandBuffer(const heap_string& passName)
+	ISecondaryRenderCommandBuffer* VulkanRenderer::acquireSecondaryCommandBuffer(HashedString passName)
 	{
 		auto& currentFrameCommandBuffers = m_secondaryCommandBuffers[m_currentFrame];
 		auto it = currentFrameCommandBuffers.find(passName);

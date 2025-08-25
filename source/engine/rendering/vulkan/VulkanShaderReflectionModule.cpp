@@ -2,6 +2,8 @@
 #include "base/Assert.hpp"
 #include <spirv-reflect/spirv_reflect.h>
 
+#include "base/StringInterner.hpp"
+
 namespace spite
 {
 	VulkanShaderReflectionModule::VulkanShaderReflectionModule(const std::vector<char>& spirvBinary,
@@ -42,11 +44,11 @@ namespace spite
 				if (binding.type == DescriptorType::UNIFORM_BUFFER || binding.type == DescriptorType::STORAGE_BUFFER)
 				{
 					binding.size = spvBinding->block.size;
-					binding.name = spvBinding->block.name;
+					binding.name = toHashedString(spvBinding->block.name);
 				}
 				else
 				{
-					binding.name = spvBinding->name;
+					binding.name = toHashedString(spvBinding->name);
 				}
 				layoutDesc.bindings.push_back(binding);
 			}

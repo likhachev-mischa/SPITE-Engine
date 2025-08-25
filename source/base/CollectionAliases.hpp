@@ -24,9 +24,9 @@ namespace spite
 	using heap_string16 = heap_string_t<char16_t>;
 	using heap_string32 = heap_string_t<char32_t>;
 
-	template <typename Key, typename Value, typename Hash = eastl::hash<Key>>
+	template <typename Key, typename Value, typename Hash = eastl::hash<Key>, typename Equal = eastl::equal_to<Key>>
 	using heap_unordered_map = eastl::unordered_map<Key, Value,
-	                                                Hash, eastl::equal_to<Key>, HeapAllocatorAdapter
+	                                                Hash, Equal, HeapAllocatorAdapter
 	                                                <eastl::pair<const Key, Value>>>;
 	template <typename T>
 	using heap_set = eastl::vector_set<T, eastl::less<T>, HeapAllocatorAdapter<T>>;
@@ -82,7 +82,7 @@ namespace eastl
 	template <typename T, typename Allocator>
 	struct hash<eastl::basic_string<T, Allocator>>
 	{
-		size_t operator()(const eastl::basic_string<T, Allocator>& s) const
+		sizet operator()(const eastl::basic_string<T, Allocator>& s) const
 		{
 			return string_hash<eastl::basic_string<T, Allocator>>()(s);
 		}

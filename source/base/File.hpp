@@ -18,10 +18,9 @@
 
 namespace spite
 {
-
 	//nlohmann json templated parser
-	template<typename T>
-	T parseJson(const cstring filePath)
+	template <typename T>
+	T parseJson(cstring filePath)
 	{
 		std::ifstream file(filePath);
 		SASSERTM(file.is_open(), "Error opening %s json", filePath);
@@ -32,7 +31,7 @@ namespace spite
 
 		try
 		{
-			obj= reader.get<T>();
+			obj = reader.get<T>();
 		}
 		catch (const nlohmann::json::exception& e)
 		{
@@ -42,22 +41,21 @@ namespace spite
 		return obj;
 	}
 
-	u8* loadTexture(const cstring path, int& width, int& height, int& channels);
+	u8* loadTexture(cstring path, int& width, int& height, int& channels);
 
 	void freeTexture(u8* pixels);
 
 
-	void importModelAssimp(const cstring filename,
-		scratch_vector<Vertex>& vertices,
-		scratch_vector<u32>& indices);
+	void importModelAssimp(cstring filename,
+	                       scratch_vector<Vertex>& vertices,
+	                       scratch_vector<u32>& indices);
 
-	std::vector<char> readBinaryFile(const char* filename);
-	void writeBinaryFile(const char* filename, const void* data, sizet size);
+	std::vector<char> readBinaryFile(cstring filename);
+	void writeBinaryFile(cstring filename, void* data, sizet size);
 
 	void readModelInfoFile(
 		cstring filename,
 		eastl::vector<Vertex, spite::HeapAllocator>& vertices,
 		eastl::vector<u32, spite::HeapAllocator>& indices,
 		const spite::HeapAllocator& allocator);
-
 }

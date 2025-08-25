@@ -19,7 +19,7 @@ namespace spite
 
 	void DepthPassSystem::onUpdate(SystemContext ctx)
 	{
-		const heap_string passName = "Depth";
+		auto passName = toHashedString("Depth");
 
 		ISecondaryRenderCommandBuffer* cb;
 		ctx.accessSingleton<RendererSingleton>([&cb,&passName](const RendererSingleton& singleton)

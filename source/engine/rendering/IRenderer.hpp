@@ -4,6 +4,7 @@
 namespace spite
 {
 	class IRenderDevice;
+	struct HashedString;
 	class IRenderCommandBuffer;
 	class RenderGraph;
 	class ISecondaryRenderCommandBuffer;
@@ -21,7 +22,7 @@ namespace spite
 		virtual void waitIdle() = 0;
 		virtual IRenderCommandBuffer* beginFrame() = 0;
 		virtual void endFrameAndSubmit(IRenderCommandBuffer& commandBuffer) = 0;
-		virtual ISecondaryRenderCommandBuffer* acquireSecondaryCommandBuffer(const heap_string& passName) = 0;
+		virtual ISecondaryRenderCommandBuffer* acquireSecondaryCommandBuffer(HashedString passName) = 0;
 		virtual void setRenderGraph(RenderGraph* renderGraph) = 0;
 		virtual bool wasSwapchainRecreated() = 0;
 		virtual ImageViewHandle getCurrentSwapchainImageView() const = 0;

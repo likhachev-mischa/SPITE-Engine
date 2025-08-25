@@ -4,6 +4,9 @@
 #include "base/CollectionAliases.hpp"
 #include <EASTL/span.h>
 
+#include "base/HashedString.hpp"
+#include "base/StringInterner.hpp"
+
 namespace spite
 {
 	class IPipeline;
@@ -12,7 +15,7 @@ namespace spite
 	{
 		ShaderModuleHandle module;
 		ShaderStage stage;
-		heap_string8 entryPoint = "main";
+		HashedString entryPoint = toHashedString("main");
 
 		bool operator==(const PipelineShaderStageDesc& other) const = default;
 	};
@@ -69,9 +72,9 @@ namespace spite
 	// Describes a single shader stage for pipeline creation from source files.
 	struct ShaderStageDescription
 	{
-		heap_string path;
+		HashedString path;
 		ShaderStage stage;
-		heap_string8 entryPoint = "main";
+		HashedString entryPoint = toHashedString("main");
 	};
 
 	class IPipelineCache
@@ -90,8 +93,8 @@ namespace spite
 		virtual void destroyPipeline(PipelineHandle handle) = 0;
 
 		virtual IPipeline& getPipeline(PipelineHandle handle) = 0;
-		        virtual const IPipeline& getPipeline(PipelineHandle handle) const = 0;
-        virtual const PipelineDescription& getPipelineDescription(PipelineHandle handle) const = 0;
+		virtual const IPipeline& getPipeline(PipelineHandle handle) const = 0;
+		virtual const PipelineDescription& getPipelineDescription(PipelineHandle handle) const = 0;
 		virtual PipelineLayoutHandle getPipelineLayoutHandle(PipelineHandle handle) const = 0;
 	};
 }

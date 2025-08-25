@@ -16,6 +16,8 @@
 #include "Synchronization.hpp"
 
 #include "base/CollectionAliases.hpp"
+#include "base/HashedString.hpp"
+#include "base/StringInterner.hpp"
 
 namespace spite
 {
@@ -40,8 +42,6 @@ namespace spite
 		// Only used if loadOp is CLEAR.
 		std::optional<ClearValue> clearValue = std::nullopt;
 	};
-
-	// class RenderGraph;
 
 	struct PassRenderingInfo
 	{
@@ -69,10 +69,10 @@ namespace spite
 
 		PipelineHandle getPipelineHandle() const { return m_pipelineHandle; }
 
-		RGPass(heap_string name);
+		RGPass(HashedString name);
 
 	private:
-		heap_string m_name;
+		HashedString m_name;
 
 		std::any m_passData;
 
@@ -86,7 +86,7 @@ namespace spite
 		sbo_vector<RGPass*> m_successors{};
 		sbo_vector<RGResourceAccess> m_reads{};
 		sbo_vector<RGWriteAccess> m_writes{};
-		sbo_vector<heap_string> m_usedUbos{};
+		sbo_vector<HashedString> m_usedUbos{};
 
 		bool m_writesToSwapchain = false;
 
@@ -104,7 +104,7 @@ namespace spite
 
 		sbo_vector<ResourceSetHandle> m_resourceSets{};
 
-		sbo_vector<heap_string> m_declaredUbos{};
+		sbo_vector<HashedString> m_declaredUbos{};
 	};
 
 	class RenderGraph
@@ -115,7 +115,7 @@ namespace spite
 
 		struct RGResource
 		{
-			heap_string name;
+			HashedString name;
 			bool isImported = false;
 
 			RGPass* writer = nullptr;
@@ -140,12 +140,12 @@ namespace spite
 		heap_vector<sbo_vector<std::variant<MemoryBarrier2, BufferBarrier2, TextureBarrier2>>> m_passBarriers;
 		heap_unordered_map<u32, PhysicalResourceState> m_physicalResourceStates;
 
-		heap_unordered_map<heap_string, RGPass*> m_passLookup;
-		heap_unordered_map<heap_string, RGResourceHandle> m_resourceNameLookup;
+		heap_unordered_map<HashedString, RGPass*> m_passLookup;
+		heap_unordered_map<HashedString, RGResourceHandle> m_resourceNameLookup;
 		heap_unordered_map<u32, ImageViewHandle> m_managedImageViews;
 
-		RGResourceHandle createManagedTexture(heap_string name, const TextureDesc& desc);
-		RGResourceHandle createManagedBuffer(const heap_string& name, const BufferDesc& desc);
+		RGResourceHandle createManagedTexture(HashedString name, const TextureDesc& desc);
+		RGResourceHandle createManagedBuffer(HashedString name, const BufferDesc& desc);
 
 	public:
 		RenderGraph(const HeapAllocator& allocator, IRenderDevice& device);
@@ -157,20 +157,20 @@ namespace spite
 
 		~RenderGraph();
 
-		RGResourceHandle importTexture(heap_string name, TextureHandle handle, const TextureDesc& desc);
-		RGResourceHandle importBuffer(const heap_string& name, BufferHandle handle, const BufferDesc& desc);
+		RGResourceHandle importTexture(HashedString name, TextureHandle handle, const TextureDesc& desc);
+		RGResourceHandle importBuffer(HashedString name, BufferHandle handle, const BufferDesc& desc);
 
-		RGPass* getPass(const heap_string& name);
-		const RGPass* getPass(const heap_string& name) const;
-		PassRenderingInfo getPassRenderingInfo(const heap_string& passName) const;
+		RGPass* getPass(HashedString name);
+		const RGPass* getPass(HashedString name) const;
+		PassRenderingInfo getPassRenderingInfo(HashedString passName) const;
 
-		const sbo_vector<ResourceSetHandle>& getPassResourceSets(const heap_string& passName);
+		const sbo_vector<ResourceSetHandle>& getPassResourceSets(HashedString passName);
 
-		PipelineLayoutHandle getPipelineLayoutForPass(const heap_string& passName);
+		PipelineLayoutHandle getPipelineLayoutForPass(HashedString passName);
 
 		template <typename PassData>
 		RGPass& addPass(
-			heap_string name,
+			HashedString name,
 			std::function<void(RGBuilder&, PassData&)> setup,
 			std::function<void(IRenderCommandBuffer&)> execute = nullptr
 		);
@@ -185,11 +185,11 @@ namespace spite
 	public:
 		RGBuilder(RenderGraph& graph, RGPass& pass);
 
-		RGResourceHandle createTexture(heap_string name, const TextureDesc& desc) const;
-		RGResourceHandle createBuffer(heap_string name, const BufferDesc& desc) const;
-		RGResourceHandle importBuffer(heap_string name, BufferHandle handle, const BufferDesc& desc) const;
+		RGResourceHandle createTexture(HashedString name, const TextureDesc& desc) const;
+		RGResourceHandle createBuffer(HashedString name, const BufferDesc& desc) const;
+		RGResourceHandle importBuffer(HashedString name, BufferHandle handle, const BufferDesc& desc) const;
 
-		void useUbo(const heap_string& uboName) const;
+		void useUbo(HashedString uboName) const;
 
 		RGResourceHandle read(RGResourceHandle handle, const RGResourceUsage& usage) const;
 		RGResourceHandle write(RGResourceHandle handle, const RGResourceUsage& usage,
@@ -207,7 +207,7 @@ namespace spite
 
 	template <typename PassData>
 	RGPass& RenderGraph::addPass(
-		heap_string name,
+		HashedString name,
 		std::function<void(RGBuilder&, PassData&)> setup,
 		std::function<void(IRenderCommandBuffer&)> execute)
 	{
