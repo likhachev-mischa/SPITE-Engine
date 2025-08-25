@@ -62,102 +62,103 @@ cameraInfo.cameraPositionWorld = vec3(0.0,0.0,0.0);
 
     // Calculate viewDir in WORLD space
     vec3 viewDir = normalize(cameraInfo.cameraPositionWorld - fragPosWorld);
+    vec3 finalColor = albedo;
 
-    vec3 pointLightContribution = vec3(0.0);
-    int numPointLights = lightData.pointLights.length();
-
-    for (int i = 0; i < numPointLights; ++i) {
-        PointLight light = lightData.pointLights[i];
-        vec3 lightPosWorld = light.position.xyz;
-        float lightRadius = light.position.w;
-        vec3 lightColor = light.color.rgb;
-        float lightIntensity = light.color.a;
-
-        vec3 toLight = lightPosWorld - fragPosWorld;
-        float distanceToLight = length(toLight);
-        vec3 pointLightDir = normalize(toLight);
-
-        float attenuation = 1.0;
-        if (lightRadius > 0.0) {
-            attenuation = 1.0 - smoothstep(0.0, lightRadius, distanceToLight);
-            attenuation = clamp(attenuation, 0.0, 1.0);
-        } else {
-            attenuation = 1.0 / (1.0 + 0.1 * distanceToLight + 0.01 * distanceToLight * distanceToLight);
-        }
-
-        float pointDiffuseIntensity = max(dot(normalWorld, pointLightDir), 0.0);
-        vec3 pointDiffuse = pointDiffuseIntensity * lightColor;
-
-        vec3 pointSpecular = vec3(0.0);
-        if (pointDiffuseIntensity > 0.0) {
-            vec3 pointReflectDir = reflect(-pointLightDir, normalWorld);
-            float pointSpec = pow(max(dot(viewDir, pointReflectDir), 0.0), 32.0);
-            pointSpecular = specularStrength * pointSpec * lightColor;
-        }
-
-        pointLightContribution += (pointDiffuse + pointSpecular) * lightIntensity * attenuation;
-    }
-
-    // Directional Light Calculation
-    vec3 directionalLightContribution = vec3(0.0);
-    int numDirectionalLights = lightData.directionalLights.length();
-    for (int i = 0; i < numDirectionalLights; ++i) {
-        DirectionalLight light = lightData.directionalLights[i];
-        vec3 lightDirWorld = normalize(light.direction.xyz);
-        vec3 lightColor = light.color.rgb;
-        float lightIntensity = light.color.a;
-
-        float diffuseIntensity = max(dot(normalWorld, -lightDirWorld), 0.0);
-        vec3 diffuse = diffuseIntensity * lightColor;
-
-        vec3 reflectDir = reflect(lightDirWorld, normalWorld);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-        vec3 specular = specularStrength * spec * lightColor;
-
-        directionalLightContribution += (diffuse + specular) * lightIntensity;
-    }
-
-    // SpotLight Calculation
-    vec3 spotLightContribution = vec3(0.0);
-    int numSpotLights = lightData.spotLights.length();
-    for (int i = 0; i < numSpotLights; ++i) {
-        SpotLight light = lightData.spotLights[i];
-        vec3 lightPosWorld = light.position.xyz;
-        float lightRadius = light.position.w;
-        vec3 spotDirWorld = normalize(light.direction.xyz);
-        vec3 lightColor = light.color.rgb;
-        float lightIntensity = light.color.a;
-        float innerCutOffCos = light.cutOffs.x;
-        float outerCutOffCos = light.cutOffs.y;
-
-        vec3 toLight = lightPosWorld - fragPosWorld;
-        float distanceToLight = length(toLight);
-        vec3 spotLightDir = normalize(toLight);
-
-        float attenuation = 1.0;
-        if (lightRadius > 0.0) {
-            attenuation = 1.0 - smoothstep(0.0, lightRadius, distanceToLight);
-            attenuation = clamp(attenuation, 0.0, 1.0);
-        } else {
-            attenuation = 1.0 / (1.0 + 0.1 * distanceToLight + 0.01 * distanceToLight * distanceToLight);
-        }
-
-        float theta = dot(spotLightDir, -spotDirWorld);
-        if (theta > outerCutOffCos) {
-            float diffuseIntensity = max(dot(normalWorld, spotLightDir), 0.0);
-            vec3 diffuse = diffuseIntensity * lightColor;
-
-            vec3 reflectDir = reflect(-spotLightDir, normalWorld);
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-            vec3 specular = specularStrength * spec * lightColor;
-
-            float epsilon = innerCutOffCos - outerCutOffCos;
-            float spotEffect = smoothstep(0.0, 1.0, (theta - outerCutOffCos) / epsilon);
-
-            spotLightContribution += (diffuse + specular) * lightIntensity * attenuation * spotEffect;
-        }
-    }
-    vec3 finalColor = albedo * ambient + pointLightContribution + directionalLightContribution + spotLightContribution;
-
+//    vec3 pointLightContribution = vec3(0.0);
+//    int numPointLights = lightData.pointLights.length();
+//
+//    for (int i = 0; i < numPointLights; ++i) {
+//        PointLight light = lightData.pointLights[i];
+//        vec3 lightPosWorld = light.position.xyz;
+//        float lightRadius = light.position.w;
+//        vec3 lightColor = light.color.rgb;
+//        float lightIntensity = light.color.a;
+//
+//        vec3 toLight = lightPosWorld - fragPosWorld;
+//        float distanceToLight = length(toLight);
+//        vec3 pointLightDir = normalize(toLight);
+//
+//        float attenuation = 1.0;
+//        if (lightRadius > 0.0) {
+//            attenuation = 1.0 - smoothstep(0.0, lightRadius, distanceToLight);
+//            attenuation = clamp(attenuation, 0.0, 1.0);
+//        } else {
+//            attenuation = 1.0 / (1.0 + 0.1 * distanceToLight + 0.01 * distanceToLight * distanceToLight);
+//        }
+//
+//        float pointDiffuseIntensity = max(dot(normalWorld, pointLightDir), 0.0);
+//        vec3 pointDiffuse = pointDiffuseIntensity * lightColor;
+//
+//        vec3 pointSpecular = vec3(0.0);
+//        if (pointDiffuseIntensity > 0.0) {
+//            vec3 pointReflectDir = reflect(-pointLightDir, normalWorld);
+//            float pointSpec = pow(max(dot(viewDir, pointReflectDir), 0.0), 32.0);
+//            pointSpecular = specularStrength * pointSpec * lightColor;
+//        }
+//
+//        pointLightContribution += (pointDiffuse + pointSpecular) * lightIntensity * attenuation;
+//    }
+//
+//    // Directional Light Calculation
+//    vec3 directionalLightContribution = vec3(0.0);
+//    int numDirectionalLights = lightData.directionalLights.length();
+//    for (int i = 0; i < numDirectionalLights; ++i) {
+//        DirectionalLight light = lightData.directionalLights[i];
+//        vec3 lightDirWorld = normalize(light.direction.xyz);
+//        vec3 lightColor = light.color.rgb;
+//        float lightIntensity = light.color.a;
+//
+//        float diffuseIntensity = max(dot(normalWorld, -lightDirWorld), 0.0);
+//        vec3 diffuse = diffuseIntensity * lightColor;
+//
+//        vec3 reflectDir = reflect(lightDirWorld, normalWorld);
+//        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+//        vec3 specular = specularStrength * spec * lightColor;
+//
+//        directionalLightContribution += (diffuse + specular) * lightIntensity;
+//    }
+//
+//    // SpotLight Calculation
+//    vec3 spotLightContribution = vec3(0.0);
+//    int numSpotLights = lightData.spotLights.length();
+//    for (int i = 0; i < numSpotLights; ++i) {
+//        SpotLight light = lightData.spotLights[i];
+//        vec3 lightPosWorld = light.position.xyz;
+//        float lightRadius = light.position.w;
+//        vec3 spotDirWorld = normalize(light.direction.xyz);
+//        vec3 lightColor = light.color.rgb;
+//        float lightIntensity = light.color.a;
+//        float innerCutOffCos = light.cutOffs.x;
+//        float outerCutOffCos = light.cutOffs.y;
+//
+//        vec3 toLight = lightPosWorld - fragPosWorld;
+//        float distanceToLight = length(toLight);
+//        vec3 spotLightDir = normalize(toLight);
+//
+//        float attenuation = 1.0;
+//        if (lightRadius > 0.0) {
+//            attenuation = 1.0 - smoothstep(0.0, lightRadius, distanceToLight);
+//            attenuation = clamp(attenuation, 0.0, 1.0);
+//        } else {
+//            attenuation = 1.0 / (1.0 + 0.1 * distanceToLight + 0.01 * distanceToLight * distanceToLight);
+//        }
+//
+//        float theta = dot(spotLightDir, -spotDirWorld);
+//        if (theta > outerCutOffCos) {
+//            float diffuseIntensity = max(dot(normalWorld, spotLightDir), 0.0);
+//            vec3 diffuse = diffuseIntensity * lightColor;
+//
+//            vec3 reflectDir = reflect(-spotLightDir, normalWorld);
+//            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+//            vec3 specular = specularStrength * spec * lightColor;
+//
+//            float epsilon = innerCutOffCos - outerCutOffCos;
+//            float spotEffect = smoothstep(0.0, 1.0, (theta - outerCutOffCos) / epsilon);
+//
+//            spotLightContribution += (diffuse + specular) * lightIntensity * attenuation * spotEffect;
+//        }
+//    }
+//    vec3 finalColor = albedo * ambient + pointLightContribution + directionalLightContribution + spotLightContribution;
+//
     outFragColor = vec4(finalColor, 1.0);
 }
