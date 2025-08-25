@@ -56,7 +56,7 @@ namespace spite
 
 	void EntityManager::destroyEntity(Entity entity)
 	{
-		SASSERT(isValid(entity))
+		SASSERT(isEntityValid(entity))
 
 		m_archetypeManager->removeEntity(entity);
 
@@ -73,7 +73,7 @@ namespace spite
 		}
 	}
 
-	bool EntityManager::isValid(Entity entity) const
+	bool EntityManager::isEntityValid(Entity entity) const
 	{
 		const u32 index = entity.index();
 		return (entity != Entity::undefined()) && (index < m_generations.size() && m_generations[index] == entity.
@@ -84,14 +84,14 @@ namespace spite
 	                                  eastl::span<const ComponentID> componentIds) const
 	{
 		for (const auto& entity : entities)
-			SASSERT(isValid(entity))
+			SASSERT(isEntityValid(entity))
 		m_archetypeManager->addComponents(entities, componentIds);
 	}
 
 	void EntityManager::moveEntities(const Aspect& toAspect, eastl::span<const Entity> entities) const
 	{
 		for (const auto& entity : entities)
-			SASSERT(isValid(entity))
+			SASSERT(isEntityValid(entity))
 		m_archetypeManager->moveEntities(toAspect, entities);
 	}
 
@@ -99,20 +99,20 @@ namespace spite
 	                                     eastl::span<ComponentID> componentIds) const
 	{
 		for (const auto& entity : entities)
-			SASSERT(isValid(entity))
+			SASSERT(isEntityValid(entity))
 		m_archetypeManager->removeComponents(entities, componentIds);
 	}
 
 	bool EntityManager::hasComponent(Entity entity, ComponentID id) const
 	{
-		SASSERT(isValid(entity))
+		SASSERT(isEntityValid(entity))
 		const Archetype& archetype = m_archetypeManager->getEntityArchetype(entity);
 		return archetype.aspect().contains(id);
 	}
 
 	void EntityManager::setComponentData(Entity entity, ComponentID componentId, void* componentData) const
 	{
-		SASSERT(isValid(entity))
+		SASSERT(isEntityValid(entity))
 		const Archetype& archetype = m_archetypeManager->getEntityArchetype(entity);
 		auto [chunk, indexInChunk] = archetype.getEntityLocation(entity);
 
